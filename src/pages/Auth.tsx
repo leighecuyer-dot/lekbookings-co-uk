@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import { Calendar, CheckCircle } from "lucide-react";
 
 export default function Auth() {
+  const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -41,8 +43,16 @@ export default function Auth() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Account created! You can now sign in.");
-      navigate("/onboarding");
+      // In case sign-ups require email confirmation, there may be no session yet.
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        toast.success("Account created! Let's set up your business.");
+        navigate("/onboarding");
+      } else {
+        toast.success("Account created! Please sign in to continue.");
+        setTab("signin");
+      }
     }
     setLoading(false);
   };
@@ -96,7 +106,7 @@ export default function Auth() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="signin" className="w-full">
+              <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="signin">Sign In</TabsTrigger>
                   <TabsTrigger value="signup">Sign Up</TabsTrigger>
