@@ -380,6 +380,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_business_with_owner: {
+        Args: {
+          _industry: string
+          _name: string
+          _phone: string
+          _slug: string
+        }
+        Returns: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          industry: string | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          settings: Json | null
+          slug: string
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "businesses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_business_ids: { Args: { _user_id: string }; Returns: string[] }
       has_business_role: {
         Args: {
