@@ -45,11 +45,37 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Auth-only route (allows access even if user has no businesses)
+function AuthOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const { businesses, loading: businessLoading } = useBusiness();
+
+  if (loading || businessLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // If user already has a business, onboarding is no longer needed
+  if (businesses.length > 0) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 // Redirect authenticated users away from auth pages
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const { businesses, loading: businessLoading } = useBusiness();
 
-  if (loading) {
+  if (loading || businessLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -58,7 +84,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={businesses.length === 0 ? "/onboarding" : "/dashboard"} replace />;
   }
 
   return <>{children}</>;
@@ -72,7 +98,7 @@ const AppRoutes = () => (
     <Route path="/install" element={<InstallPage />} />
     
     {/* Onboarding (authenticated but no business) */}
-    <Route path="/onboarding" element={<Onboarding />} />
+    <Route path="/onboarding" element={<AuthOnlyRoute><Onboarding /></AuthOnlyRoute>} />
     
     {/* Protected routes */}
     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
