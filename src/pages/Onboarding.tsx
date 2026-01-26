@@ -87,31 +87,21 @@ export default function Onboarding() {
     setLoading(true);
     
     try {
-      // Create the business
       const slug = generateSlug(businessName);
-      const { data: business, error: businessError } = await supabase
-        .from("businesses")
-        .insert({
-          name: businessName,
-          slug,
-          industry,
-          phone,
-        })
-        .select()
-        .single();
+
+      // Create the business AND assign the current user as owner (atomic, secure)
+      const { data: business, error: businessError } = await supabase.rpc(
+        "create_business_with_owner",
+        {
+          _name: businessName,
+          _slug: slug,
+          _industry: industry,
+          _phone: phone,
+        }
+      );
 
       if (businessError) throw businessError;
-
-      // Create owner role for the user
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: user.id,
-          business_id: business.id,
-          role: "owner",
-        });
-
-      if (roleError) throw roleError;
+      if (!business) throw new Error("Failed to create business");
 
       // Refresh businesses and navigate
       await refreshBusinesses();
