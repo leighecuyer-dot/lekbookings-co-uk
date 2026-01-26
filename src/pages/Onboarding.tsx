@@ -76,6 +76,25 @@ export default function Onboarding() {
       + "-" + Math.random().toString(36).substring(2, 8);
   };
 
+  const formatCreateBusinessError = (err: unknown) => {
+    if (!err) return "Failed to create business";
+    if (err instanceof Error) return err.message || "Failed to create business";
+
+    if (typeof err === "string") return err;
+
+    // Supabase errors often include { message, details, hint, code }
+    if (typeof err === "object") {
+      const e = err as Record<string, unknown>;
+      const message = typeof e.message === "string" ? e.message : undefined;
+      const details = typeof e.details === "string" ? e.details : undefined;
+      const hint = typeof e.hint === "string" ? e.hint : undefined;
+
+      return [message, details, hint].filter(Boolean).join(" — ") || "Failed to create business";
+    }
+
+    return "Failed to create business";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -87,6 +106,11 @@ export default function Onboarding() {
     setLoading(true);
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Your session isn't active yet. Please sign in again and retry.");
+      }
+
       const slug = generateSlug(businessName);
 
       // Create the business AND assign the current user as owner (atomic, secure)
@@ -100,7 +124,11 @@ export default function Onboarding() {
         }
       );
 
-      if (businessError) throw businessError;
+      if (businessError) {
+        // Helpful for debugging in preview console without exposing secrets.
+        console.error("create_business_with_owner error:", businessError);
+        throw businessError;
+      }
       if (!business) throw new Error("Failed to create business");
 
       // Refresh businesses and navigate
@@ -108,8 +136,8 @@ export default function Onboarding() {
       toast.success("Business created successfully!");
       navigate("/dashboard");
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to create business";
-      toast.error(errorMessage);
+      console.error("Create business failed:", error);
+      toast.error(formatCreateBusinessError(error));
     } finally {
       setLoading(false);
     }
