@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Clock, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, startOfDay, endOfDay, addDays, isSameDay, parseISO } from "date-fns";
+import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 
 interface Booking {
   id: string;
@@ -29,6 +30,7 @@ interface Booking {
   status: string;
   customer_name: string | null;
   customer_email: string | null;
+  customer_phone: string | null;
   notes: string | null;
   service_id: string | null;
   staff_id: string | null;
@@ -62,6 +64,8 @@ export default function CalendarPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // New booking form
   const [newBooking, setNewBooking] = useState({
@@ -196,15 +200,15 @@ export default function CalendarPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
-        return "bg-success text-success-foreground";
+        return "bg-background text-foreground";
       case "pending":
-        return "bg-warning text-warning-foreground";
+        return "bg-background/80 text-foreground";
       case "cancelled":
-        return "bg-destructive text-destructive-foreground";
+        return "bg-background/50 text-foreground";
       case "completed":
-        return "bg-muted text-muted-foreground";
+        return "bg-background/60 text-foreground";
       default:
-        return "bg-secondary text-secondary-foreground";
+        return "bg-background text-foreground";
     }
   };
 
@@ -430,17 +434,17 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={booking.id}
-                      className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:shadow-soft transition-shadow"
-                      style={{
-                        borderLeftWidth: 4,
-                        borderLeftColor: service?.color || "hsl(var(--primary))",
+                      onClick={() => {
+                        setEditingBooking(booking);
+                        setEditDialogOpen(true);
                       }}
+                      className="flex items-start gap-4 p-4 rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.01] transition-transform"
                     >
                       <div className="text-center min-w-[60px]">
                         <p className="text-lg font-semibold">
                           {format(parseISO(booking.start_time), "HH:mm")}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-background/60">
                           {format(parseISO(booking.end_time), "HH:mm")}
                         </p>
                       </div>
@@ -451,11 +455,11 @@ export default function CalendarPage() {
                             {booking.status}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-background/70">
                           {service?.name || "No service"}
                         </p>
                         {staff && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <p className="text-xs text-background/60 flex items-center gap-1 mt-1">
                             <User className="w-3 h-3" />
                             {staff.name}
                           </p>
@@ -469,6 +473,15 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
       </div>
+
+      <BookingEditDialog
+        booking={editingBooking}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        services={services}
+        staffList={staffList}
+        onUpdate={fetchData}
+      />
     </DashboardLayout>
   );
 }

@@ -6,13 +6,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight } from "lucide-react";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO } from "date-fns";
+import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 
 interface Stats {
   todayBookings: number;
   weekBookings: number;
   totalCustomers: number;
   pendingBookings: number;
+}
+
+interface Booking {
+  id: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  notes: string | null;
+  service_id: string | null;
+  staff_id: string | null;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  duration_minutes: number;
+}
+
+interface Staff {
+  id: string;
+  name: string;
 }
 
 export default function Dashboard() {
@@ -23,7 +48,12 @@ export default function Dashboard() {
     totalCustomers: 0,
     pendingBookings: 0,
   });
+  const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -36,7 +66,7 @@ export default function Dashboard() {
       const weekStart = startOfWeek(now).toISOString();
       const weekEnd = endOfWeek(now).toISOString();
 
-      const [todayResult, weekResult, customersResult, pendingResult] = await Promise.all([
+      const [todayResult, weekResult, customersResult, pendingResult, upcomingResult, servicesResult, staffResult] = await Promise.all([
         supabase
           .from("bookings")
           .select("id", { count: "exact", head: true })
@@ -58,6 +88,23 @@ export default function Dashboard() {
           .select("id", { count: "exact", head: true })
           .eq("business_id", currentBusiness.id)
           .eq("status", "pending"),
+        supabase
+          .from("bookings")
+          .select("*")
+          .eq("business_id", currentBusiness.id)
+          .gte("start_time", todayStart)
+          .order("start_time", { ascending: true })
+          .limit(5),
+        supabase
+          .from("services")
+          .select("id, name, duration_minutes")
+          .eq("business_id", currentBusiness.id)
+          .eq("is_active", true),
+        supabase
+          .from("staff")
+          .select("id, name")
+          .eq("business_id", currentBusiness.id)
+          .eq("is_active", true),
       ]);
 
       setStats({
@@ -66,6 +113,9 @@ export default function Dashboard() {
         totalCustomers: customersResult.count || 0,
         pendingBookings: pendingResult.count || 0,
       });
+      if (upcomingResult.data) setUpcomingBookings(upcomingResult.data);
+      if (servicesResult.data) setServices(servicesResult.data);
+      if (staffResult.data) setStaffList(staffResult.data);
       setLoading(false);
     };
 
@@ -113,6 +163,26 @@ export default function Dashboard() {
     { title: "View Calendar", href: "/calendar", icon: Calendar },
   ];
 
+  const refetchData = () => {
+    // Trigger re-fetch by toggling loading
+    setLoading(true);
+    const now = new Date();
+    const todayStart = startOfDay(now).toISOString();
+    
+    Promise.all([
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("business_id", currentBusiness?.id)
+        .gte("start_time", todayStart)
+        .order("start_time", { ascending: true })
+        .limit(5),
+    ]).then(([upcomingResult]) => {
+      if (upcomingResult.data) setUpcomingBookings(upcomingResult.data);
+      setLoading(false);
+    });
+  };
+
   return (
     <DashboardLayout
       title={`Welcome back${currentBusiness ? `, ${currentBusiness.name}` : ""}`}
@@ -122,26 +192,74 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => (
-            <Card key={stat.title} className="border-0 shadow-soft">
+            <Card key={stat.title} className="border-0 shadow-soft bg-foreground text-background rounded-2xl">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-sm font-medium text-background/70">
                   {stat.title}
                 </CardTitle>
-                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                  <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                <div className="p-2 rounded-lg bg-background/10">
+                  <stat.icon className="w-4 h-4 text-background" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-display font-bold">
+                <div className="text-3xl font-display font-bold text-background">
                   {loading ? "-" : stat.value}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-background/60 mt-1">
                   {stat.description}
                 </p>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {/* Upcoming Bookings */}
+        {upcomingBookings.length > 0 && (
+          <Card className="border-0 shadow-soft">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-display">Today's Appointments</CardTitle>
+                <CardDescription>Click to view or edit</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/calendar">View All</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {upcomingBookings.map((booking) => {
+                  const service = services.find((s) => s.id === booking.service_id);
+                  return (
+                    <div
+                      key={booking.id}
+                      onClick={() => {
+                        setEditingBooking(booking);
+                        setEditDialogOpen(true);
+                      }}
+                      className="p-4 rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.02] transition-transform"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-background" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-background">
+                            {format(parseISO(booking.start_time), "HH:mm")}
+                          </p>
+                          <p className="text-xs text-background/60">
+                            {format(parseISO(booking.end_time), "HH:mm")}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-medium text-background truncate">{booking.customer_name}</p>
+                      <p className="text-sm text-background/70 truncate">{service?.name || "No service"}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions & Recent Activity */}
         <div className="grid gap-6 lg:grid-cols-2">
@@ -206,6 +324,15 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      <BookingEditDialog
+        booking={editingBooking}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        services={services}
+        staffList={staffList}
+        onUpdate={refetchData}
+      />
     </DashboardLayout>
   );
 }
