@@ -46,17 +46,26 @@ interface Staff {
   name: string;
 }
 
+interface Customer {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+}
+
 export default function CalendarPage() {
   const { currentBusiness } = useBusiness();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // New booking form
   const [newBooking, setNewBooking] = useState({
+    customerId: "",
     customerName: "",
     customerEmail: "",
     customerPhone: "",
@@ -79,7 +88,7 @@ export default function CalendarPage() {
     const dayStart = startOfDay(selectedDate).toISOString();
     const dayEnd = endOfDay(selectedDate).toISOString();
 
-    const [bookingsRes, servicesRes, staffRes] = await Promise.all([
+    const [bookingsRes, servicesRes, staffRes, customersRes] = await Promise.all([
       supabase
         .from("bookings")
         .select("*")
@@ -97,11 +106,17 @@ export default function CalendarPage() {
         .select("id, name")
         .eq("business_id", currentBusiness.id)
         .eq("is_active", true),
+      supabase
+        .from("customers")
+        .select("id, name, email, phone")
+        .eq("business_id", currentBusiness.id)
+        .order("name", { ascending: true }),
     ]);
 
     if (bookingsRes.data) setBookings(bookingsRes.data);
     if (servicesRes.data) setServices(servicesRes.data);
     if (staffRes.data) setStaffList(staffRes.data);
+    if (customersRes.data) setCustomers(customersRes.data);
     setLoading(false);
   };
 
@@ -123,6 +138,7 @@ export default function CalendarPage() {
 
     const { error } = await supabase.from("bookings").insert({
       business_id: currentBusiness.id,
+      customer_id: newBooking.customerId || null,
       customer_name: newBooking.customerName,
       customer_email: newBooking.customerEmail || null,
       customer_phone: newBooking.customerPhone || null,
@@ -142,6 +158,7 @@ export default function CalendarPage() {
     toast.success("Booking created!");
     setDialogOpen(false);
     setNewBooking({
+      customerId: "",
       customerName: "",
       customerEmail: "",
       customerPhone: "",
@@ -151,6 +168,29 @@ export default function CalendarPage() {
       notes: "",
     });
     fetchData();
+  };
+
+  const handleCustomerSelect = (customerId: string) => {
+    if (customerId === "new") {
+      setNewBooking({
+        ...newBooking,
+        customerId: "",
+        customerName: "",
+        customerEmail: "",
+        customerPhone: "",
+      });
+    } else {
+      const customer = customers.find((c) => c.id === customerId);
+      if (customer) {
+        setNewBooking({
+          ...newBooking,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerEmail: customer.email || "",
+          customerPhone: customer.phone || "",
+        });
+      }
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -195,6 +235,25 @@ export default function CalendarPage() {
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
+                <Label>Select Customer</Label>
+                <Select
+                  value={newBooking.customerId || "new"}
+                  onValueChange={handleCustomerSelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select existing or add new" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">+ Add new customer</SelectItem>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name} {customer.email ? `(${customer.email})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>Customer Name *</Label>
                 <Input
                   value={newBooking.customerName}
@@ -202,6 +261,7 @@ export default function CalendarPage() {
                     setNewBooking({ ...newBooking, customerName: e.target.value })
                   }
                   placeholder="John Doe"
+                  disabled={!!newBooking.customerId}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
