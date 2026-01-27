@@ -3,6 +3,11 @@ import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { 
   Clock, 
   User, 
@@ -13,7 +18,8 @@ import {
   ChevronRight,
   ChevronLeft,
   Pencil,
-  Check
+  Check,
+  Palette
 } from "lucide-react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,44 +53,100 @@ interface KanbanViewProps {
   onStatusChange: (bookingId: string, newStatus: string) => void;
 }
 
+// Color presets for status customization
+const colorPresets = [
+  { 
+    id: "amber", 
+    name: "Amber",
+    bgColor: "bg-amber-100 dark:bg-amber-900/30",
+    textColor: "text-amber-700 dark:text-amber-400",
+    borderColor: "border-amber-300 dark:border-amber-700"
+  },
+  { 
+    id: "emerald", 
+    name: "Green",
+    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+    textColor: "text-emerald-700 dark:text-emerald-400",
+    borderColor: "border-emerald-300 dark:border-emerald-700"
+  },
+  { 
+    id: "blue", 
+    name: "Blue",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    textColor: "text-blue-700 dark:text-blue-400",
+    borderColor: "border-blue-300 dark:border-blue-700"
+  },
+  { 
+    id: "purple", 
+    name: "Purple",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+    textColor: "text-purple-700 dark:text-purple-400",
+    borderColor: "border-purple-300 dark:border-purple-700"
+  },
+  { 
+    id: "pink", 
+    name: "Pink",
+    bgColor: "bg-pink-100 dark:bg-pink-900/30",
+    textColor: "text-pink-700 dark:text-pink-400",
+    borderColor: "border-pink-300 dark:border-pink-700"
+  },
+  { 
+    id: "red", 
+    name: "Red",
+    bgColor: "bg-red-100 dark:bg-red-900/30",
+    textColor: "text-red-700 dark:text-red-400",
+    borderColor: "border-red-300 dark:border-red-700"
+  },
+  { 
+    id: "orange", 
+    name: "Orange",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    textColor: "text-orange-700 dark:text-orange-400",
+    borderColor: "border-orange-300 dark:border-orange-700"
+  },
+  { 
+    id: "gray", 
+    name: "Gray",
+    bgColor: "bg-muted",
+    textColor: "text-muted-foreground",
+    borderColor: "border-border"
+  },
+];
+
 const defaultStatusConfig = [
   { 
     id: "pending", 
     label: "Pending", 
     icon: CircleDot,
     description: "Awaiting confirmation",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    textColor: "text-amber-700 dark:text-amber-400",
-    borderColor: "border-amber-300 dark:border-amber-700"
+    colorId: "amber"
   },
   { 
     id: "confirmed", 
     label: "Confirmed", 
     icon: CheckCircle2,
     description: "Ready to go",
-    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
-    textColor: "text-emerald-700 dark:text-emerald-400",
-    borderColor: "border-emerald-300 dark:border-emerald-700"
+    colorId: "emerald"
   },
   { 
     id: "completed", 
     label: "Done", 
     icon: CheckCircle2,
     description: "Finished",
-    bgColor: "bg-muted",
-    textColor: "text-muted-foreground",
-    borderColor: "border-border"
+    colorId: "gray"
   },
   { 
     id: "cancelled", 
     label: "Cancelled", 
     icon: XCircle,
     description: "Not happening",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    textColor: "text-red-700 dark:text-red-400",
-    borderColor: "border-red-300 dark:border-red-700"
+    colorId: "red"
   },
 ];
+
+const getColorStyles = (colorId: string) => {
+  return colorPresets.find(c => c.id === colorId) || colorPresets[0];
+};
 
 export function KanbanView({
   bookings,
@@ -99,14 +161,21 @@ export function KanbanView({
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Get custom labels from business settings
+  // Get custom settings from business
   const customLabels = (currentBusiness?.settings?.statusLabels as Record<string, string>) || {};
+  const customColors = (currentBusiness?.settings?.statusColors as Record<string, string>) || {};
   
-  // Merge default config with custom labels
-  const statusConfig = defaultStatusConfig.map(status => ({
-    ...status,
-    label: customLabels[status.id] || status.label
-  }));
+  // Merge default config with custom labels and colors
+  const statusConfig = defaultStatusConfig.map(status => {
+    const colorId = customColors[status.id] || status.colorId;
+    const colorStyles = getColorStyles(colorId);
+    return {
+      ...status,
+      label: customLabels[status.id] || status.label,
+      colorId,
+      ...colorStyles
+    };
+  });
 
   const getBookingsByStatus = (status: string) => {
     return bookings.filter((b) => b.status === status);
@@ -169,6 +238,32 @@ export function KanbanView({
     setEditValue("");
   };
 
+  const handleColorChange = async (statusId: string, colorId: string) => {
+    if (!currentBusiness) return;
+    
+    const newColors = {
+      ...customColors,
+      [statusId]: colorId
+    };
+
+    const { error } = await supabase
+      .from("businesses")
+      .update({ 
+        settings: { 
+          ...currentBusiness.settings, 
+          statusColors: newColors 
+        } 
+      })
+      .eq("id", currentBusiness.id);
+
+    if (error) {
+      toast.error("Failed to update color");
+    } else {
+      toast.success("Color updated");
+      await refreshBusinesses();
+    }
+  };
+
   const handleEditCancel = () => {
     setEditingStatus(null);
     setEditValue("");
@@ -198,7 +293,32 @@ export function KanbanView({
             {/* Column Header */}
             <div className={`p-4 rounded-t-xl border-2 ${column.borderColor} ${column.bgColor}`}>
               <div className="flex items-center gap-2">
-                <StatusIcon className={`w-5 h-5 ${column.textColor}`} />
+                {/* Color Picker */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className={`p-1 rounded hover:bg-background/50 transition-colors`}>
+                      <StatusIcon className={`w-5 h-5 ${column.textColor}`} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-48 p-2" align="start">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground px-1">Pick a color</p>
+                      <div className="grid grid-cols-4 gap-1">
+                        {colorPresets.map((color) => (
+                          <button
+                            key={color.id}
+                            onClick={() => handleColorChange(column.id, color.id)}
+                            className={`w-8 h-8 rounded-lg ${color.bgColor} ${color.borderColor} border-2 transition-transform hover:scale-110 ${
+                              column.colorId === color.id ? "ring-2 ring-primary ring-offset-2" : ""
+                            }`}
+                            title={color.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                
                 {isEditing ? (
                   <div className="flex items-center gap-1 flex-1">
                     <Input
@@ -247,6 +367,7 @@ export function KanbanView({
                     staffList={staffList}
                     onBookingClick={onBookingClick}
                     onStatusChange={onStatusChange}
+                    statusConfig={statusConfig}
                     compact
                   />
                 ))
@@ -333,6 +454,7 @@ export function KanbanView({
                 staffList={staffList}
                 onBookingClick={onBookingClick}
                 onStatusChange={onStatusChange}
+                statusConfig={statusConfig}
                 showActions
               />
             ))
@@ -351,12 +473,24 @@ export function KanbanView({
 }
 
 // Extracted Booking Card Component
+interface StatusConfigItem {
+  id: string;
+  label: string;
+  icon: typeof CircleDot;
+  description: string;
+  colorId: string;
+  bgColor: string;
+  textColor: string;
+  borderColor: string;
+}
+
 interface BookingCardProps {
   booking: Booking;
   services: Service[];
   staffList: Staff[];
   onBookingClick: (booking: Booking) => void;
   onStatusChange: (bookingId: string, newStatus: string) => void;
+  statusConfig: StatusConfigItem[];
   compact?: boolean;
   showActions?: boolean;
 }
@@ -367,12 +501,12 @@ function BookingCard({
   staffList,
   onBookingClick,
   onStatusChange,
+  statusConfig,
   compact = false,
   showActions = false,
 }: BookingCardProps) {
   const service = services.find((s) => s.id === booking.service_id);
   const staff = staffList.find((s) => s.id === booking.staff_id);
-  const statusInfo = defaultStatusConfig.find(s => s.id === booking.status) || defaultStatusConfig[0];
 
   const getNextStatus = (currentStatus: string) => {
     if (currentStatus === "pending") return "confirmed";
@@ -388,8 +522,8 @@ function BookingCard({
 
   const nextStatus = getNextStatus(booking.status);
   const prevStatus = getPrevStatus(booking.status);
-  const nextStatusConfig = nextStatus ? defaultStatusConfig.find(s => s.id === nextStatus) : null;
-  const prevStatusConfig = prevStatus ? defaultStatusConfig.find(s => s.id === prevStatus) : null;
+  const nextStatusConfig = nextStatus ? statusConfig.find(s => s.id === nextStatus) : null;
+  const prevStatusConfig = prevStatus ? statusConfig.find(s => s.id === prevStatus) : null;
 
   return (
     <div
