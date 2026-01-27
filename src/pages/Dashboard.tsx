@@ -27,6 +27,7 @@ interface Booking {
   notes: string | null;
   service_id: string | null;
   staff_id: string | null;
+  image_urls: string[] | null;
 }
 
 interface Service {
