@@ -224,6 +224,103 @@ export type Database = {
           },
         ]
       }
+      page_sections: {
+        Row: {
+          business_id: string
+          content: Json
+          created_at: string
+          display_order: number
+          id: string
+          is_visible: boolean
+          section_type: string
+          settings: Json
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          content?: Json
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          section_type: string
+          settings?: Json
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          content?: Json
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          section_type?: string
+          settings?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_sections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_themes: {
+        Row: {
+          accent_color: string | null
+          business_id: string
+          created_at: string
+          custom_css: string | null
+          favicon_url: string | null
+          font_body: string | null
+          font_heading: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string | null
+          business_id: string
+          created_at?: string
+          custom_css?: string | null
+          favicon_url?: string | null
+          font_body?: string | null
+          font_heading?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string | null
+          business_id?: string
+          created_at?: string
+          custom_css?: string | null
+          favicon_url?: string | null
+          font_body?: string | null
+          font_heading?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_themes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
