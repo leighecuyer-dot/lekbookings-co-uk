@@ -24,6 +24,7 @@ export type Database = {
           customer_phone: string | null
           end_time: string
           id: string
+          image_urls: string[] | null
           notes: string | null
           service_id: string | null
           staff_id: string | null
@@ -40,6 +41,7 @@ export type Database = {
           customer_phone?: string | null
           end_time: string
           id?: string
+          image_urls?: string[] | null
           notes?: string | null
           service_id?: string | null
           staff_id?: string | null
@@ -56,6 +58,7 @@ export type Database = {
           customer_phone?: string | null
           end_time?: string
           id?: string
+          image_urls?: string[] | null
           notes?: string | null
           service_id?: string | null
           staff_id?: string | null
