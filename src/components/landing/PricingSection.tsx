@@ -8,13 +8,14 @@ const plans = [
   {
     name: "Essential",
     description: "For solo practitioners",
-    price: 29,
+    price: 20,
     period: "month",
     features: [
       { name: "1 staff member", included: true },
       { name: "Up to 100 bookings/month", included: true },
       { name: "Customer management", included: true },
       { name: "Calendar & scheduling", included: true },
+      { name: "50 SMS reminders/month", included: true },
       { name: "Email support", included: true },
       { name: "Branding customization", included: true },
       { name: "Full content editing", included: false },
@@ -27,12 +28,12 @@ const plans = [
   {
     name: "Professional",
     description: "For growing businesses",
-    price: 79,
+    price: 59,
     period: "month",
     features: [
       { name: "Up to 5 staff members", included: true },
       { name: "Unlimited bookings", included: true },
-      { name: "SMS reminders", included: true },
+      { name: "200 SMS reminders/month", included: true },
       { name: "Analytics dashboard", included: true },
       { name: "Priority support", included: true },
       { name: "Branding customization", included: true },
@@ -46,15 +47,15 @@ const plans = [
   {
     name: "Enterprise",
     description: "For larger teams",
-    price: 199,
+    price: 149,
     period: "month",
     features: [
       { name: "Unlimited staff", included: true },
       { name: "Unlimited bookings", included: true },
+      { name: "Unlimited SMS reminders", included: true },
       { name: "Advanced analytics", included: true },
       { name: "API access", included: true },
       { name: "Dedicated account manager", included: true },
-      { name: "Branding customization", included: true },
       { name: "Full content editing", included: true },
       { name: "Complete page builder", included: true },
     ],
@@ -116,7 +117,7 @@ export function PricingSection() {
               </div>
 
               <div className="mb-8">
-                <span className="text-5xl font-display font-bold tracking-tight">${plan.price}</span>
+                <span className="text-5xl font-display font-bold tracking-tight">£{plan.price}</span>
                 <span className={cn(
                   "text-sm ml-1",
                   plan.popular ? "text-background/70" : "text-muted-foreground"
