@@ -75,21 +75,21 @@ export function FeaturesSection() {
         </motion.div>
 
         {/* Features grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-border rounded-2xl overflow-hidden">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
             <motion.div
               key={feature.title}
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.05 }}
-              className="bg-background p-8 hover:bg-muted/30 transition-colors group"
+              className="bg-foreground text-background p-8 rounded-3xl hover:scale-[1.02] transition-transform group"
             >
-              <div className="w-10 h-10 rounded-lg border border-border flex items-center justify-center mb-6 group-hover:border-foreground/30 transition-colors">
-                <feature.icon className="w-5 h-5 text-foreground" />
+              <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center mb-6">
+                <feature.icon className="w-6 h-6 text-foreground" />
               </div>
-              <h3 className="text-base font-semibold mb-2">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <h3 className="text-lg font-semibold mb-3">{feature.title}</h3>
+              <p className="text-sm text-background/70 leading-relaxed">
                 {feature.description}
               </p>
             </motion.div>
