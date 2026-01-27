@@ -85,7 +85,7 @@ export function FeaturesSection() {
               transition={{ duration: 0.5, delay: index * 0.05 }}
               className="bg-foreground text-background p-8 rounded-3xl hover:scale-[1.02] transition-transform group flex items-start gap-6"
             >
-              <div className="w-16 h-16 rounded-full bg-background flex items-center justify-center flex-shrink-0">
+              <div className="w-16 h-16 rounded-full bg-background flex items-center justify-center flex-shrink-0 ring-4 ring-background/20 shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] transition-shadow">
                 <feature.icon className="w-8 h-8 text-foreground" />
               </div>
               <div>
