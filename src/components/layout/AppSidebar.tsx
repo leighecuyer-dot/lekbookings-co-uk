@@ -71,7 +71,7 @@ export function AppSidebar() {
             <Calendar className="w-5 h-5 text-white" />
           </div>
           <span className="text-lg font-display font-bold text-sidebar-foreground">
-            BookFlow
+            LEK
           </span>
         </div>
         
