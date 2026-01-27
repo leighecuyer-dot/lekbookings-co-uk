@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { BusinessProvider, useBusiness } from "@/contexts/BusinessContext";
 
 // Pages
+import LandingPage from "./pages/LandingPage";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -93,7 +94,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <Routes>
     {/* Public routes */}
-    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    <Route path="/" element={<LandingPage />} />
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
     <Route path="/install" element={<InstallPage />} />
     
