@@ -64,15 +64,13 @@ export function HeroSection() {
               </Link>
             </Button>
             <Button 
-              asChild 
               variant="ghost" 
               size="lg" 
               className="h-14 px-8 text-base font-medium rounded-full hover:bg-muted"
+              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              <Link to="#features" className="flex items-center gap-2">
-                <Play className="w-4 h-4" />
-                See How It Works
-              </Link>
+              <Play className="w-4 h-4" />
+              See How It Works
             </Button>
           </motion.div>
 
