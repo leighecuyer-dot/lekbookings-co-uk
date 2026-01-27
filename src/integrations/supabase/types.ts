@@ -354,6 +354,102 @@ export type Database = {
         }
         Relationships: []
       }
+      reseller_clients: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          monthly_price: number | null
+          reseller_id: string
+          subscription_tier: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          monthly_price?: number | null
+          reseller_id: string
+          subscription_tier?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          monthly_price?: number | null
+          reseller_id?: string
+          subscription_tier?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_clients_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_clients_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resellers: {
+        Row: {
+          company_name: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          markup_percentage: number | null
+          primary_color: string | null
+          secondary_color: string | null
+          settings: Json | null
+          slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          markup_percentage?: number | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          settings?: Json | null
+          slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          markup_percentage?: number | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          settings?: Json | null
+          slug?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           business_id: string
@@ -487,6 +583,95 @@ export type Database = {
           },
         ]
       }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          business_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          priority: string | null
+          reseller_id: string
+          status: string | null
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          business_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          reseller_id: string
+          status?: string | null
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          business_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          reseller_id?: string
+          status?: string | null
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           business_id: string
@@ -552,6 +737,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_business_ids: { Args: { _user_id: string }; Returns: string[] }
       has_business_role: {
         Args: {
@@ -561,9 +747,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_reseller: { Args: { _user_id: string }; Returns: boolean }
+      is_reseller_client: {
+        Args: { _business_id: string; _reseller_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "owner" | "admin" | "staff" | "readonly"
+      app_role: "owner" | "admin" | "staff" | "readonly" | "reseller"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -691,7 +882,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "admin", "staff", "readonly"],
+      app_role: ["owner", "admin", "staff", "readonly", "reseller"],
     },
   },
 } as const
