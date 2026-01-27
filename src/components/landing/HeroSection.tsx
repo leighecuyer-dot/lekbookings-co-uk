@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
 import { Link } from "react-router-dom";
+import { VideoModal } from "./VideoModal";
 
 export function HeroSection() {
+  const [videoOpen, setVideoOpen] = useState(false);
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
       {/* Minimal grid background */}
@@ -67,12 +70,14 @@ export function HeroSection() {
               variant="ghost" 
               size="lg" 
               className="h-14 px-8 text-base font-medium rounded-full hover:bg-muted"
-              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => setVideoOpen(true)}
             >
               <Play className="w-4 h-4" />
               See How It Works
             </Button>
           </motion.div>
+
+          <VideoModal open={videoOpen} onOpenChange={setVideoOpen} />
 
           {/* Stats */}
           <motion.div
