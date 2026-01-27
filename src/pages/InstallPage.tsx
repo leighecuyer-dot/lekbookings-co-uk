@@ -55,7 +55,7 @@ export default function InstallPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary mb-4">
             <Calendar className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-display font-bold mb-2">Install BookFlow</h1>
+          <h1 className="text-3xl font-display font-bold mb-2">Install LEK</h1>
           <p className="text-muted-foreground">
             Get quick access to your bookings from your home screen
           </p>
@@ -71,7 +71,7 @@ export default function InstallPage() {
                 Already Installed!
               </h2>
               <p className="text-muted-foreground">
-                BookFlow is installed on your device. Open it from your home screen.
+                LEK is installed on your device. Open it from your home screen.
               </p>
             </CardContent>
           </Card>
@@ -88,7 +88,7 @@ export default function InstallPage() {
                     <div className="flex-1">
                       <h3 className="font-semibold">Install Now</h3>
                       <p className="text-sm text-muted-foreground">
-                        Add BookFlow to your home screen
+                        Add LEK to your home screen
                       </p>
                     </div>
                     <Button onClick={handleInstall} className="gradient-primary">

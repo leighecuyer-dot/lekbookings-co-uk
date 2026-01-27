@@ -20,9 +20,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
-        name: "BookFlow CRM",
-        short_name: "BookFlow",
-        description: "Professional booking and customer management for your business",
+        name: "LEK Booking System",
+        short_name: "LEK",
+        description: "Premium booking system for discerning businesses",
         theme_color: "#0f172a",
         background_color: "#ffffff",
         display: "standalone",

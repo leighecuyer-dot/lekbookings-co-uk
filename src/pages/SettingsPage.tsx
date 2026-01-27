@@ -187,13 +187,13 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Mobile App</CardTitle>
             <CardDescription>
-              Install BookFlow on your phone for quick access
+              Install LEK on your phone for quick access
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
               On your phone, tap the share button in your browser and select "Add to Home Screen" 
-              to install BookFlow as an app.
+              to install LEK as an app.
             </p>
             <div className="flex gap-2">
               <Button variant="outline" asChild>

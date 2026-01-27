@@ -152,7 +152,7 @@ export default function Onboarding() {
           </div>
           <CardTitle className="text-2xl font-display">Set up your business</CardTitle>
           <CardDescription>
-            Tell us about your business to get started with BookFlow
+            Tell us about your business to get started with LEK
           </CardDescription>
         </CardHeader>
         <CardContent>

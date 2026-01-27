@@ -66,7 +66,7 @@ export default function Auth() {
             <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
               <Calendar className="w-7 h-7" />
             </div>
-            <span className="text-3xl font-display font-bold">BookFlow</span>
+            <span className="text-3xl font-display font-bold">LEK</span>
           </div>
           <h1 className="text-4xl font-display font-bold mb-6">
             Manage your bookings with ease
@@ -95,7 +95,7 @@ export default function Auth() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <Calendar className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-display font-bold">BookFlow</span>
+            <span className="text-2xl font-display font-bold">LEK</span>
           </div>
 
           <Card className="border-0 shadow-elevated">
