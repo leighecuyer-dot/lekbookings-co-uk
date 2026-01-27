@@ -1,39 +1,33 @@
 import { motion } from "framer-motion";
-import { Star, Quote } from "lucide-react";
+import { Quote } from "lucide-react";
 
 const testimonials = [
   {
     name: "Sarah Mitchell",
     role: "Salon Owner",
     company: "Luxe Hair Studio",
-    content: "BookFlow has completely transformed how we manage appointments. Our no-shows dropped by 70% thanks to the SMS reminders. The interface is beautiful and my staff picked it up in minutes.",
-    rating: 5,
+    content: "LEK has completely transformed how we manage appointments. Our no-shows dropped by 70%. The interface is beautiful and my staff picked it up in minutes.",
     avatar: "SM"
   },
   {
     name: "Marcus Chen",
     role: "Clinic Director",
     company: "Wellness First",
-    content: "The customer management features are incredible. We can track everything from visit history to preferences. It's like having a personal assistant for every patient relationship.",
-    rating: 5,
+    content: "The customer management features are incredible. We can track everything from visit history to preferences. It's like having a personal assistant for every patient.",
     avatar: "MC"
   },
   {
     name: "Emma Rodriguez",
     role: "Spa Manager",
     company: "Tranquil Spa",
-    content: "We switched from a legacy system and the difference is night and day. BookFlow is fast, reliable, and the analytics help us make smarter business decisions every day.",
-    rating: 5,
+    content: "We switched from a legacy system and the difference is night and day. LEK is fast, reliable, and the analytics help us make smarter business decisions.",
     avatar: "ER"
   }
 ];
 
 export function TestimonialsSection() {
   return (
-    <section className="py-24 bg-muted/30 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[400px] h-[400px] bg-primary/5 rounded-full blur-3xl" />
-      
+    <section className="py-32 bg-foreground text-background relative" id="testimonials">
       <div className="container relative mx-auto px-6">
         {/* Section header */}
         <motion.div
@@ -41,22 +35,16 @@ export function TestimonialsSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center max-w-3xl mx-auto mb-16"
+          className="text-center max-w-2xl mx-auto mb-20"
         >
-          <span className="text-sm font-medium text-primary uppercase tracking-wider">Testimonials</span>
-          <h2 className="text-4xl md:text-5xl font-display font-bold mt-4 mb-6">
-            Loved by businesses{" "}
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              everywhere
-            </span>
+          <span className="text-xs font-medium uppercase tracking-[0.2em] text-background/60">Testimonials</span>
+          <h2 className="text-4xl md:text-5xl font-display font-bold mt-6 tracking-tight">
+            Loved by businesses
           </h2>
-          <p className="text-lg text-muted-foreground">
-            Don't just take our word for it. Here's what our customers have to say.
-          </p>
         </motion.div>
 
         {/* Testimonials grid */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.name}
@@ -64,31 +52,24 @@ export function TestimonialsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="p-8 rounded-2xl bg-card border border-border/50 hover:shadow-lg transition-shadow"
+              className="p-8 rounded-2xl bg-background/5 border border-background/10 hover:bg-background/10 transition-colors"
             >
               {/* Quote icon */}
-              <Quote className="w-10 h-10 text-primary/20 mb-4" />
-
-              {/* Rating */}
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: testimonial.rating }).map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-warning text-warning" />
-                ))}
-              </div>
+              <Quote className="w-8 h-8 text-background/20 mb-6" />
 
               {/* Content */}
-              <p className="text-muted-foreground mb-6 leading-relaxed">
+              <p className="text-background/80 leading-relaxed mb-8">
                 "{testimonial.content}"
               </p>
 
               {/* Author */}
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center font-semibold text-primary">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-background/10 flex items-center justify-center font-medium text-sm">
                   {testimonial.avatar}
                 </div>
                 <div>
-                  <p className="font-semibold">{testimonial.name}</p>
-                  <p className="text-sm text-muted-foreground">{testimonial.role}, {testimonial.company}</p>
+                  <p className="font-medium">{testimonial.name}</p>
+                  <p className="text-sm text-background/60">{testimonial.role}, {testimonial.company}</p>
                 </div>
               </div>
             </motion.div>

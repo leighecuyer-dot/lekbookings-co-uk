@@ -1,167 +1,104 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-      {/* Background gradients */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-accent/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
+    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+      {/* Minimal grid background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(0_0%_90%)_1px,transparent_1px),linear-gradient(to_bottom,hsl(0_0%_90%)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
       
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-[0.02]"
-        style={{
-          backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px),
-                           linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px'
-        }}
-      />
-
-      <div className="container relative mx-auto px-6 py-20">
+      <div className="container relative mx-auto px-6 py-24">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8"
+            transition={{ duration: 0.6 }}
           >
-            <Sparkles className="w-4 h-4" />
-            <span>The #1 booking platform for service businesses</span>
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-background text-sm font-medium tracking-wide">
+              <span className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
+              Premium Booking System
+            </span>
           </motion.div>
 
-          {/* Main headline */}
+          {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight mb-6"
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="mt-8 text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tighter leading-[0.9]"
           >
-            Grow your business with{" "}
-            <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
-              smarter booking
-            </span>
+            Refined
+            <br />
+            <span className="text-muted-foreground">Scheduling</span>
           </motion.h1>
 
           {/* Subheadline */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-10"
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
-            Streamline appointments, manage staff, and delight customers with the booking system built for modern service businesses.
+            LEK is the booking system for businesses that refuse to compromise. 
+            Elegant design meets powerful functionality.
           </motion.p>
 
           {/* CTAs */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Button asChild size="lg" className="h-14 px-8 text-lg gradient-primary shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-shadow">
+            <Button 
+              asChild 
+              size="lg" 
+              className="h-14 px-8 text-base font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-all"
+            >
               <Link to="/auth">
-                Start free trial
-                <ArrowRight className="ml-2 w-5 h-5" />
+                Start Free Trial
+                <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </Button>
-            <Button variant="outline" size="lg" className="h-14 px-8 text-lg border-2">
-              <Play className="mr-2 w-5 h-5" />
-              Watch demo
+            <Button 
+              asChild 
+              variant="ghost" 
+              size="lg" 
+              className="h-14 px-8 text-base font-medium rounded-full hover:bg-muted"
+            >
+              <Link to="#features" className="flex items-center gap-2">
+                <Play className="w-4 h-4" />
+                See How It Works
+              </Link>
             </Button>
           </motion.div>
 
-          {/* Social proof */}
+          {/* Stats */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            className="mt-16 flex flex-col items-center gap-4"
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="mt-20 grid grid-cols-3 gap-8 max-w-xl mx-auto"
           >
-            <div className="flex -space-x-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div
-                  key={i}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-background flex items-center justify-center text-xs font-medium text-muted-foreground"
-                >
-                  {String.fromCharCode(64 + i)}
-                </div>
-              ))}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Trusted by <span className="font-semibold text-foreground">2,500+</span> businesses worldwide
-            </p>
+            {[
+              { value: "10k+", label: "Businesses" },
+              { value: "2M+", label: "Bookings" },
+              { value: "99.9%", label: "Uptime" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl md:text-4xl font-display font-bold tracking-tight">{stat.value}</div>
+                <div className="mt-1 text-sm text-muted-foreground uppercase tracking-wider">{stat.label}</div>
+              </div>
+            ))}
           </motion.div>
         </div>
-
-        {/* Dashboard preview */}
-        <motion.div
-          initial={{ opacity: 0, y: 60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-20 relative"
-        >
-          <div className="relative mx-auto max-w-5xl">
-            {/* Browser chrome */}
-            <div className="rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-2xl overflow-hidden">
-              <div className="h-10 bg-muted/50 flex items-center gap-2 px-4 border-b border-border/50">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                  <div className="w-3 h-3 rounded-full bg-warning/60" />
-                  <div className="w-3 h-3 rounded-full bg-success/60" />
-                </div>
-                <div className="flex-1 flex justify-center">
-                  <div className="h-6 w-64 bg-background/50 rounded-md flex items-center justify-center text-xs text-muted-foreground">
-                    app.bookflow.io/dashboard
-                  </div>
-                </div>
-              </div>
-              <div className="aspect-[16/9] bg-gradient-to-br from-muted/30 to-muted/10 flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <Sparkles className="w-8 h-8 text-primary" />
-                  </div>
-                  <p className="text-lg font-medium">Your beautiful dashboard awaits</p>
-                  <p className="text-sm">Calendar, customers, analytics & more</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Floating elements */}
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -left-8 top-1/4 p-4 rounded-xl bg-card border border-border shadow-lg"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
-                  <span className="text-success text-lg">✓</span>
-                </div>
-                <div>
-                  <p className="font-medium text-sm">New booking</p>
-                  <p className="text-xs text-muted-foreground">Just now</p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute -right-8 top-1/3 p-4 rounded-xl bg-card border border-border shadow-lg"
-            >
-              <div className="text-right">
-                <p className="text-2xl font-bold text-primary">+127%</p>
-                <p className="text-xs text-muted-foreground">Bookings this month</p>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
       </div>
+
+      {/* Bottom fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
     </section>
   );
 }
