@@ -27,6 +27,7 @@ import ResellerClients from "./pages/reseller/ResellerClients";
 import ResellerAnalytics from "./pages/reseller/ResellerAnalytics";
 import ResellerTickets from "./pages/reseller/ResellerTickets";
 import ResellerSettings from "./pages/reseller/ResellerSettings";
+import ResellerOnboarding from "./pages/reseller/ResellerOnboarding";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,31 @@ function ResellerRoute({ children }: { children: React.ReactNode }) {
 
   if (!isReseller) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Reseller onboarding route - allows authenticated users who aren't yet resellers
+function ResellerOnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const { isReseller, loading: resellerLoading } = useReseller();
+
+  if (loading || resellerLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // If already a reseller, go to dashboard
+  if (isReseller) {
+    return <Navigate to="/reseller" replace />;
   }
 
   return <>{children}</>;
@@ -144,6 +170,7 @@ const AppRoutes = () => (
     <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
     
     {/* Reseller routes */}
+    <Route path="/reseller/onboarding" element={<ResellerOnboardingRoute><ResellerOnboarding /></ResellerOnboardingRoute>} />
     <Route path="/reseller" element={<ResellerRoute><ResellerDashboard /></ResellerRoute>} />
     <Route path="/reseller/clients" element={<ResellerRoute><ResellerClients /></ResellerRoute>} />
     <Route path="/reseller/analytics" element={<ResellerRoute><ResellerAnalytics /></ResellerRoute>} />
