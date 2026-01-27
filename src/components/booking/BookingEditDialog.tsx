@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { Trash2, Clock, User, Calendar } from "lucide-react";
+import { BookingImageUpload } from "./BookingImageUpload";
 
 interface Booking {
   id: string;
@@ -29,6 +30,7 @@ interface Booking {
   notes: string | null;
   service_id: string | null;
   staff_id: string | null;
+  image_urls: string[] | null;
 }
 
 interface Service {
@@ -74,6 +76,7 @@ export function BookingEditDialog({
     notes: "",
     serviceId: "",
     staffId: "",
+    imageUrls: [] as string[],
   });
   const [loading, setLoading] = useState(false);
 
@@ -87,6 +90,7 @@ export function BookingEditDialog({
         notes: booking.notes || "",
         serviceId: booking.service_id || "",
         staffId: booking.staff_id || "",
+        imageUrls: booking.image_urls || [],
       });
     }
   }, [booking]);
@@ -105,6 +109,7 @@ export function BookingEditDialog({
         notes: editData.notes || null,
         service_id: editData.serviceId || null,
         staff_id: editData.staffId || null,
+        image_urls: editData.imageUrls.length > 0 ? editData.imageUrls : null,
       })
       .eq("id", booking.id);
 
@@ -274,6 +279,13 @@ export function BookingEditDialog({
               rows={2}
             />
           </div>
+
+          {/* Photo Attachments */}
+          <BookingImageUpload
+            images={editData.imageUrls}
+            onImagesChange={(urls) => setEditData({ ...editData, imageUrls: urls })}
+            bookingId={booking.id}
+          />
         </div>
 
         <DialogFooter className="flex justify-between mt-4">

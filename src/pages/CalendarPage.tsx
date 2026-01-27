@@ -19,9 +19,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Clock, User, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, startOfDay, endOfDay, addDays, isSameDay, parseISO } from "date-fns";
+import { Plus, Clock, User, ChevronLeft, ChevronRight, CalendarDays, Columns3, List } from "lucide-react";
+import { format, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
+import { WeekView } from "@/components/calendar/WeekView";
+import { KanbanView } from "@/components/calendar/KanbanView";
+import { StatusFilter } from "@/components/calendar/StatusFilter";
+
+type ViewMode = "day" | "week" | "kanban";
 
 interface Booking {
   id: string;
@@ -34,6 +39,7 @@ interface Booking {
   notes: string | null;
   service_id: string | null;
   staff_id: string | null;
+  image_urls: string[] | null;
 }
 
 interface Service {
@@ -66,6 +72,8 @@ export default function CalendarPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   
   // New booking form
   const [newBooking, setNewBooking] = useState({
@@ -83,22 +91,36 @@ export default function CalendarPage() {
     if (currentBusiness) {
       fetchData();
     }
-  }, [currentBusiness, selectedDate]);
+  }, [currentBusiness, selectedDate, viewMode]);
 
   const fetchData = async () => {
     if (!currentBusiness) return;
     
     setLoading(true);
-    const dayStart = startOfDay(selectedDate).toISOString();
-    const dayEnd = endOfDay(selectedDate).toISOString();
+    
+    // For week view, fetch the whole week; for kanban, fetch more; otherwise just the day
+    let queryStart: string;
+    let queryEnd: string;
+    
+    if (viewMode === "week") {
+      queryStart = startOfWeek(selectedDate, { weekStartsOn: 1 }).toISOString();
+      queryEnd = endOfWeek(selectedDate, { weekStartsOn: 1 }).toISOString();
+    } else if (viewMode === "kanban") {
+      // Fetch a wider range for kanban view
+      queryStart = startOfWeek(selectedDate, { weekStartsOn: 1 }).toISOString();
+      queryEnd = endOfWeek(addDays(selectedDate, 14), { weekStartsOn: 1 }).toISOString();
+    } else {
+      queryStart = startOfDay(selectedDate).toISOString();
+      queryEnd = endOfDay(selectedDate).toISOString();
+    }
 
     const [bookingsRes, servicesRes, staffRes, customersRes] = await Promise.all([
       supabase
         .from("bookings")
         .select("*")
         .eq("business_id", currentBusiness.id)
-        .gte("start_time", dayStart)
-        .lte("start_time", dayEnd)
+        .gte("start_time", queryStart)
+        .lte("start_time", queryEnd)
         .order("start_time", { ascending: true }),
       supabase
         .from("services")
@@ -217,6 +239,36 @@ export default function CalendarPage() {
     const minute = i % 2 === 0 ? "00" : "30";
     return `${hour.toString().padStart(2, "0")}:${minute}`;
   });
+
+  // Filter bookings by status
+  const filteredBookings = statusFilter.length === 0
+    ? bookings
+    : bookings.filter((b) => statusFilter.includes(b.status));
+
+  // For day view, also filter by selected day
+  const dayBookings = filteredBookings.filter((b) =>
+    isSameDay(parseISO(b.start_time), selectedDate)
+  );
+
+  const handleStatusChange = async (bookingId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from("bookings")
+      .update({ status: newStatus })
+      .eq("id", bookingId);
+
+    if (error) {
+      toast.error("Failed to update status");
+      return;
+    }
+
+    toast.success("Status updated");
+    fetchData();
+  };
+
+  const handleBookingClick = (booking: Booking) => {
+    setEditingBooking(booking);
+    setEditDialogOpen(true);
+  };
 
   return (
     <DashboardLayout
@@ -366,112 +418,171 @@ export default function CalendarPage() {
         </Dialog>
       }
     >
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        {/* Calendar Sidebar */}
-        <Card className="border-0 shadow-soft h-fit">
-          <CardContent className="p-4">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-md"
-            />
-          </CardContent>
-        </Card>
+      <div className="space-y-4">
+        {/* View Mode Tabs & Status Filter */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "day" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("day")}
+              className={viewMode === "day" ? "bg-foreground text-background" : ""}
+            >
+              <List className="w-4 h-4 mr-2" />
+              Day
+            </Button>
+            <Button
+              variant={viewMode === "week" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("week")}
+              className={viewMode === "week" ? "bg-foreground text-background" : ""}
+            >
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Week
+            </Button>
+            <Button
+              variant={viewMode === "kanban" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("kanban")}
+              className={viewMode === "kanban" ? "bg-foreground text-background" : ""}
+            >
+              <Columns3 className="w-4 h-4 mr-2" />
+              Kanban
+            </Button>
+          </div>
+          <StatusFilter
+            selectedStatuses={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
+        </div>
 
-        {/* Day View */}
-        <Card className="border-0 shadow-soft">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setSelectedDate(addDays(selectedDate, -1))}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <h2 className="text-xl font-display font-semibold">
-                  {format(selectedDate, "EEEE, MMMM d, yyyy")}
-                </h2>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedDate(new Date())}
-              >
-                Today
-              </Button>
-            </div>
+        <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+          {/* Calendar Sidebar */}
+          <Card className="border-0 shadow-soft h-fit">
+            <CardContent className="p-4">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                className="rounded-md"
+              />
+            </CardContent>
+          </Card>
 
-            {loading ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Loading...
-              </div>
-            ) : bookings.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">
-                  No bookings for this day
-                </p>
-                <Button onClick={() => setDialogOpen(true)} variant="outline">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add First Booking
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {bookings.map((booking) => {
-                  const service = services.find((s) => s.id === booking.service_id);
-                  const staff = staffList.find((s) => s.id === booking.staff_id);
-                  
-                  return (
-                    <div
-                      key={booking.id}
-                      onClick={() => {
-                        setEditingBooking(booking);
-                        setEditDialogOpen(true);
-                      }}
-                      className="flex items-start gap-4 p-4 rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.01] transition-transform"
-                    >
-                      <div className="text-center min-w-[60px]">
-                        <p className="text-lg font-semibold">
-                          {format(parseISO(booking.start_time), "HH:mm")}
-                        </p>
-                        <p className="text-xs text-background/60">
-                          {format(parseISO(booking.end_time), "HH:mm")}
-                        </p>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium">{booking.customer_name}</p>
-                          <Badge className={getStatusColor(booking.status)}>
-                            {booking.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-background/70">
-                          {service?.name || "No service"}
-                        </p>
-                        {staff && (
-                          <p className="text-xs text-background/60 flex items-center gap-1 mt-1">
-                            <User className="w-3 h-3" />
-                            {staff.name}
-                          </p>
-                        )}
-                      </div>
+          {/* Main Content Area */}
+          <Card className="border-0 shadow-soft">
+            <CardContent className="p-6">
+              {viewMode === "day" && (
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      <h2 className="text-xl font-display font-semibold">
+                        {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                      </h2>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedDate(new Date())}
+                    >
+                      Today
+                    </Button>
+                  </div>
+
+                  {loading ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      Loading...
+                    </div>
+                  ) : dayBookings.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground mb-4">
+                        No bookings for this day
+                      </p>
+                      <Button onClick={() => setDialogOpen(true)} variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add First Booking
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {dayBookings.map((booking) => {
+                        const service = services.find((s) => s.id === booking.service_id);
+                        const staff = staffList.find((s) => s.id === booking.staff_id);
+                        
+                        return (
+                          <div
+                            key={booking.id}
+                            onClick={() => handleBookingClick(booking)}
+                            className="flex items-start gap-4 p-4 rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.01] transition-transform"
+                          >
+                            <div className="text-center min-w-[60px]">
+                              <p className="text-lg font-semibold">
+                                {format(parseISO(booking.start_time), "HH:mm")}
+                              </p>
+                              <p className="text-xs text-background/60">
+                                {format(parseISO(booking.end_time), "HH:mm")}
+                              </p>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium">{booking.customer_name}</p>
+                                <Badge className={getStatusColor(booking.status)}>
+                                  {booking.status}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-background/70">
+                                {service?.name || "No service"}
+                              </p>
+                              {staff && (
+                                <p className="text-xs text-background/60 flex items-center gap-1 mt-1">
+                                  <User className="w-3 h-3" />
+                                  {staff.name}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {viewMode === "week" && (
+                <WeekView
+                  selectedDate={selectedDate}
+                  bookings={filteredBookings}
+                  services={services}
+                  onBookingClick={handleBookingClick}
+                />
+              )}
+
+              {viewMode === "kanban" && (
+                <KanbanView
+                  bookings={filteredBookings}
+                  services={services}
+                  staffList={staffList}
+                  onBookingClick={handleBookingClick}
+                  onStatusChange={handleStatusChange}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <BookingEditDialog
