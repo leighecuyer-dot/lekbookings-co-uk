@@ -8,7 +8,7 @@ import { Footer } from "@/components/landing/Footer";
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-background border-x-[12px] border-y-[12px] border-foreground">
+    <div className="min-h-screen bg-background border-x-[20px] border-y-[20px] border-foreground">
       <Navbar />
       <main className="pt-16">
         <HeroSection />
