@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Clock, 
   User, 
@@ -10,8 +11,13 @@ import {
   CircleDot, 
   Calendar,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Pencil,
+  Check
 } from "lucide-react";
+import { useBusiness } from "@/contexts/BusinessContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Booking {
   id: string;
@@ -41,7 +47,7 @@ interface KanbanViewProps {
   onStatusChange: (bookingId: string, newStatus: string) => void;
 }
 
-const statusConfig = [
+const defaultStatusConfig = [
   { 
     id: "pending", 
     label: "Pending", 
@@ -87,7 +93,20 @@ export function KanbanView({
   onBookingClick,
   onStatusChange,
 }: KanbanViewProps) {
+  const { currentBusiness, refreshBusinesses } = useBusiness();
   const [activeTab, setActiveTab] = useState("pending");
+  const [editingStatus, setEditingStatus] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Get custom labels from business settings
+  const customLabels = (currentBusiness?.settings?.statusLabels as Record<string, string>) || {};
+  
+  // Merge default config with custom labels
+  const statusConfig = defaultStatusConfig.map(status => ({
+    ...status,
+    label: customLabels[status.id] || status.label
+  }));
 
   const getBookingsByStatus = (status: string) => {
     return bookings.filter((b) => b.status === status);
@@ -115,12 +134,64 @@ export function KanbanView({
     return statusConfig.find(s => s.id === statusId) || statusConfig[0];
   };
 
+  const handleEditStart = (statusId: string, currentLabel: string) => {
+    setEditingStatus(statusId);
+    setEditValue(currentLabel);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleEditSave = async () => {
+    if (!currentBusiness || !editingStatus) return;
+    
+    const newLabels = {
+      ...customLabels,
+      [editingStatus]: editValue.trim() || defaultStatusConfig.find(s => s.id === editingStatus)?.label || editingStatus
+    };
+
+    const { error } = await supabase
+      .from("businesses")
+      .update({ 
+        settings: { 
+          ...currentBusiness.settings, 
+          statusLabels: newLabels 
+        } 
+      })
+      .eq("id", currentBusiness.id);
+
+    if (error) {
+      toast.error("Failed to update label");
+    } else {
+      toast.success("Label updated");
+      await refreshBusinesses();
+    }
+    
+    setEditingStatus(null);
+    setEditValue("");
+  };
+
+  const handleEditCancel = () => {
+    setEditingStatus(null);
+    setEditValue("");
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (editingStatus) {
+        if (e.key === "Enter") handleEditSave();
+        if (e.key === "Escape") handleEditCancel();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editingStatus, editValue]);
+
   // Desktop: 4-column grid layout
   const DesktopView = () => (
     <div className="hidden md:grid md:grid-cols-4 gap-4 min-h-[500px]">
       {statusConfig.map((column) => {
         const columnBookings = getBookingsByStatus(column.id);
         const StatusIcon = column.icon;
+        const isEditing = editingStatus === column.id;
 
         return (
           <div key={column.id} className="flex flex-col">
@@ -128,7 +199,33 @@ export function KanbanView({
             <div className={`p-4 rounded-t-xl border-2 ${column.borderColor} ${column.bgColor}`}>
               <div className="flex items-center gap-2">
                 <StatusIcon className={`w-5 h-5 ${column.textColor}`} />
-                <h3 className={`font-bold ${column.textColor}`}>{column.label}</h3>
+                {isEditing ? (
+                  <div className="flex items-center gap-1 flex-1">
+                    <Input
+                      ref={inputRef}
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="h-7 text-sm font-bold bg-background"
+                      onBlur={handleEditSave}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={handleEditSave}
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleEditStart(column.id, column.label)}
+                    className={`font-bold ${column.textColor} hover:underline flex items-center gap-1 group`}
+                  >
+                    {column.label}
+                    <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-70 transition-opacity" />
+                  </button>
+                )}
                 <Badge variant="outline" className="ml-auto bg-background">
                   {columnBookings.length}
                 </Badge>
@@ -275,7 +372,7 @@ function BookingCard({
 }: BookingCardProps) {
   const service = services.find((s) => s.id === booking.service_id);
   const staff = staffList.find((s) => s.id === booking.staff_id);
-  const statusInfo = statusConfig.find(s => s.id === booking.status) || statusConfig[0];
+  const statusInfo = defaultStatusConfig.find(s => s.id === booking.status) || defaultStatusConfig[0];
 
   const getNextStatus = (currentStatus: string) => {
     if (currentStatus === "pending") return "confirmed";
@@ -291,8 +388,8 @@ function BookingCard({
 
   const nextStatus = getNextStatus(booking.status);
   const prevStatus = getPrevStatus(booking.status);
-  const nextStatusConfig = nextStatus ? statusConfig.find(s => s.id === nextStatus) : null;
-  const prevStatusConfig = prevStatus ? statusConfig.find(s => s.id === prevStatus) : null;
+  const nextStatusConfig = nextStatus ? defaultStatusConfig.find(s => s.id === nextStatus) : null;
+  const prevStatusConfig = prevStatus ? defaultStatusConfig.find(s => s.id === prevStatus) : null;
 
   return (
     <div
