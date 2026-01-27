@@ -17,6 +17,7 @@ import ServicesPage from "./pages/ServicesPage";
 import StaffPage from "./pages/StaffPage";
 import SettingsPage from "./pages/SettingsPage";
 import InstallPage from "./pages/InstallPage";
+import ImportPage from "./pages/ImportPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -107,6 +108,7 @@ const AppRoutes = () => (
     <Route path="/customers" element={<ProtectedRoute><CustomersPage /></ProtectedRoute>} />
     <Route path="/services" element={<ProtectedRoute><ServicesPage /></ProtectedRoute>} />
     <Route path="/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
+    <Route path="/import" element={<ProtectedRoute><ImportPage /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
     
     {/* Catch-all */}

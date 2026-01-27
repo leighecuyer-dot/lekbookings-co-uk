@@ -32,6 +32,7 @@ import {
   LogOut,
   ChevronUp,
   Building2,
+  Upload,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -40,6 +41,7 @@ const mainNavItems = [
   { title: "Customers", href: "/customers", icon: Users },
   { title: "Staff", href: "/staff", icon: UserCircle },
   { title: "Services", href: "/services", icon: Briefcase },
+  { title: "Import", href: "/import", icon: Upload },
 ];
 
 const settingsNavItems = [

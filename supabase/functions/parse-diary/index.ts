@@ -1,0 +1,209 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { diaryText, dataType } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    if (!diaryText || !dataType) {
+      throw new Error("Missing diaryText or dataType");
+    }
+
+    const systemPrompts: Record<string, string> = {
+      bookings: `You are an expert at parsing appointment diaries. Extract booking information from unstructured text.
+Return a JSON array of bookings with this structure:
+{
+  "bookings": [
+    {
+      "customer_name": "string (required)",
+      "customer_phone": "string or null",
+      "customer_email": "string or null",
+      "service_name": "string (the service being booked)",
+      "staff_name": "string or null (if mentioned)",
+      "date": "YYYY-MM-DD format",
+      "start_time": "HH:MM 24-hour format",
+      "duration_minutes": number (estimate based on service, default 60),
+      "notes": "string or null"
+    }
+  ]
+}
+Be intelligent about interpreting times (e.g., "10am" = "10:00", "2:30" = "14:30").
+Infer dates from context (e.g., "Monday" = next Monday, "tomorrow", etc.).
+If a service is mentioned, include it. If duration isn't specified, estimate based on service type.`,
+
+      customers: `You are an expert at parsing customer lists. Extract customer information from unstructured text.
+Return a JSON array of customers with this structure:
+{
+  "customers": [
+    {
+      "name": "string (required)",
+      "phone": "string or null",
+      "email": "string or null",
+      "notes": "string or null"
+    }
+  ]
+}
+Extract any contact information you can find.`,
+
+      services: `You are an expert at parsing service lists. Extract service information from unstructured text.
+Return a JSON array of services with this structure:
+{
+  "services": [
+    {
+      "name": "string (required)",
+      "description": "string or null",
+      "duration_minutes": number (estimate if not specified, default 60),
+      "price": number or null (in pence/cents)
+    }
+  ]
+}
+Infer durations based on service type if not explicitly stated.`,
+
+      staff: `You are an expert at parsing staff lists. Extract staff member information from unstructured text.
+Return a JSON array of staff members with this structure:
+{
+  "staff": [
+    {
+      "name": "string (required)",
+      "email": "string or null",
+      "phone": "string or null"
+    }
+  ]
+}
+Extract any contact information you can find.`
+    };
+
+    const systemPrompt = systemPrompts[dataType];
+    if (!systemPrompt) {
+      throw new Error(`Invalid dataType: ${dataType}`);
+    }
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Parse the following ${dataType} data:\n\n${diaryText}` }
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_data",
+              description: `Extract ${dataType} data from unstructured text`,
+              parameters: {
+                type: "object",
+                properties: {
+                  [dataType]: {
+                    type: "array",
+                    items: dataType === "bookings" ? {
+                      type: "object",
+                      properties: {
+                        customer_name: { type: "string" },
+                        customer_phone: { type: "string" },
+                        customer_email: { type: "string" },
+                        service_name: { type: "string" },
+                        staff_name: { type: "string" },
+                        date: { type: "string" },
+                        start_time: { type: "string" },
+                        duration_minutes: { type: "number" },
+                        notes: { type: "string" }
+                      },
+                      required: ["customer_name", "date", "start_time"]
+                    } : dataType === "customers" ? {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        phone: { type: "string" },
+                        email: { type: "string" },
+                        notes: { type: "string" }
+                      },
+                      required: ["name"]
+                    } : dataType === "services" ? {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        description: { type: "string" },
+                        duration_minutes: { type: "number" },
+                        price: { type: "number" }
+                      },
+                      required: ["name"]
+                    } : {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        email: { type: "string" },
+                        phone: { type: "string" }
+                      },
+                      required: ["name"]
+                    }
+                  }
+                },
+                required: [dataType]
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "extract_data" } }
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const errorText = await response.text();
+      console.error("AI gateway error:", response.status, errorText);
+      throw new Error("Failed to parse diary data");
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    
+    if (!toolCall) {
+      throw new Error("No data extracted from the diary");
+    }
+
+    const parsedData = JSON.parse(toolCall.function.arguments);
+
+    return new Response(JSON.stringify(parsedData), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("parse-diary error:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+});
