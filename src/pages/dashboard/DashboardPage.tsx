@@ -10,6 +10,7 @@ import { format, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { DashboardSkeleton } from "@/components/common/Skeletons";
 import { EmptyState } from "@/components/common/EmptyState";
+import { recordDashboardRpcCall } from "@/hooks/dashboard/useDashboardDiagnostics";
 
 interface Booking {
   id: string;
@@ -76,6 +77,9 @@ export default function DashboardPage() {
         ]);
 
         if (dashboardResult.data && !dashboardResult.error) {
+          // Record RPC call for diagnostics
+          recordDashboardRpcCall();
+          
           const data = dashboardResult.data as unknown as {
             today_bookings: number;
             week_bookings: number;
@@ -146,6 +150,9 @@ export default function DashboardPage() {
     });
 
     if (data) {
+      // Record RPC call for diagnostics
+      recordDashboardRpcCall();
+      
       const result = data as unknown as {
         today_bookings: number;
         week_bookings: number;
