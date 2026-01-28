@@ -6,6 +6,7 @@ import { BookingServices } from "@/components/booking/public/BookingServices";
 import { BookingGallery } from "@/components/booking/public/BookingGallery";
 import { BookingContact } from "@/components/booking/public/BookingContact";
 import { BookingFooter } from "@/components/booking/public/BookingFooter";
+import { FloatingWhatsApp } from "@/components/booking/public/FloatingWhatsApp";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface SocialLinks {
@@ -168,6 +169,7 @@ export default function PublicBookingPage() {
   }
 
   const logoUrl = theme?.logo_url || business.logo_url;
+  const whatsappNumber = business.settings?.socialLinks?.whatsapp;
 
   return (
     <div
@@ -203,6 +205,13 @@ export default function PublicBookingPage() {
       <BookingFooter
         business={business}
       />
+
+      {whatsappNumber && (
+        <FloatingWhatsApp 
+          phoneNumber={whatsappNumber} 
+          businessName={business.name}
+        />
+      )}
     </div>
   );
 }
