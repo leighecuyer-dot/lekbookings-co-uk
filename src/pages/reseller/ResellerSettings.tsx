@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Copy } from "lucide-react";
+import { Copy, Palette } from "lucide-react";
 
 export default function ResellerSettings() {
   const { reseller, refreshReseller } = useReseller();
@@ -21,10 +21,13 @@ export default function ResellerSettings() {
     primary_color: "#4F46E5",
     secondary_color: "#06B6D4",
     markup_percentage: 0,
+    support_email: "",
+    website_url: "",
   });
 
   useEffect(() => {
     if (reseller) {
+      const settings = reseller.settings as Record<string, string> || {};
       setFormData({
         company_name: reseller.company_name,
         contact_email: reseller.contact_email || "",
@@ -33,6 +36,8 @@ export default function ResellerSettings() {
         primary_color: reseller.primary_color,
         secondary_color: reseller.secondary_color,
         markup_percentage: reseller.markup_percentage,
+        support_email: settings.support_email || "",
+        website_url: settings.website_url || "",
       });
     }
   }, [reseller]);
@@ -51,6 +56,11 @@ export default function ResellerSettings() {
         primary_color: formData.primary_color,
         secondary_color: formData.secondary_color,
         markup_percentage: formData.markup_percentage,
+        settings: {
+          ...((reseller.settings as Record<string, unknown>) || {}),
+          support_email: formData.support_email || null,
+          website_url: formData.website_url || null,
+        },
       })
       .eq("id", reseller.id);
 
@@ -73,13 +83,13 @@ export default function ResellerSettings() {
   };
 
   return (
-    <ResellerLayout title="Settings" description="Configure your reseller account">
+    <ResellerLayout title="Settings" description="Configure your reseller account and white-label branding">
       <div className="max-w-2xl space-y-6">
         {/* Company Info */}
         <Card className="border-0 shadow-soft">
           <CardHeader>
             <CardTitle>Company Information</CardTitle>
-            <CardDescription>Your white-label branding details</CardDescription>
+            <CardDescription>Your business details</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -112,6 +122,48 @@ export default function ResellerSettings() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Support Email</Label>
+                <Input
+                  type="email"
+                  value={formData.support_email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, support_email: e.target.value })
+                  }
+                  placeholder="support@yourcompany.com"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown in customer-facing emails
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Website URL</Label>
+                <Input
+                  type="url"
+                  value={formData.website_url}
+                  onChange={(e) =>
+                    setFormData({ ...formData, website_url: e.target.value })
+                  }
+                  placeholder="https://yourcompany.com"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* White-Label Branding */}
+        <Card className="border-0 shadow-soft">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Palette className="h-5 w-5 text-primary" />
+              <CardTitle>White-Label Branding</CardTitle>
+            </div>
+            <CardDescription>
+              These settings are applied to your clients' booking pages and email notifications
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Logo URL</Label>
               <Input
@@ -121,19 +173,20 @@ export default function ResellerSettings() {
                 }
                 placeholder="https://..."
               />
+              {formData.logo_url && (
+                <div className="mt-2 p-4 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                  <img
+                    src={formData.logo_url}
+                    alt="Logo preview"
+                    className="h-12 w-auto object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Branding */}
-        <Card className="border-0 shadow-soft">
-          <CardHeader>
-            <CardTitle>Branding</CardTitle>
-            <CardDescription>
-              Colors applied to your clients' booking pages
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Primary Color</Label>
@@ -173,6 +226,25 @@ export default function ResellerSettings() {
                     }
                     className="flex-1"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Brand Preview */}
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <p className="text-xs text-muted-foreground mb-3">Brand Preview:</p>
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-16 h-16 rounded-lg flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: formData.primary_color }}
+                >
+                  Primary
+                </div>
+                <div
+                  className="w-16 h-16 rounded-lg flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: formData.secondary_color }}
+                >
+                  Secondary
                 </div>
               </div>
             </div>
