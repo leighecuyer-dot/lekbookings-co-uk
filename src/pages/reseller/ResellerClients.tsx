@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Search, MoreHorizontal, Building2, Mail, Settings } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Building2, Mail, Settings, UserPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +50,7 @@ import {
 import { EmptyState } from "@/components/common/EmptyState";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { useIndustries } from "@/hooks/business";
+import { InviteUserDialog } from "@/components/reseller/InviteUserDialog";
 
 const TIERS = [
   { value: "essential", label: "Essential", price: 2000 },
@@ -65,6 +66,8 @@ export default function ResellerClients() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<{ id: string; name: string } | null>(null);
 
   const [newClient, setNewClient] = useState({
     businessName: "",
@@ -84,6 +87,11 @@ export default function ResellerClients() {
   const handleManageClient = (businessId: string) => {
     enterResellerMode(businessId);
     navigate("/dashboard");
+  };
+
+  const handleInviteUsers = (businessId: string, businessName: string) => {
+    setSelectedClient({ id: businessId, name: businessName });
+    setInviteDialogOpen(true);
   };
 
   const handleAddClient = async () => {
@@ -386,6 +394,15 @@ export default function ResellerClients() {
                                 <Settings className="h-4 w-4 mr-2" />
                                 Manage Business
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  client.business?.id &&
+                                  handleInviteUsers(client.business.id, client.business.name || "Business")
+                                }
+                              >
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Invite Users
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() =>
@@ -406,6 +423,16 @@ export default function ResellerClients() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Users Dialog */}
+      {selectedClient && (
+        <InviteUserDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          businessId={selectedClient.id}
+          businessName={selectedClient.name}
+        />
+      )}
     </ResellerLayout>
   );
 }

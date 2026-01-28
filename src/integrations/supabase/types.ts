@@ -917,6 +917,29 @@ export type Database = {
         }
         Returns: string
       }
+      reseller_create_invite: {
+        Args: {
+          p_business_id: string
+          p_email: string
+          p_role?: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
+      reseller_get_business_invites: {
+        Args: { p_business_id: string }
+        Returns: {
+          accepted_at: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      reseller_revoke_invite: {
+        Args: { p_invite_id: string }
+        Returns: undefined
+      }
       reseller_update_booking_status: {
         Args: { p_booking_id: string; p_new_status: string }
         Returns: undefined
