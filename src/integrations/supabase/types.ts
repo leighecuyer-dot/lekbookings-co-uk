@@ -97,6 +97,50 @@ export type Database = {
           },
         ]
       }
+      business_invites: {
+        Row: {
+          accepted_at: string | null
+          business_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          business_id: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["app_role"]
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          business_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_invites_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           address: string | null
@@ -226,6 +270,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      industries: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id: string
+          is_active?: boolean
+          label: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label?: string
+        }
+        Relationships: []
       }
       page_sections: {
         Row: {
@@ -709,6 +777,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_business_invite: { Args: { _token: string }; Returns: Json }
       create_business_with_owner: {
         Args: {
           _industry: string
@@ -736,6 +805,21 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_reseller_client_business: {
+        Args: {
+          _business_email?: string
+          _business_name: string
+          _business_phone?: string
+          _industry?: string
+          _owner_email?: string
+          _subscription_tier?: string
+        }
+        Returns: Json
+      }
+      get_dashboard_overview: {
+        Args: { _business_id: string; _from_date?: string; _to_date?: string }
+        Returns: Json
       }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_business_ids: { Args: { _user_id: string }; Returns: string[] }

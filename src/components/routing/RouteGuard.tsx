@@ -1,0 +1,96 @@
+import { ReactNode } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBusiness } from "@/contexts/BusinessContext";
+import { useReseller } from "@/contexts/ResellerContext";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface RouteGuardProps {
+  children: ReactNode;
+  /** Require user to be authenticated */
+  requireAuth?: boolean;
+  /** Require user to have at least one business */
+  requireBusiness?: boolean;
+  /** Require user to be a reseller */
+  requireReseller?: boolean;
+  /** Redirect authenticated users away (for login/register pages) */
+  redirectAuthenticated?: boolean;
+  /** Redirect users who already have a business (for onboarding) */
+  redirectIfHasBusiness?: boolean;
+  /** Redirect users who are already resellers (for reseller onboarding) */
+  redirectIfIsReseller?: boolean;
+  /** Custom redirect path when conditions fail */
+  fallbackPath?: string;
+}
+
+function LoadingState() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+    </div>
+  );
+}
+
+export function RouteGuard({
+  children,
+  requireAuth = false,
+  requireBusiness = false,
+  requireReseller = false,
+  redirectAuthenticated = false,
+  redirectIfHasBusiness = false,
+  redirectIfIsReseller = false,
+  fallbackPath,
+}: RouteGuardProps) {
+  const { user, loading: authLoading } = useAuth();
+  const { businesses, loading: businessLoading } = useBusiness();
+  const { isReseller, loading: resellerLoading } = useReseller();
+
+  // Determine which loading states we need to wait for
+  const needsBusinessContext = requireBusiness || redirectIfHasBusiness || redirectAuthenticated;
+  const needsResellerContext = requireReseller || redirectIfIsReseller;
+
+  const isLoading =
+    authLoading ||
+    (needsBusinessContext && businessLoading) ||
+    (needsResellerContext && resellerLoading);
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  // Redirect authenticated users away from public pages (like /auth)
+  if (redirectAuthenticated && user) {
+    const destination = businesses.length === 0 ? "/onboarding" : "/dashboard";
+    return <Navigate to={fallbackPath || destination} replace />;
+  }
+
+  // Redirect if user already has a business (for onboarding page)
+  if (redirectIfHasBusiness && user && businesses.length > 0) {
+    return <Navigate to={fallbackPath || "/dashboard"} replace />;
+  }
+
+  // Redirect if user is already a reseller (for reseller onboarding)
+  if (redirectIfIsReseller && user && isReseller) {
+    return <Navigate to={fallbackPath || "/reseller"} replace />;
+  }
+
+  // Require authentication
+  if (requireAuth && !user) {
+    return <Navigate to={fallbackPath || "/auth"} replace />;
+  }
+
+  // Require at least one business
+  if (requireBusiness && user && businesses.length === 0) {
+    return <Navigate to={fallbackPath || "/onboarding"} replace />;
+  }
+
+  // Require reseller status
+  if (requireReseller && !isReseller) {
+    return <Navigate to={fallbackPath || "/dashboard"} replace />;
+  }
+
+  return <>{children}</>;
+}

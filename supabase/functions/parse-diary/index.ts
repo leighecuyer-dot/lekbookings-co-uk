@@ -5,9 +5,60 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Simple in-memory rate limiting (per function instance)
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10;
+
+function getRateLimitKey(req: Request): string {
+  // Use authorization header user ID or IP for rate limiting
+  const authHeader = req.headers.get("authorization") || "";
+  const clientInfo = req.headers.get("x-client-info") || "";
+  const forwarded = req.headers.get("x-forwarded-for") || "unknown";
+  return `${authHeader.slice(-20)}-${clientInfo}-${forwarded}`;
+}
+
+function checkRateLimit(key: string): { allowed: boolean; remaining: number; resetIn: number } {
+  const now = Date.now();
+  const record = rateLimitStore.get(key);
+
+  if (!record || now > record.resetTime) {
+    rateLimitStore.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - 1, resetIn: RATE_LIMIT_WINDOW_MS };
+  }
+
+  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+    return { allowed: false, remaining: 0, resetIn: record.resetTime - now };
+  }
+
+  record.count++;
+  return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - record.count, resetIn: record.resetTime - now };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Check rate limit
+  const rateLimitKey = getRateLimitKey(req);
+  const rateLimit = checkRateLimit(rateLimitKey);
+
+  if (!rateLimit.allowed) {
+    return new Response(
+      JSON.stringify({ 
+        error: "Too many requests. Please wait a moment and try again.",
+        retryAfter: Math.ceil(rateLimit.resetIn / 1000)
+      }), 
+      {
+        status: 429,
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil(rateLimit.resetIn / 1000))
+        },
+      }
+    );
   }
 
   try {
@@ -19,7 +70,27 @@ serve(async (req) => {
     }
 
     if (!diaryText || !dataType) {
-      throw new Error("Missing diaryText or dataType");
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: diaryText and dataType are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate dataType
+    const validDataTypes = ["bookings", "customers", "services", "staff"];
+    if (!validDataTypes.includes(dataType)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid dataType. Must be one of: ${validDataTypes.join(", ")}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Limit input size to prevent abuse
+    if (diaryText.length > 50000) {
+      return new Response(
+        JSON.stringify({ error: "Input too large. Please limit diary text to 50,000 characters." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const systemPrompts: Record<string, string> = {
@@ -87,9 +158,6 @@ Extract any contact information you can find.`
     };
 
     const systemPrompt = systemPrompts[dataType];
-    if (!systemPrompt) {
-      throw new Error(`Invalid dataType: ${dataType}`);
-    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -168,16 +236,22 @@ Extract any contact information you can find.`
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "AI service is busy. Please try again in a few moments." }), 
+          {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Please contact support." }), 
+          {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
@@ -188,18 +262,27 @@ Extract any contact information you can find.`
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     
     if (!toolCall) {
-      throw new Error("No data extracted from the diary");
+      return new Response(
+        JSON.stringify({ error: "No data could be extracted from the provided text. Please check the format and try again." }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const parsedData = JSON.parse(toolCall.function.arguments);
 
     return new Response(JSON.stringify(parsedData), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { 
+        ...corsHeaders, 
+        "Content-Type": "application/json",
+        "X-RateLimit-Remaining": String(rateLimit.remaining)
+      },
     });
   } catch (error) {
     console.error("parse-diary error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "An unexpected error occurred. Please try again." 
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

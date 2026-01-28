@@ -6,15 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight } from "lucide-react";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
-
-interface Stats {
-  todayBookings: number;
-  weekBookings: number;
-  totalCustomers: number;
-  pendingBookings: number;
-}
+import { DashboardSkeleton } from "@/components/common/Skeletons";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface Booking {
   id: string;
@@ -43,7 +38,7 @@ interface Staff {
 
 export default function Dashboard() {
   const { currentBusiness } = useBusiness();
-  const [stats, setStats] = useState<Stats>({
+  const [stats, setStats] = useState({
     todayBookings: 0,
     weekBookings: 0,
     totalCustomers: 0,
@@ -57,70 +52,57 @@ export default function Dashboard() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       if (!currentBusiness) return;
 
       setLoading(true);
-      const now = new Date();
-      const todayStart = startOfDay(now).toISOString();
-      const todayEnd = endOfDay(now).toISOString();
-      const weekStart = startOfWeek(now).toISOString();
-      const weekEnd = endOfWeek(now).toISOString();
 
-      const [todayResult, weekResult, customersResult, pendingResult, upcomingResult, servicesResult, staffResult] = await Promise.all([
-        supabase
-          .from("bookings")
-          .select("id", { count: "exact", head: true })
-          .eq("business_id", currentBusiness.id)
-          .gte("start_time", todayStart)
-          .lte("start_time", todayEnd),
-        supabase
-          .from("bookings")
-          .select("id", { count: "exact", head: true })
-          .eq("business_id", currentBusiness.id)
-          .gte("start_time", weekStart)
-          .lte("start_time", weekEnd),
-        supabase
-          .from("customers")
-          .select("id", { count: "exact", head: true })
-          .eq("business_id", currentBusiness.id),
-        supabase
-          .from("bookings")
-          .select("id", { count: "exact", head: true })
-          .eq("business_id", currentBusiness.id)
-          .eq("status", "pending"),
-        supabase
-          .from("bookings")
-          .select("*")
-          .eq("business_id", currentBusiness.id)
-          .gte("start_time", todayStart)
-          .order("start_time", { ascending: true })
-          .limit(5),
-        supabase
-          .from("services")
-          .select("id, name, duration_minutes")
-          .eq("business_id", currentBusiness.id)
-          .eq("is_active", true),
-        supabase
-          .from("staff")
-          .select("id, name")
-          .eq("business_id", currentBusiness.id)
-          .eq("is_active", true),
-      ]);
+      try {
+        // Use the dashboard overview RPC for stats
+        const [dashboardResult, servicesResult, staffResult] = await Promise.all([
+          supabase.rpc("get_dashboard_overview", {
+            _business_id: currentBusiness.id,
+          }),
+          supabase
+            .from("services")
+            .select("id, name, duration_minutes")
+            .eq("business_id", currentBusiness.id)
+            .eq("is_active", true),
+          supabase
+            .from("staff")
+            .select("id, name")
+            .eq("business_id", currentBusiness.id)
+            .eq("is_active", true),
+        ]);
 
-      setStats({
-        todayBookings: todayResult.count || 0,
-        weekBookings: weekResult.count || 0,
-        totalCustomers: customersResult.count || 0,
-        pendingBookings: pendingResult.count || 0,
-      });
-      if (upcomingResult.data) setUpcomingBookings(upcomingResult.data);
-      if (servicesResult.data) setServices(servicesResult.data);
-      if (staffResult.data) setStaffList(staffResult.data);
-      setLoading(false);
+        if (dashboardResult.data && !dashboardResult.error) {
+          const data = dashboardResult.data as unknown as {
+            today_bookings: number;
+            week_bookings: number;
+            total_customers: number;
+            pending_bookings: number;
+            upcoming_bookings: Booking[];
+          };
+          
+          setStats({
+            todayBookings: data.today_bookings,
+            weekBookings: data.week_bookings,
+            totalCustomers: data.total_customers,
+            pendingBookings: data.pending_bookings,
+          });
+          setUpcomingBookings(data.upcoming_bookings || []);
+        }
+
+        if (servicesResult.data) setServices(servicesResult.data);
+        if (staffResult.data) setStaffList(staffResult.data);
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchStats();
+    fetchData();
   }, [currentBusiness]);
 
   const statCards = [
@@ -129,32 +111,24 @@ export default function Dashboard() {
       value: stats.todayBookings,
       icon: Calendar,
       description: format(new Date(), "EEEE, MMMM d"),
-      color: "text-primary",
-      bgColor: "bg-primary/10",
     },
     {
       title: "This Week",
       value: stats.weekBookings,
       icon: TrendingUp,
       description: "Total appointments",
-      color: "text-accent",
-      bgColor: "bg-accent/10",
     },
     {
       title: "Total Customers",
       value: stats.totalCustomers,
       icon: Users,
       description: "In your database",
-      color: "text-success",
-      bgColor: "bg-success/10",
     },
     {
       title: "Pending Confirmation",
       value: stats.pendingBookings,
       icon: Clock,
       description: "Awaiting response",
-      color: "text-warning",
-      bgColor: "bg-warning/10",
     },
   ];
 
@@ -164,25 +138,41 @@ export default function Dashboard() {
     { title: "View Calendar", href: "/calendar", icon: Calendar },
   ];
 
-  const refetchData = () => {
-    // Trigger re-fetch by toggling loading
-    setLoading(true);
-    const now = new Date();
-    const todayStart = startOfDay(now).toISOString();
+  const refetchData = async () => {
+    if (!currentBusiness) return;
     
-    Promise.all([
-      supabase
-        .from("bookings")
-        .select("*")
-        .eq("business_id", currentBusiness?.id)
-        .gte("start_time", todayStart)
-        .order("start_time", { ascending: true })
-        .limit(5),
-    ]).then(([upcomingResult]) => {
-      if (upcomingResult.data) setUpcomingBookings(upcomingResult.data);
-      setLoading(false);
+    const { data } = await supabase.rpc("get_dashboard_overview", {
+      _business_id: currentBusiness.id,
     });
+
+    if (data) {
+      const result = data as unknown as {
+        today_bookings: number;
+        week_bookings: number;
+        total_customers: number;
+        pending_bookings: number;
+        upcoming_bookings: Booking[];
+      };
+      setStats({
+        todayBookings: result.today_bookings,
+        weekBookings: result.week_bookings,
+        totalCustomers: result.total_customers,
+        pendingBookings: result.pending_bookings,
+      });
+      setUpcomingBookings(result.upcoming_bookings || []);
+    }
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout
+        title={`Welcome back${currentBusiness ? `, ${currentBusiness.name}` : ""}`}
+        description="Here's what's happening with your business today"
+      >
+        <DashboardSkeleton />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout
@@ -204,7 +194,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-display font-bold text-background">
-                  {loading ? "-" : stat.value}
+                  {stat.value}
                 </div>
                 <p className="text-xs text-background/60 mt-1">
                   {stat.description}
@@ -215,18 +205,28 @@ export default function Dashboard() {
         </div>
 
         {/* Upcoming Bookings */}
-        {upcomingBookings.length > 0 && (
-          <Card className="border-0 shadow-soft">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-display">Today's Appointments</CardTitle>
-                <CardDescription>Click to view or edit</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/calendar">View All</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
+        <Card className="border-0 shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-display">Today's Appointments</CardTitle>
+              <CardDescription>Click to view or edit</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/calendar">View All</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {upcomingBookings.length === 0 ? (
+              <EmptyState
+                icon={Calendar}
+                title="No appointments today"
+                description="Your schedule is clear. Add a new booking to get started."
+                action={{
+                  label: "Add Booking",
+                  href: "/calendar",
+                }}
+              />
+            ) : (
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {upcomingBookings.map((booking) => {
                   const service = services.find((s) => s.id === booking.service_id);
@@ -258,11 +258,11 @@ export default function Dashboard() {
                   );
                 })}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Quick Actions & Recent Activity */}
+        {/* Quick Actions & Getting Started */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Quick Actions */}
           <Card className="border-0 shadow-soft">
