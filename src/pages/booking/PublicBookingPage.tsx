@@ -171,6 +171,7 @@ export default function PublicBookingPage() {
         <BookingServices
           services={services}
           theme={theme}
+          businessId={business.id}
         />
       )}
       

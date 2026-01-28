@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mail, Phone, UserCircle, MoreHorizontal } from "lucide-react";
+import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { StaffAvailabilityModal } from "@/components/staff/StaffAvailabilityModal";
+
+interface WorkingHours {
+  monday: { enabled: boolean; start: string; end: string };
+  tuesday: { enabled: boolean; start: string; end: string };
+  wednesday: { enabled: boolean; start: string; end: string };
+  thursday: { enabled: boolean; start: string; end: string };
+  friday: { enabled: boolean; start: string; end: string };
+  saturday: { enabled: boolean; start: string; end: string };
+  sunday: { enabled: boolean; start: string; end: string };
+}
 
 interface Staff {
   id: string;
@@ -31,6 +42,7 @@ interface Staff {
   email: string | null;
   phone: string | null;
   is_active: boolean;
+  working_hours: WorkingHours | null;
 }
 
 export default function StaffPage() {
@@ -38,6 +50,8 @@ export default function StaffPage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState<Staff | null>(null);
   
   const [newStaff, setNewStaff] = useState({
     name: "",
@@ -64,7 +78,16 @@ export default function StaffPage() {
     if (error) {
       toast.error("Failed to load staff");
     } else {
-      setStaffList(data || []);
+      // Map the data to our Staff interface with proper typing
+      const mappedStaff: Staff[] = (data || []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        phone: s.phone,
+        is_active: s.is_active,
+        working_hours: s.working_hours as unknown as WorkingHours | null,
+      }));
+      setStaffList(mappedStaff);
     }
     setLoading(false);
   };
@@ -228,6 +251,15 @@ export default function StaffPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedStaffForAvailability(staff);
+                              setAvailabilityModalOpen(true);
+                            }}
+                          >
+                            <Clock className="w-4 h-4 mr-2" />
+                            Set Hours
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() =>
                               handleToggleActive(staff.id, staff.is_active)
                             }
@@ -261,6 +293,18 @@ export default function StaffPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Availability Modal */}
+      {selectedStaffForAvailability && (
+        <StaffAvailabilityModal
+          open={availabilityModalOpen}
+          onOpenChange={setAvailabilityModalOpen}
+          staffId={selectedStaffForAvailability.id}
+          staffName={selectedStaffForAvailability.name}
+          currentHours={selectedStaffForAvailability.working_hours}
+          onSave={fetchStaff}
+        />
       )}
     </DashboardLayout>
   );
