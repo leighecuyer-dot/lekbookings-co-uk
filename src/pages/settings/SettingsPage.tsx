@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Copy, ExternalLink } from "lucide-react";
+import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
+import { GalleryManagement } from "@/components/settings/GalleryManagement";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -151,6 +153,12 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Theme Customization */}
+        <ThemeCustomization />
+
+        {/* Gallery Management */}
+        <GalleryManagement />
 
         {/* Booking Link */}
         <Card className="border-0 shadow-soft">
