@@ -11,6 +11,7 @@ import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { DashboardSkeleton } from "@/components/common/Skeletons";
 import { EmptyState } from "@/components/common/EmptyState";
 import { recordDashboardRpcCall } from "@/hooks/dashboard/useDashboardDiagnostics";
+import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 
 interface Booking {
   id: string;
@@ -149,15 +150,27 @@ export default function DashboardPage() {
   const refetchData = async () => {
     if (!currentBusiness) return;
     
-    const { data } = await supabase.rpc("get_dashboard_overview", {
-      _business_id: currentBusiness.id,
-    });
+    const [dashboardResult, servicesResult, staffResult] = await Promise.all([
+      supabase.rpc("get_dashboard_overview", {
+        _business_id: currentBusiness.id,
+      }),
+      supabase
+        .from("services")
+        .select("id, name, duration_minutes")
+        .eq("business_id", currentBusiness.id)
+        .eq("is_active", true),
+      supabase
+        .from("staff")
+        .select("id, name")
+        .eq("business_id", currentBusiness.id)
+        .eq("is_active", true),
+    ]);
 
-    if (data) {
+    if (dashboardResult.data) {
       // Record RPC call for diagnostics
       recordDashboardRpcCall();
       
-      const result = data as unknown as {
+      const result = dashboardResult.data as unknown as {
         today_bookings: number;
         week_bookings: number;
         total_customers: number;
@@ -172,6 +185,9 @@ export default function DashboardPage() {
       });
       setUpcomingBookings(result.upcoming_bookings || []);
     }
+    
+    if (servicesResult.data) setServices(servicesResult.data);
+    if (staffResult.data) setStaffList(staffResult.data);
   };
 
   if (loading) {
@@ -303,39 +319,12 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Getting Started */}
-          <Card className="border-0 shadow-soft gradient-primary text-white">
-            <CardHeader>
-              <CardTitle className="text-lg font-display text-white">
-                Getting Started
-              </CardTitle>
-              <CardDescription className="text-white/80">
-                Complete these steps to set up your business
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {[
-                  { label: "Add your services", href: "/services" },
-                  { label: "Set up your staff", href: "/staff" },
-                  { label: "Import customers", href: "/customers" },
-                  { label: "Share your booking page", href: "/settings" },
-                ].map((step, i) => (
-                  <Link
-                    key={i}
-                    to={step.href}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                  >
-                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium">
-                      {i + 1}
-                    </div>
-                    <span className="flex-1">{step.label}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Getting Started Checklist */}
+          <SetupChecklist 
+            hasServices={services.length > 0}
+            hasStaff={staffList.length > 0}
+            onRefresh={refetchData}
+          />
         </div>
       </div>
 
