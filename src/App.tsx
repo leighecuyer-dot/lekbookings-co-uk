@@ -21,6 +21,7 @@ import StaffPage from "./pages/staff/StaffPage";
 import SettingsPage from "./pages/settings/SettingsPage";
 import InstallPage from "./pages/install/InstallPage";
 import ImportPage from "./pages/import/ImportPage";
+import PublicBookingPage from "./pages/booking/PublicBookingPage";
 import NotFound from "./pages/NotFound";
 import DiagnosticsPage from "./pages/admin/DiagnosticsPage";
 
@@ -48,6 +49,7 @@ const AppRoutes = () => (
     />
     <Route path="/install" element={<InstallPage />} />
     <Route path="/invite/accept" element={<AcceptInvitePage />} />
+    <Route path="/book/:slug" element={<PublicBookingPage />} />
     
     {/* Onboarding (authenticated but no business) */}
     <Route 
