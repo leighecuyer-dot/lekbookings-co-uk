@@ -27,8 +27,9 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Mail, Trash2, UserPlus, Clock, CheckCircle } from "lucide-react";
+import { Mail, Trash2, UserPlus, Clock, CheckCircle, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface InviteUserDialogProps {
   open: boolean;
@@ -64,6 +65,8 @@ export function InviteUserDialog({
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingInvites, setFetchingInvites] = useState(false);
+  const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const fetchInvites = async () => {
     setFetchingInvites(true);
@@ -119,6 +122,13 @@ export function InviteUserDialog({
         return;
       }
 
+      const result = data as { token?: string };
+      const inviteUrl = result?.token 
+        ? `${window.location.origin}/invite/accept?token=${result.token}`
+        : null;
+      
+      setLastInviteUrl(inviteUrl);
+      setCopied(false);
       toast.success(`Invite sent to ${email}`);
       setEmail("");
       setRole("staff");
@@ -203,6 +213,31 @@ export function InviteUserDialog({
             <Mail className="h-4 w-4 mr-2" />
             {loading ? "Sending..." : "Send Invite"}
           </Button>
+
+          {lastInviteUrl && (
+            <Alert className="mt-4 bg-muted/50">
+              <AlertDescription className="space-y-2">
+                <p className="text-sm font-medium">Invite link created! Share this with the user:</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-background p-2 rounded border overflow-x-auto whitespace-nowrap">
+                    {lastInviteUrl}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(lastInviteUrl);
+                      setCopied(true);
+                      toast.success("Link copied to clipboard");
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         {/* Pending Invites */}
