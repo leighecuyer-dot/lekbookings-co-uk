@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import { ResellerLayout } from "@/components/layout/ResellerLayout";
 import { useReseller } from "@/contexts/ResellerContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Copy, Palette } from "lucide-react";
+import { Copy, Palette, Upload, Building2 } from "lucide-react";
 
 export default function ResellerSettings() {
   const { reseller, refreshReseller } = useReseller();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const [formData, setFormData] = useState({
     company_name: "",
@@ -80,6 +83,41 @@ export default function ResellerSettings() {
   const copyUrl = () => {
     navigator.clipboard.writeText(resellerUrl);
     toast.success("URL copied!");
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Check file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size must be less than 2MB");
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `reseller-logos/${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("business-assets")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("business-assets")
+        .getPublicUrl(filePath);
+
+      setFormData({ ...formData, logo_url: urlData.publicUrl });
+      toast.success("Logo uploaded successfully");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload logo");
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   return (
@@ -165,27 +203,44 @@ export default function ResellerSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Logo URL</Label>
-              <Input
-                value={formData.logo_url}
-                onChange={(e) =>
-                  setFormData({ ...formData, logo_url: e.target.value })
-                }
-                placeholder="https://..."
-              />
-              {formData.logo_url && (
-                <div className="mt-2 p-4 bg-muted rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+              <Label>Company Logo</Label>
+              <div className="flex items-center gap-4">
+                {formData.logo_url ? (
                   <img
                     src={formData.logo_url}
                     alt="Logo preview"
-                    className="h-12 w-auto object-contain"
+                    className="w-16 h-16 rounded-lg object-cover border-2 border-primary"
                     onError={(e) => {
+                      (e.target as HTMLImageElement).src = "";
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
+                    <Building2 className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                )}
+                <div>
+                  <Label
+                    htmlFor="logo-upload-settings"
+                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {uploadingLogo ? "Uploading..." : formData.logo_url ? "Change Logo" : "Upload Logo"}
+                  </Label>
+                  <input
+                    id="logo-upload-settings"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    disabled={uploadingLogo}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PNG, JPG up to 2MB
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
