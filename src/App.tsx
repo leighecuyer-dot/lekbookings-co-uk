@@ -21,6 +21,7 @@ import SettingsPage from "./pages/settings/SettingsPage";
 import InstallPage from "./pages/install/InstallPage";
 import ImportPage from "./pages/import/ImportPage";
 import NotFound from "./pages/NotFound";
+import DiagnosticsPage from "./pages/admin/DiagnosticsPage";
 
 // Reseller Pages
 import ResellerDashboard from "./pages/reseller/ResellerDashboard";
@@ -112,8 +113,18 @@ const AppRoutes = () => (
           <SettingsPage />
         </RouteGuard>
       } 
-    />
-    
+      />
+      
+      {/* Admin routes */}
+      <Route 
+        path="/admin/diagnostics" 
+        element={
+          <RouteGuard requireAuth requireBusiness>
+            <DiagnosticsPage />
+          </RouteGuard>
+        } 
+      />
+      
     {/* Reseller routes */}
     <Route 
       path="/reseller/onboarding" 

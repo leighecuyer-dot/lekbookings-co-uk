@@ -26,6 +26,7 @@ interface BusinessContextType {
   currentBusiness: Business | null;
   currentRole: UserRole | null;
   loading: boolean;
+  isRealtimeActive: boolean;
   setCurrentBusiness: (business: Business | null) => void;
   refreshBusinesses: () => Promise<void>;
 }
@@ -38,6 +39,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const [currentBusiness, setCurrentBusiness] = useState<Business | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
   const fetchBusinesses = async () => {
     if (!user) {
@@ -108,7 +110,10 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
   // Subscribe to realtime changes for the current business settings
   useEffect(() => {
-    if (!currentBusiness) return;
+    if (!currentBusiness) {
+      setIsRealtimeActive(false);
+      return;
+    }
 
     const channel = supabase
       .channel(`business-settings-${currentBusiness.id}`)
@@ -133,9 +138,12 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
           );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setIsRealtimeActive(status === 'SUBSCRIBED');
+      });
 
     return () => {
+      setIsRealtimeActive(false);
       supabase.removeChannel(channel);
     };
   }, [currentBusiness?.id]);
@@ -163,6 +171,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         currentBusiness,
         currentRole,
         loading,
+        isRealtimeActive,
         setCurrentBusiness,
         refreshBusinesses: fetchBusinesses,
       }}

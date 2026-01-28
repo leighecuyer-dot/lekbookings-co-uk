@@ -1,1 +1,1 @@
-export { useIndustries } from "./useIndustries";
+export { useIndustries, type IndustriesSource } from "./useIndustries";

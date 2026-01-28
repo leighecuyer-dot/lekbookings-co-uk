@@ -817,6 +817,7 @@ export type Database = {
         }
         Returns: Json
       }
+      diag_orphan_businesses: { Args: never; Returns: Json }
       get_dashboard_overview: {
         Args: { _business_id: string; _from_date?: string; _to_date?: string }
         Returns: Json

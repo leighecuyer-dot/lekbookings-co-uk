@@ -148,7 +148,17 @@ serve(async (req) => {
   }
 
   try {
-    const { diaryText, dataType } = await req.json();
+    const body = await req.json();
+    const { diaryText, dataType, _diagnosticPing } = body;
+    
+    // Handle diagnostic ping - return rate limit status without processing
+    if (_diagnosticPing === true) {
+      return jsonResponse({
+        rateLimitEnabled: true,
+        remaining: rateLimit.remaining,
+      }, 200);
+    }
+    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {

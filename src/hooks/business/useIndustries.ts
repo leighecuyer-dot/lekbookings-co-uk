@@ -28,15 +28,20 @@ const FALLBACK_INDUSTRIES: Industry[] = [
   { id: "other", label: "Other" },
 ];
 
+export type IndustriesSource = "database" | "fallback" | "loading";
+
 let cachedIndustries: Industry[] | null = null;
+let cachedSource: IndustriesSource = "loading";
 
 export function useIndustries() {
   const [industries, setIndustries] = useState<Industry[]>(cachedIndustries || FALLBACK_INDUSTRIES);
   const [loading, setLoading] = useState(!cachedIndustries);
+  const [source, setSource] = useState<IndustriesSource>(cachedSource);
 
   useEffect(() => {
     if (cachedIndustries) {
       setIndustries(cachedIndustries);
+      setSource(cachedSource);
       setLoading(false);
       return;
     }
@@ -50,9 +55,13 @@ export function useIndustries() {
       if (error || !data || data.length === 0) {
         // Use fallback
         setIndustries(FALLBACK_INDUSTRIES);
+        cachedSource = "fallback";
+        setSource("fallback");
       } else {
         cachedIndustries = data;
+        cachedSource = "database";
         setIndustries(data);
+        setSource("database");
       }
       setLoading(false);
     };
@@ -60,5 +69,5 @@ export function useIndustries() {
     fetchIndustries();
   }, []);
 
-  return { industries, loading };
+  return { industries, loading, source };
 }
