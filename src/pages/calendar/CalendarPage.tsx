@@ -508,51 +508,58 @@ export default function CalendarPage() {
                       Loading...
                     </div>
                   ) : dayBookings.length === 0 ? (
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground mb-4">
-                        No bookings for this day
-                      </p>
-                      <Button onClick={() => setDialogOpen(true)} variant="outline">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add First Booking
-                      </Button>
+                    <div className="text-center py-12 text-muted-foreground">
+                      No bookings for this day
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {dayBookings.map((booking) => {
-                        const service = services.find((s) => s.id === booking.service_id);
-                        const staff = staffList.find((s) => s.id === booking.staff_id);
-                        
+                        const service = services.find(
+                          (s) => s.id === booking.service_id
+                        );
+                        const staff = staffList.find(
+                          (s) => s.id === booking.staff_id
+                        );
+
                         return (
                           <div
                             key={booking.id}
                             onClick={() => handleBookingClick(booking)}
-                            className="flex items-start gap-4 p-4 rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.01] transition-transform"
+                            className="flex items-center gap-4 p-4 rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.01] transition-transform"
+                            style={{
+                              borderLeft: service?.color
+                                ? `4px solid ${service.color}`
+                                : undefined,
+                            }}
                           >
-                            <div className="text-center min-w-[60px]">
-                              <p className="text-lg font-semibold">
-                                {format(parseISO(booking.start_time), "HH:mm")}
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-full bg-background/10 flex items-center justify-center">
+                                <Clock className="w-5 h-5 text-background" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-background">
+                                  {format(parseISO(booking.start_time), "HH:mm")}
+                                </p>
+                                <p className="text-xs text-background/60">
+                                  {format(parseISO(booking.end_time), "HH:mm")}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-background truncate">
+                                {booking.customer_name}
                               </p>
-                              <p className="text-xs text-background/60">
-                                {format(parseISO(booking.end_time), "HH:mm")}
+                              <p className="text-sm text-background/70 truncate">
+                                {service?.name || "No service"}
+                                {staff && ` • ${staff.name}`}
                               </p>
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-medium">{booking.customer_name}</p>
-                                <Badge className={getStatusColor(booking.status)}>
-                                  {booking.status}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-background/70">
-                                {service?.name || "No service"}
-                              </p>
-                              {staff && (
-                                <p className="text-xs text-background/60 flex items-center gap-1 mt-1">
-                                  <User className="w-3 h-3" />
-                                  {staff.name}
-                                </p>
-                              )}
+
+                            <div className="flex items-center gap-2">
+                              <Badge className={getStatusColor(booking.status)}>
+                                {booking.status}
+                              </Badge>
                             </div>
                           </div>
                         );
@@ -564,9 +571,9 @@ export default function CalendarPage() {
 
               {viewMode === "week" && (
                 <WeekView
-                  selectedDate={selectedDate}
                   bookings={filteredBookings}
                   services={services}
+                  selectedDate={selectedDate}
                   onBookingClick={handleBookingClick}
                 />
               )}
@@ -576,8 +583,9 @@ export default function CalendarPage() {
                   bookings={filteredBookings}
                   services={services}
                   staffList={staffList}
-                  onBookingClick={handleBookingClick}
                   onStatusChange={handleStatusChange}
+                  onBookingClick={handleBookingClick}
+                  loading={loading}
                 />
               )}
             </CardContent>

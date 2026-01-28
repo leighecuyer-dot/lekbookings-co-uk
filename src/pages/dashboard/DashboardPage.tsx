@@ -36,7 +36,7 @@ interface Staff {
   name: string;
 }
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const { currentBusiness } = useBusiness();
   const [stats, setStats] = useState({
     todayBookings: 0,
