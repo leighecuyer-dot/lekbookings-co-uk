@@ -9,7 +9,7 @@ interface RouteGuardProps {
   children: ReactNode;
   /** Require user to be authenticated */
   requireAuth?: boolean;
-  /** Require user to have at least one business */
+  /** Require user to have at least one business OR be in reseller mode managing a client */
   requireBusiness?: boolean;
   /** Require user to be a reseller */
   requireReseller?: boolean;
@@ -45,7 +45,7 @@ export function RouteGuard({
   fallbackPath,
 }: RouteGuardProps) {
   const { user, loading: authLoading } = useAuth();
-  const { businesses, loading: businessLoading } = useBusiness();
+  const { businesses, isResellerMode, currentBusiness, loading: businessLoading } = useBusiness();
   const { isReseller, loading: resellerLoading } = useReseller();
 
   // Determine which loading states we need to wait for
@@ -82,9 +82,14 @@ export function RouteGuard({
     return <Navigate to={fallbackPath || "/auth"} replace />;
   }
 
-  // Require at least one business
-  if (requireBusiness && user && businesses.length === 0) {
-    return <Navigate to={fallbackPath || "/onboarding"} replace />;
+  // Require at least one business OR be in reseller mode with a current business
+  if (requireBusiness && user) {
+    const hasOwnBusiness = businesses.length > 0;
+    const hasResellerAccess = isResellerMode && currentBusiness !== null;
+    
+    if (!hasOwnBusiness && !hasResellerAccess) {
+      return <Navigate to={fallbackPath || "/onboarding"} replace />;
+    }
   }
 
   // Require reseller status

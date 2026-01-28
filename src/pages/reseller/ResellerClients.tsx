@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ResellerLayout } from "@/components/layout/ResellerLayout";
 import { useReseller } from "@/contexts/ResellerContext";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,11 +39,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Search, MoreHorizontal, Building2, Mail } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Building2, Mail, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -55,7 +58,9 @@ const TIERS = [
 ];
 
 export default function ResellerClients() {
+  const navigate = useNavigate();
   const { reseller, clients, refreshClients, loading: resellerLoading } = useReseller();
+  const { enterResellerMode } = useBusiness();
   const { industries } = useIndustries();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -67,7 +72,7 @@ export default function ResellerClients() {
     businessPhone: "",
     industry: "",
     tier: "essential",
-    ownerEmail: "", // New: email for owner invite
+    ownerEmail: "",
   });
 
   const filteredClients = clients.filter(
@@ -76,13 +81,17 @@ export default function ResellerClients() {
       c.business?.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleManageClient = (businessId: string) => {
+    enterResellerMode(businessId);
+    navigate("/dashboard");
+  };
+
   const handleAddClient = async () => {
     if (!reseller || !newClient.businessName) return;
 
     setLoading(true);
 
     try {
-      // Use the atomic RPC function instead of multiple client-side inserts
       const { data, error } = await supabase.rpc("create_reseller_client_business", {
         _business_name: newClient.businessName,
         _business_email: newClient.businessEmail || null,
@@ -315,7 +324,7 @@ export default function ResellerClients() {
                   <TableHead>Tier</TableHead>
                   <TableHead>Monthly</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -343,7 +352,7 @@ export default function ResellerClients() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        £{(client.monthly_price / 100).toFixed(2)}
+                        £{((client.monthly_price || 0) / 100).toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -354,22 +363,40 @@ export default function ResellerClients() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                toggleClientStatus(client.id, client.is_active)
-                              }
-                            >
-                              {client.is_active ? "Deactivate" : "Activate"}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => client.business?.id && handleManageClient(client.business.id)}
+                            className="gap-1"
+                          >
+                            <Settings className="h-3 w-3" />
+                            Manage
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => client.business?.id && handleManageClient(client.business.id)}
+                              >
+                                <Settings className="h-4 w-4 mr-2" />
+                                Manage Business
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  toggleClientStatus(client.id, client.is_active ?? true)
+                                }
+                              >
+                                {client.is_active ? "Deactivate" : "Activate"}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
