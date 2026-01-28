@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Clock, DollarSign } from "lucide-react";
+import { BookingFormModal } from "./BookingFormModal";
 
 interface Service {
   id: string;
@@ -21,9 +23,12 @@ interface PageTheme {
 interface BookingServicesProps {
   services: Service[];
   theme: PageTheme | null;
+  businessId: string;
 }
 
-export function BookingServices({ services, theme }: BookingServicesProps) {
+export function BookingServices({ services, theme, businessId }: BookingServicesProps) {
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const primaryColor = theme?.primary_color || "#4F46E5";
   const fontHeading = theme?.font_heading || "Plus Jakarta Sans";
   const fontBody = theme?.font_body || "Inter";
@@ -116,6 +121,10 @@ export function BookingServices({ services, theme }: BookingServicesProps) {
 
                 {/* Book Button */}
                 <button
+                  onClick={() => {
+                    setSelectedService(service);
+                    setBookingModalOpen(true);
+                  }}
                   className="mt-4 w-full py-2.5 rounded-lg font-medium text-sm transition-all hover:opacity-90"
                   style={{
                     backgroundColor: primaryColor,
@@ -130,6 +139,17 @@ export function BookingServices({ services, theme }: BookingServicesProps) {
           ))}
         </div>
       </div>
+
+      {/* Booking Modal */}
+      {selectedService && (
+        <BookingFormModal
+          open={bookingModalOpen}
+          onOpenChange={setBookingModalOpen}
+          businessId={businessId}
+          service={selectedService}
+          primaryColor={primaryColor}
+        />
+      )}
     </section>
   );
 }
