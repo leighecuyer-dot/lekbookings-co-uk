@@ -41,6 +41,10 @@ interface Booking {
   service_id: string | null;
   staff_id: string | null;
   image_urls: string[] | null;
+  payment_status?: string;
+  total_price?: number | null;
+  deposit_amount?: number | null;
+  amount_paid?: number | null;
 }
 
 interface Service {
@@ -48,6 +52,7 @@ interface Service {
   name: string;
   duration_minutes: number;
   color: string | null;
+  price?: number | null;
 }
 
 interface Staff {
@@ -126,7 +131,7 @@ export default function CalendarPage() {
         .order("start_time", { ascending: true }),
       supabase
         .from("services")
-        .select("id, name, duration_minutes, color")
+        .select("id, name, duration_minutes, color, price")
         .eq("business_id", currentBusiness.id)
         .eq("is_active", true),
       supabase

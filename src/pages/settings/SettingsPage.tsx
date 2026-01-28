@@ -12,6 +12,7 @@ import { Copy, ExternalLink } from "lucide-react";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { GalleryManagement } from "@/components/settings/GalleryManagement";
 import { EmbedWidget } from "@/components/settings/EmbedWidget";
+import { PaymentSettings } from "@/components/settings/PaymentSettings";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -154,6 +155,9 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Payment Settings */}
+        <PaymentSettings />
 
         {/* Theme Customization */}
         <ThemeCustomization />

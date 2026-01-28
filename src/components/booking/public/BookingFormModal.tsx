@@ -92,6 +92,11 @@ export function BookingFormModal({
   const [submitting, setSubmitting] = useState(false);
   const [rememberDetails, setRememberDetails] = useState(false);
   const [hasSavedDetails, setHasSavedDetails] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState<{
+    requireDeposit: boolean;
+    depositType: "percentage" | "fixed";
+    depositAmount: number;
+  } | null>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -103,6 +108,7 @@ export function BookingFormModal({
   useEffect(() => {
     if (open && businessId) {
       fetchStaff();
+      fetchPaymentConfig();
       // Load saved customer details
       const saved = getSavedDetails();
       if (saved) {
@@ -148,6 +154,26 @@ export function BookingFormModal({
     }
   };
 
+  const fetchPaymentConfig = async () => {
+    const { data } = await supabase
+      .from("businesses")
+      .select("settings")
+      .eq("id", businessId)
+      .single();
+    
+    if (data?.settings) {
+      const settings = data.settings as Record<string, unknown>;
+      const config = settings.paymentConfig as {
+        requireDeposit: boolean;
+        depositType: "percentage" | "fixed";
+        depositAmount: number;
+      } | undefined;
+      if (config) {
+        setPaymentConfig(config);
+      }
+    }
+  };
+
   const getAvailableSlots = () => {
     if (!selectedDate || !selectedStaff) return TIME_SLOTS;
     
@@ -176,6 +202,18 @@ export function BookingFormModal({
     const startTime = setMinutes(setHours(selectedDate, hours), minutes);
     const endTime = new Date(startTime.getTime() + service.duration_minutes * 60000);
 
+    // Calculate deposit amount if configured
+    const totalPrice = service.price || 0;
+    let depositAmount: number | null = null;
+    
+    if (paymentConfig?.requireDeposit && totalPrice > 0) {
+      if (paymentConfig.depositType === "percentage") {
+        depositAmount = (totalPrice * paymentConfig.depositAmount) / 100;
+      } else {
+        depositAmount = paymentConfig.depositAmount;
+      }
+    }
+
     const { error } = await supabase.from("bookings").insert({
       business_id: businessId,
       service_id: service.id,
@@ -187,6 +225,9 @@ export function BookingFormModal({
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       status: "pending",
+      total_price: totalPrice > 0 ? totalPrice : null,
+      deposit_amount: depositAmount,
+      payment_status: "unpaid",
     });
 
     if (error) {
