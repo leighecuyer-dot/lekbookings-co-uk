@@ -13,11 +13,13 @@ interface RouteGuardProps {
   requireBusiness?: boolean;
   /** Require user to be a reseller */
   requireReseller?: boolean;
+  /** Require reseller to have completed onboarding (has branding set up) */
+  requireResellerOnboarded?: boolean;
   /** Redirect authenticated users away (for login/register pages) */
   redirectAuthenticated?: boolean;
   /** Redirect users who already have a business (for onboarding) */
   redirectIfHasBusiness?: boolean;
-  /** Redirect users who are already resellers (for reseller onboarding) */
+  /** Redirect users who are already resellers AND have completed onboarding (for reseller onboarding) */
   redirectIfIsReseller?: boolean;
   /** Custom redirect path when conditions fail */
   fallbackPath?: string;
@@ -39,6 +41,7 @@ export function RouteGuard({
   requireAuth = false,
   requireBusiness = false,
   requireReseller = false,
+  requireResellerOnboarded = false,
   redirectAuthenticated = false,
   redirectIfHasBusiness = false,
   redirectIfIsReseller = false,
@@ -46,11 +49,11 @@ export function RouteGuard({
 }: RouteGuardProps) {
   const { user, loading: authLoading } = useAuth();
   const { businesses, isResellerMode, currentBusiness, loading: businessLoading } = useBusiness();
-  const { isReseller, loading: resellerLoading } = useReseller();
+  const { isReseller, needsOnboarding, loading: resellerLoading } = useReseller();
 
   // Determine which loading states we need to wait for
   const needsBusinessContext = requireBusiness || redirectIfHasBusiness || redirectAuthenticated;
-  const needsResellerContext = requireReseller || redirectIfIsReseller;
+  const needsResellerContext = requireReseller || requireResellerOnboarded || redirectIfIsReseller;
 
   const isLoading =
     authLoading ||
@@ -72,8 +75,8 @@ export function RouteGuard({
     return <Navigate to={fallbackPath || "/dashboard"} replace />;
   }
 
-  // Redirect if user is already a reseller (for reseller onboarding)
-  if (redirectIfIsReseller && user && isReseller) {
+  // Redirect if user is already a reseller AND has completed onboarding (for reseller onboarding page)
+  if (redirectIfIsReseller && user && isReseller && !needsOnboarding) {
     return <Navigate to={fallbackPath || "/reseller"} replace />;
   }
 
@@ -95,6 +98,11 @@ export function RouteGuard({
   // Require reseller status
   if (requireReseller && !isReseller) {
     return <Navigate to={fallbackPath || "/dashboard"} replace />;
+  }
+
+  // Require reseller to have completed onboarding (branding set up)
+  if (requireResellerOnboarded && isReseller && needsOnboarding) {
+    return <Navigate to="/reseller/onboarding" replace />;
   }
 
   return <>{children}</>;

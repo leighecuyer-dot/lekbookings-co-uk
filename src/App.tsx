@@ -139,7 +139,7 @@ const AppRoutes = () => (
     <Route 
       path="/reseller" 
       element={
-        <RouteGuard requireAuth requireReseller>
+        <RouteGuard requireAuth requireReseller requireResellerOnboarded>
           <ResellerDashboard />
         </RouteGuard>
       } 
@@ -147,7 +147,7 @@ const AppRoutes = () => (
     <Route 
       path="/reseller/clients" 
       element={
-        <RouteGuard requireAuth requireReseller>
+        <RouteGuard requireAuth requireReseller requireResellerOnboarded>
           <ResellerClients />
         </RouteGuard>
       } 
@@ -155,7 +155,7 @@ const AppRoutes = () => (
     <Route 
       path="/reseller/analytics" 
       element={
-        <RouteGuard requireAuth requireReseller>
+        <RouteGuard requireAuth requireReseller requireResellerOnboarded>
           <ResellerAnalytics />
         </RouteGuard>
       } 
@@ -163,7 +163,7 @@ const AppRoutes = () => (
     <Route 
       path="/reseller/tickets" 
       element={
-        <RouteGuard requireAuth requireReseller>
+        <RouteGuard requireAuth requireReseller requireResellerOnboarded>
           <ResellerTickets />
         </RouteGuard>
       } 
@@ -171,7 +171,7 @@ const AppRoutes = () => (
     <Route 
       path="/reseller/settings" 
       element={
-        <RouteGuard requireAuth requireReseller>
+        <RouteGuard requireAuth requireReseller requireResellerOnboarded>
           <ResellerSettings />
         </RouteGuard>
       } 

@@ -39,6 +39,7 @@ interface ResellerContextType {
   reseller: Reseller | null;
   clients: ResellerClient[];
   isReseller: boolean;
+  needsOnboarding: boolean;
   loading: boolean;
   refreshReseller: () => Promise<void>;
   refreshClients: () => Promise<void>;
@@ -124,12 +125,16 @@ export function ResellerProvider({ children }: { children: ReactNode }) {
     }
   }, [reseller]);
 
+  // A reseller needs onboarding if they don't have logo_url set (required for white-label)
+  const needsOnboarding = !!reseller && !reseller.logo_url;
+
   return (
     <ResellerContext.Provider
       value={{
         reseller,
         clients,
         isReseller: !!reseller,
+        needsOnboarding,
         loading,
         refreshReseller: fetchReseller,
         refreshClients: fetchClients,
