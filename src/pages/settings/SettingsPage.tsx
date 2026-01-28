@@ -13,6 +13,7 @@ import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { GalleryManagement } from "@/components/settings/GalleryManagement";
 import { EmbedWidget } from "@/components/settings/EmbedWidget";
 import { PaymentSettings } from "@/components/settings/PaymentSettings";
+import { SocialLinksSettings } from "@/components/settings/SocialLinksSettings";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -164,6 +165,9 @@ export default function SettingsPage() {
 
         {/* Gallery Management */}
         <GalleryManagement />
+
+        {/* Social Media Links */}
+        <SocialLinksSettings />
 
         {/* Booking Link */}
         <Card className="border-0 shadow-soft">
