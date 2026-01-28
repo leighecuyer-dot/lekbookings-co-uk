@@ -8,6 +8,13 @@ import { BookingContact } from "@/components/booking/public/BookingContact";
 import { BookingFooter } from "@/components/booking/public/BookingFooter";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  whatsapp?: string;
+}
+
 interface Business {
   id: string;
   name: string;
@@ -17,6 +24,9 @@ interface Business {
   address: string | null;
   logo_url: string | null;
   industry: string | null;
+  settings?: {
+    socialLinks?: SocialLinks;
+  } | null;
 }
 
 interface PageTheme {
@@ -70,7 +80,7 @@ export default function PublicBookingPage() {
     // Fetch business by slug - this is a public query
     const { data: businessData, error: businessError } = await supabase
       .from("businesses")
-      .select("id, name, slug, phone, email, address, logo_url, industry")
+      .select("id, name, slug, phone, email, address, logo_url, industry, settings")
       .eq("slug", slug)
       .maybeSingle();
 
@@ -81,7 +91,10 @@ export default function PublicBookingPage() {
       return;
     }
 
-    setBusiness(businessData);
+    setBusiness({
+      ...businessData,
+      settings: businessData.settings as Business["settings"],
+    });
 
     // Fetch theme, services, and gallery in parallel
     const [themeResult, servicesResult, galleryResult] = await Promise.all([
