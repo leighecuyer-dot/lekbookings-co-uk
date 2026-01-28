@@ -9,6 +9,7 @@ const navItems = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "Testimonials", href: "#testimonials" },
+  { label: "Demo Booking", href: "/book/test-salon-4m09ht", isRoute: true },
   { label: "Reseller Portal", href: "/reseller/onboarding", isRoute: true },
 ];
 
