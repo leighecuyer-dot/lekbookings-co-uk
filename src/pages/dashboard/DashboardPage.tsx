@@ -115,24 +115,28 @@ export default function DashboardPage() {
       value: stats.todayBookings,
       icon: Calendar,
       description: format(new Date(), "EEEE, MMMM d"),
+      href: "/calendar",
     },
     {
       title: "This Week",
       value: stats.weekBookings,
       icon: TrendingUp,
       description: "Total appointments",
+      href: "/calendar",
     },
     {
       title: "Total Customers",
       value: stats.totalCustomers,
       icon: Users,
       description: "In your database",
+      href: "/customers",
     },
     {
       title: "Pending Confirmation",
       value: stats.pendingBookings,
       icon: Clock,
       description: "Awaiting response",
+      href: "/calendar",
     },
   ];
 
@@ -190,24 +194,26 @@ export default function DashboardPage() {
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => (
-            <Card key={stat.title} className="border-0 shadow-soft bg-foreground text-background rounded-2xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-background/70">
-                  {stat.title}
-                </CardTitle>
-                <div className="p-2 rounded-lg bg-background/10">
-                  <stat.icon className="w-4 h-4 text-background" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-display font-bold text-background">
-                  {stat.value}
-                </div>
-                <p className="text-xs text-background/60 mt-1">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
+            <Link key={stat.title} to={stat.href}>
+              <Card className="border-0 shadow-soft bg-foreground text-background rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-background/70">
+                    {stat.title}
+                  </CardTitle>
+                  <div className="p-2 rounded-lg bg-background/10">
+                    <stat.icon className="w-4 h-4 text-background" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-display font-bold text-background">
+                    {stat.value}
+                  </div>
+                  <p className="text-xs text-background/60 mt-1">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
 
