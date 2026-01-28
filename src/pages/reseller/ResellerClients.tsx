@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TableSkeleton } from "@/components/common/Skeletons";
-import { useIndustries } from "@/hooks/useIndustries";
+import { useIndustries } from "@/hooks/business";
 
 const TIERS = [
   { value: "essential", label: "Essential", price: 2000 },

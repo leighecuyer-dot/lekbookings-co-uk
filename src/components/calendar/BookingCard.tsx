@@ -1,7 +1,7 @@
 import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Clock, User, ChevronRight, ChevronLeft, XCircle } from "lucide-react";
-import { StatusConfigItem } from "@/hooks/useKanbanSettings";
+import { StatusConfigItem } from "@/hooks/kanban";
 
 interface Booking {
   id: string;
