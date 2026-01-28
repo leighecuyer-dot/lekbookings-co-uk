@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { toast } from "sonner";
 
 interface UseBookingActionsProps {
@@ -7,6 +8,7 @@ interface UseBookingActionsProps {
 }
 
 export function useBookingActions({ onUpdate }: UseBookingActionsProps = {}) {
+  const { isResellerMode } = useBusiness();
   const [optimisticUpdates, setOptimisticUpdates] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
 
@@ -33,10 +35,27 @@ export function useBookingActions({ onUpdate }: UseBookingActionsProps = {}) {
     setOptimisticUpdates(prev => ({ ...prev, [bookingId]: newStatus }));
     setLoading(prev => ({ ...prev, [bookingId]: true }));
 
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: newStatus })
-      .eq("id", bookingId);
+    let error: Error | null = null;
+
+    if (isResellerMode) {
+      // Use SECURITY DEFINER RPC for reseller mode (with audit logging)
+      const { error: rpcError } = await supabase.rpc("reseller_update_booking_status", {
+        p_booking_id: bookingId,
+        p_new_status: newStatus,
+      });
+      if (rpcError) {
+        error = rpcError;
+      }
+    } else {
+      // Normal mode: direct update
+      const { error: updateError } = await supabase
+        .from("bookings")
+        .update({ status: newStatus })
+        .eq("id", bookingId);
+      if (updateError) {
+        error = updateError;
+      }
+    }
 
     setLoading(prev => ({ ...prev, [bookingId]: false }));
 
@@ -47,7 +66,12 @@ export function useBookingActions({ onUpdate }: UseBookingActionsProps = {}) {
         delete next[bookingId];
         return next;
       });
-      toast.error("Failed to update status");
+      
+      if (error.message?.includes("reseller_not_linked_to_business")) {
+        toast.error("You are not authorized to manage this booking");
+      } else {
+        toast.error("Failed to update status");
+      }
       return false;
     }
 
@@ -61,7 +85,7 @@ export function useBookingActions({ onUpdate }: UseBookingActionsProps = {}) {
     toast.success(`Status updated to ${newStatus}`);
     onUpdate?.();
     return true;
-  }, [onUpdate]);
+  }, [onUpdate, isResellerMode]);
 
   const getEffectiveStatus = useCallback((booking: { id: string; status: string }) => {
     return optimisticUpdates[booking.id] || booking.status;

@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { format, parseISO } from "date-fns";
 import { Trash2, Clock, User, Calendar } from "lucide-react";
 import { BookingImageUpload } from "./BookingImageUpload";
@@ -68,6 +69,7 @@ export function BookingEditDialog({
   staffList,
   onUpdate,
 }: BookingEditDialogProps) {
+  const { isResellerMode } = useBusiness();
   const [editData, setEditData] = useState({
     customerName: "",
     customerEmail: "",
@@ -99,24 +101,73 @@ export function BookingEditDialog({
     if (!booking) return;
     setLoading(true);
 
-    const { error } = await supabase
-      .from("bookings")
-      .update({
-        customer_name: editData.customerName,
-        customer_email: editData.customerEmail || null,
-        customer_phone: editData.customerPhone || null,
-        status: editData.status,
-        notes: editData.notes || null,
-        service_id: editData.serviceId || null,
-        staff_id: editData.staffId || null,
-        image_urls: editData.imageUrls.length > 0 ? editData.imageUrls : null,
-      })
-      .eq("id", booking.id);
+    let error: Error | null = null;
+    const statusChanged = editData.status !== booking.status;
+
+    if (isResellerMode) {
+      // In reseller mode, we need to use RPCs for updates
+      // First, update the status if it changed (via RPC with audit logging)
+      if (statusChanged) {
+        const { error: statusError } = await supabase.rpc("reseller_update_booking_status", {
+          p_booking_id: booking.id,
+          p_new_status: editData.status,
+        });
+        if (statusError) {
+          error = statusError;
+        }
+      }
+      
+      // For other fields, resellers in RLS mode can still update via direct query
+      // since RLS allows read but we need to be careful here
+      // For full reseller mode safety, you'd create reseller_update_booking RPC
+      // For now, we use direct update for non-status fields
+      if (!error) {
+        const { error: updateError } = await supabase
+          .from("bookings")
+          .update({
+            customer_name: editData.customerName,
+            customer_email: editData.customerEmail || null,
+            customer_phone: editData.customerPhone || null,
+            // Skip status update here if already done via RPC
+            ...(statusChanged ? {} : { status: editData.status }),
+            notes: editData.notes || null,
+            service_id: editData.serviceId || null,
+            staff_id: editData.staffId || null,
+            image_urls: editData.imageUrls.length > 0 ? editData.imageUrls : null,
+          })
+          .eq("id", booking.id);
+        if (updateError) {
+          error = updateError;
+        }
+      }
+    } else {
+      // Normal mode: direct update
+      const { error: updateError } = await supabase
+        .from("bookings")
+        .update({
+          customer_name: editData.customerName,
+          customer_email: editData.customerEmail || null,
+          customer_phone: editData.customerPhone || null,
+          status: editData.status,
+          notes: editData.notes || null,
+          service_id: editData.serviceId || null,
+          staff_id: editData.staffId || null,
+          image_urls: editData.imageUrls.length > 0 ? editData.imageUrls : null,
+        })
+        .eq("id", booking.id);
+      if (updateError) {
+        error = updateError;
+      }
+    }
 
     setLoading(false);
 
     if (error) {
-      toast.error("Failed to update booking");
+      if (error.message?.includes("reseller_not_linked_to_business")) {
+        toast.error("You are not authorized to manage this booking");
+      } else {
+        toast.error("Failed to update booking");
+      }
       return;
     }
 

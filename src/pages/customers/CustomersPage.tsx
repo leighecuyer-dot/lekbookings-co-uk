@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useResellerOperations } from "@/hooks/reseller";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,8 @@ interface Customer {
 }
 
 export default function CustomersPage() {
-  const { currentBusiness } = useBusiness();
+  const { currentBusiness, isResellerMode } = useBusiness();
+  const { createCustomer: resellerCreateCustomer } = useResellerOperations();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,23 +82,39 @@ export default function CustomersPage() {
       return;
     }
 
-    const { error } = await supabase.from("customers").insert({
-      business_id: currentBusiness.id,
-      name: newCustomer.name,
-      email: newCustomer.email || null,
-      phone: newCustomer.phone || null,
-      notes: newCustomer.notes || null,
-    });
+    let success = false;
 
-    if (error) {
-      toast.error("Failed to create customer");
-      return;
+    if (isResellerMode) {
+      // Use SECURITY DEFINER RPC for reseller mode (with audit logging)
+      const customerId = await resellerCreateCustomer({
+        name: newCustomer.name,
+        email: newCustomer.email || null,
+        phone: newCustomer.phone || null,
+        notes: newCustomer.notes || null,
+      });
+      success = !!customerId;
+    } else {
+      // Normal mode: direct insert
+      const { error } = await supabase.from("customers").insert({
+        business_id: currentBusiness.id,
+        name: newCustomer.name,
+        email: newCustomer.email || null,
+        phone: newCustomer.phone || null,
+        notes: newCustomer.notes || null,
+      });
+      success = !error;
+      if (error) {
+        toast.error("Failed to create customer");
+        return;
+      }
     }
 
-    toast.success("Customer added!");
-    setDialogOpen(false);
-    setNewCustomer({ name: "", email: "", phone: "", notes: "" });
-    fetchCustomers();
+    if (success) {
+      toast.success("Customer added!");
+      setDialogOpen(false);
+      setNewCustomer({ name: "", email: "", phone: "", notes: "" });
+      fetchCustomers();
+    }
   };
 
   const handleDeleteCustomer = async (id: string) => {

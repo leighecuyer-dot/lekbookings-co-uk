@@ -422,6 +422,47 @@ export type Database = {
         }
         Relationships: []
       }
+      reseller_audit_logs: {
+        Row: {
+          action: string
+          business_id: string
+          created_at: string
+          entity: string | null
+          entity_id: string | null
+          id: number
+          payload: Json | null
+          reseller_user_id: string
+        }
+        Insert: {
+          action: string
+          business_id: string
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: number
+          payload?: Json | null
+          reseller_user_id: string
+        }
+        Update: {
+          action?: string
+          business_id?: string
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: number
+          payload?: Json | null
+          reseller_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_audit_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reseller_clients: {
         Row: {
           business_id: string
@@ -778,6 +819,7 @@ export type Database = {
     }
     Functions: {
       accept_business_invite: { Args: { _token: string }; Returns: Json }
+      can_access_business: { Args: { p_business_id: string }; Returns: boolean }
       create_business_with_owner: {
         Args: {
           _industry: string
@@ -822,6 +864,18 @@ export type Database = {
         Args: { _business_id: string; _from_date?: string; _to_date?: string }
         Returns: Json
       }
+      get_reseller_audit_logs: {
+        Args: { p_business_id?: string; p_limit?: number }
+        Returns: {
+          action: string
+          business_id: string
+          created_at: string
+          entity: string
+          entity_id: string
+          id: number
+          payload: Json
+        }[]
+      }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_business_ids: { Args: { _user_id: string }; Returns: string[] }
       has_business_role: {
@@ -836,6 +890,46 @@ export type Database = {
       is_reseller_client: {
         Args: { _business_id: string; _reseller_id: string }
         Returns: boolean
+      }
+      reseller_create_booking: {
+        Args: {
+          p_business_id: string
+          p_customer_email?: string
+          p_customer_id?: string
+          p_customer_name: string
+          p_customer_phone?: string
+          p_end_time: string
+          p_notes?: string
+          p_service_id?: string
+          p_staff_id?: string
+          p_start_time: string
+          p_status?: string
+        }
+        Returns: string
+      }
+      reseller_create_customer: {
+        Args: {
+          p_business_id: string
+          p_email?: string
+          p_name: string
+          p_notes?: string
+          p_phone?: string
+        }
+        Returns: string
+      }
+      reseller_update_booking_status: {
+        Args: { p_booking_id: string; p_new_status: string }
+        Returns: undefined
+      }
+      reseller_update_customer: {
+        Args: {
+          p_customer_id: string
+          p_email?: string
+          p_name?: string
+          p_notes?: string
+          p_phone?: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
