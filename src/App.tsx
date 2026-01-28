@@ -11,6 +11,7 @@ import { RouteGuard } from "@/components/routing/RouteGuard";
 // Pages
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/auth/AuthPage";
+import AcceptInvitePage from "./pages/invite/AcceptInvitePage";
 import OnboardingPage from "./pages/onboarding/OnboardingPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import CalendarPage from "./pages/calendar/CalendarPage";
@@ -46,6 +47,7 @@ const AppRoutes = () => (
       } 
     />
     <Route path="/install" element={<InstallPage />} />
+    <Route path="/invite/accept" element={<AcceptInvitePage />} />
     
     {/* Onboarding (authenticated but no business) */}
     <Route 
