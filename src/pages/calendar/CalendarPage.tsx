@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useResellerOperations } from "@/hooks/reseller";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,7 +63,8 @@ interface Customer {
 }
 
 export default function CalendarPage() {
-  const { currentBusiness } = useBusiness();
+  const { currentBusiness, isResellerMode } = useBusiness();
+  const { createBooking: resellerCreateBooking, updateBookingStatus: resellerUpdateBookingStatus } = useResellerOperations();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -162,38 +164,60 @@ export default function CalendarPage() {
     const endTime = new Date(startTime);
     endTime.setMinutes(endTime.getMinutes() + durationMinutes);
 
-    const { error } = await supabase.from("bookings").insert({
-      business_id: currentBusiness.id,
-      customer_id: newBooking.customerId || null,
-      customer_name: newBooking.customerName,
-      customer_email: newBooking.customerEmail || null,
-      customer_phone: newBooking.customerPhone || null,
-      service_id: newBooking.serviceId || null,
-      staff_id: newBooking.staffId || null,
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
-      notes: newBooking.notes || null,
-      status: "confirmed",
-    });
+    let success = false;
 
-    if (error) {
-      toast.error("Failed to create booking");
-      return;
+    if (isResellerMode) {
+      // Use SECURITY DEFINER RPC for reseller mode (with audit logging)
+      const bookingId = await resellerCreateBooking({
+        customerName: newBooking.customerName,
+        startTime,
+        endTime,
+        customerId: newBooking.customerId || null,
+        customerEmail: newBooking.customerEmail || null,
+        customerPhone: newBooking.customerPhone || null,
+        serviceId: newBooking.serviceId || null,
+        staffId: newBooking.staffId || null,
+        notes: newBooking.notes || null,
+        status: "confirmed",
+      });
+      success = !!bookingId;
+    } else {
+      // Normal mode: direct insert
+      const { error } = await supabase.from("bookings").insert({
+        business_id: currentBusiness.id,
+        customer_id: newBooking.customerId || null,
+        customer_name: newBooking.customerName,
+        customer_email: newBooking.customerEmail || null,
+        customer_phone: newBooking.customerPhone || null,
+        service_id: newBooking.serviceId || null,
+        staff_id: newBooking.staffId || null,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        notes: newBooking.notes || null,
+        status: "confirmed",
+      });
+      success = !error;
+      if (error) {
+        toast.error("Failed to create booking");
+        return;
+      }
     }
 
-    toast.success("Booking created!");
-    setDialogOpen(false);
-    setNewBooking({
-      customerId: "",
-      customerName: "",
-      customerEmail: "",
-      customerPhone: "",
-      serviceId: "",
-      staffId: "",
-      time: "09:00",
-      notes: "",
-    });
-    fetchData();
+    if (success) {
+      toast.success("Booking created!");
+      setDialogOpen(false);
+      setNewBooking({
+        customerId: "",
+        customerName: "",
+        customerEmail: "",
+        customerPhone: "",
+        serviceId: "",
+        staffId: "",
+        time: "09:00",
+        notes: "",
+      });
+      fetchData();
+    }
   };
 
   const handleCustomerSelect = (customerId: string) => {
@@ -251,18 +275,28 @@ export default function CalendarPage() {
   );
 
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: newStatus })
-      .eq("id", bookingId);
+    let success = false;
 
-    if (error) {
-      toast.error("Failed to update status");
-      return;
+    if (isResellerMode) {
+      // Use SECURITY DEFINER RPC for reseller mode (with audit logging)
+      success = await resellerUpdateBookingStatus(bookingId, newStatus);
+    } else {
+      // Normal mode: direct update
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: newStatus })
+        .eq("id", bookingId);
+      success = !error;
+      if (error) {
+        toast.error("Failed to update status");
+        return;
+      }
     }
 
-    toast.success("Status updated");
-    fetchData();
+    if (success) {
+      toast.success("Status updated");
+      fetchData();
+    }
   };
 
   const handleBookingClick = (booking: Booking) => {
