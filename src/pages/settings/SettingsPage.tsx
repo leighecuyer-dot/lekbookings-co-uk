@@ -185,7 +185,7 @@ export default function SettingsPage() {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Public booking page coming soon! For now, create bookings from the Calendar.
+              Share this link with customers so they can view your services and gallery.
             </p>
           </CardContent>
         </Card>
