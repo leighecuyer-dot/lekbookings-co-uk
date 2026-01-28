@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Copy, ExternalLink } from "lucide-react";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { GalleryManagement } from "@/components/settings/GalleryManagement";
+import { EmbedWidget } from "@/components/settings/EmbedWidget";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -189,6 +190,9 @@ export default function SettingsPage() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Website Embed Widget */}
+        <EmbedWidget />
 
         {/* PWA Install */}
         <Card className="border-0 shadow-soft">
