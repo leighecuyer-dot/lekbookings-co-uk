@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,9 @@ import {
   Check,
   X,
   Loader2,
-  Download
+  Download,
+  Camera,
+  Image as ImageIcon
 } from "lucide-react";
 
 type DataType = "customers" | "services" | "staff" | "bookings";
@@ -66,6 +68,9 @@ export default function ImportPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [parsedData, setParsedData] = useState<any[] | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const dataTypeConfig = {
     customers: { 
@@ -90,9 +95,31 @@ export default function ImportPage() {
     },
   };
 
+  const handleImageCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Image too large. Max 10MB allowed.", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCapturedImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAIParse = async () => {
-    if (!diaryText.trim()) {
-      toast({ title: "Please enter diary text to parse", variant: "destructive" });
+    if (!diaryText.trim() && !capturedImage) {
+      toast({ title: "Please enter text or capture a photo", variant: "destructive" });
       return;
     }
 
@@ -101,14 +128,18 @@ export default function ImportPage() {
 
     try {
       const { data, error } = await supabase.functions.invoke("parse-diary", {
-        body: { diaryText, dataType: activeTab }
+        body: { 
+          diaryText: diaryText.trim() || undefined, 
+          dataType: activeTab,
+          imageData: capturedImage || undefined
+        }
       });
 
       if (error) throw error;
 
       const items = data[activeTab] || [];
       if (items.length === 0) {
-        toast({ title: "No data found in the text", variant: "destructive" });
+        toast({ title: "No data found in the text or image", variant: "destructive" });
         return;
       }
 
@@ -236,6 +267,7 @@ export default function ImportPage() {
       setParsedData(null);
       setDiaryText("");
       setCsvFile(null);
+      setCapturedImage(null);
     } catch (error) {
       console.error("Import error:", error);
       toast({ title: "Import failed", description: "Some records may not have been imported", variant: "destructive" });
@@ -309,7 +341,7 @@ export default function ImportPage() {
               <Button
                 key={key}
                 variant={activeTab === key ? "default" : "outline"}
-                onClick={() => { setActiveTab(key); setParsedData(null); }}
+                onClick={() => { setActiveTab(key); setParsedData(null); setCapturedImage(null); }}
                 className="gap-2"
               >
                 <Icon className="w-4 h-4" />
@@ -340,12 +372,96 @@ export default function ImportPage() {
                   AI Diary Parser
                 </CardTitle>
                 <CardDescription>
-                  Paste your diary, schedule, or notes and our AI will extract {activeTab} automatically
+                  Take a photo of your paper diary or paste text - our AI will extract {activeTab} automatically
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
+                {/* Photo Capture Section */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    Capture or upload a photo of your diary
+                  </Label>
+                  
+                  <div className="flex flex-wrap gap-3">
+                    {/* Camera capture (mobile) */}
+                    <Button
+                      variant="outline"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="gap-2"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Take Photo
+                    </Button>
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleImageCapture}
+                      className="hidden"
+                    />
+
+                    {/* File upload */}
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="gap-2"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      Upload Image
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageCapture}
+                      className="hidden"
+                    />
+
+                    {capturedImage && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCapturedImage(null)}
+                        className="text-destructive"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Image preview */}
+                  {capturedImage && (
+                    <div className="relative border rounded-lg overflow-hidden max-w-md">
+                      <img
+                        src={capturedImage}
+                        alt="Captured diary"
+                        className="w-full h-auto max-h-[300px] object-contain bg-muted"
+                      />
+                      <Badge className="absolute top-2 right-2">
+                        Photo ready
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Or type/paste text
+                    </span>
+                  </div>
+                </div>
+
+                {/* Text input */}
                 <div className="space-y-2">
-                  <Label>Paste your diary or schedule</Label>
+                  <Label>Paste your diary or schedule (optional if using photo)</Label>
                   <Textarea
                     placeholder={activeTab === "bookings" 
                       ? "Monday 10am - Sarah haircut\n2pm John beard trim\nTuesday Mrs Jones 9:30 colour and cut..."
@@ -353,16 +469,21 @@ export default function ImportPage() {
                     }
                     value={diaryText}
                     onChange={(e) => setDiaryText(e.target.value)}
-                    className="min-h-[200px] font-mono text-sm"
+                    className="min-h-[150px] font-mono text-sm"
                   />
                 </div>
-                <Button onClick={handleAIParse} disabled={isLoading || !diaryText.trim()}>
+
+                <Button 
+                  onClick={handleAIParse} 
+                  disabled={isLoading || (!diaryText.trim() && !capturedImage)}
+                  className="w-full sm:w-auto"
+                >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
                     <Wand2 className="w-4 h-4 mr-2" />
                   )}
-                  Parse with AI
+                  {capturedImage ? "Extract from Photo" : "Parse with AI"}
                 </Button>
                 {renderParsedData()}
               </CardContent>

@@ -14,7 +14,7 @@ const VALID_DATA_TYPES = ["bookings", "customers", "services", "staff"] as const
 type DataType = typeof VALID_DATA_TYPES[number];
 
 const systemPrompts: Record<DataType, string> = {
-  bookings: `You are an expert at parsing appointment diaries. Extract booking information from unstructured text.
+  bookings: `You are an expert at parsing appointment diaries. Extract booking information from unstructured text or images of paper diaries/appointment books.
 Return a JSON array of bookings with this structure:
 {
   "bookings": [
@@ -33,9 +33,10 @@ Return a JSON array of bookings with this structure:
 }
 Be intelligent about interpreting times (e.g., "10am" = "10:00", "2:30" = "14:30").
 Infer dates from context (e.g., "Monday" = next Monday, "tomorrow", etc.).
-If a service is mentioned, include it. If duration isn't specified, estimate based on service type.`,
+If a service is mentioned, include it. If duration isn't specified, estimate based on service type.
+For images: carefully read all handwritten or printed text, even if messy. Extract every appointment you can see.`,
 
-  customers: `You are an expert at parsing customer lists. Extract customer information from unstructured text.
+  customers: `You are an expert at parsing customer lists. Extract customer information from unstructured text or images.
 Return a JSON array of customers with this structure:
 {
   "customers": [
@@ -47,9 +48,9 @@ Return a JSON array of customers with this structure:
     }
   ]
 }
-Extract any contact information you can find.`,
+Extract any contact information you can find. For images, read all visible text carefully.`,
 
-  services: `You are an expert at parsing service lists. Extract service information from unstructured text.
+  services: `You are an expert at parsing service lists. Extract service information from unstructured text or images.
 Return a JSON array of services with this structure:
 {
   "services": [
@@ -61,9 +62,9 @@ Return a JSON array of services with this structure:
     }
   ]
 }
-Infer durations based on service type if not explicitly stated.`,
+Infer durations based on service type if not explicitly stated. For images, read all visible text carefully.`,
 
-  staff: `You are an expert at parsing staff lists. Extract staff member information from unstructured text.
+  staff: `You are an expert at parsing staff lists. Extract staff member information from unstructured text or images.
 Return a JSON array of staff members with this structure:
 {
   "staff": [
@@ -74,7 +75,7 @@ Return a JSON array of staff members with this structure:
     }
   ]
 }
-Extract any contact information you can find.`
+Extract any contact information you can find. For images, read all visible text carefully.`
 };
 
 function getToolSchema(dataType: DataType) {
@@ -149,7 +150,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { diaryText, dataType, _diagnosticPing } = body;
+    const { diaryText, dataType, imageData, _diagnosticPing } = body;
     
     // Handle diagnostic ping - return rate limit status without processing
     if (_diagnosticPing === true) {
@@ -165,9 +166,17 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    if (!diaryText || !dataType) {
+    // Require either diaryText or imageData
+    if (!diaryText && !imageData) {
       return jsonResponse(
-        { error: "Missing required fields: diaryText and dataType are required" },
+        { error: "Missing required fields: either diaryText or imageData is required" },
+        400
+      );
+    }
+
+    if (!dataType) {
+      return jsonResponse(
+        { error: "Missing required field: dataType" },
         400
       );
     }
@@ -181,14 +190,49 @@ serve(async (req) => {
     }
 
     // Limit input size to prevent abuse
-    if (diaryText.length > 50000) {
+    if (diaryText && diaryText.length > 50000) {
       return jsonResponse(
         { error: "Input too large. Please limit diary text to 50,000 characters." },
         400
       );
     }
 
+    // Limit image size (base64 encoded images can be large)
+    if (imageData && imageData.length > 10 * 1024 * 1024) { // ~10MB base64
+      return jsonResponse(
+        { error: "Image too large. Please use a smaller image (max 10MB)." },
+        400
+      );
+    }
+
     const validDataType = dataType as DataType;
+
+    // Build message content based on input type
+    let messageContent: any;
+    
+    if (imageData) {
+      // Vision request with image
+      messageContent = [
+        {
+          type: "text",
+          text: `Parse the following ${validDataType} data from this image of a paper diary/appointment book. Extract all visible appointments, names, times, and any other relevant information.`
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: imageData // Already in data:image/... format
+          }
+        }
+      ];
+      
+      // If there's also text, add it
+      if (diaryText) {
+        messageContent[0].text += `\n\nAdditional context:\n${diaryText}`;
+      }
+    } else {
+      // Text-only request
+      messageContent = `Parse the following ${validDataType} data:\n\n${diaryText}`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -200,14 +244,14 @@ serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompts[validDataType] },
-          { role: "user", content: `Parse the following ${validDataType} data:\n\n${diaryText}` }
+          { role: "user", content: messageContent }
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "extract_data",
-              description: `Extract ${validDataType} data from unstructured text`,
+              description: `Extract ${validDataType} data from unstructured text or images`,
               parameters: {
                 type: "object",
                 properties: {
@@ -248,7 +292,7 @@ serve(async (req) => {
     
     if (!toolCall) {
       return jsonResponse(
-        { error: "No data could be extracted from the provided text. Please check the format and try again." },
+        { error: "No data could be extracted from the provided text or image. Please check the format and try again." },
         422
       );
     }
