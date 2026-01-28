@@ -113,9 +113,12 @@ export function getColorStyles(colorId: string) {
 export function useKanbanSettings() {
   const { currentBusiness, refreshBusinesses } = useBusiness();
 
-  // Get custom settings from business
-  const customLabels = (currentBusiness?.settings?.statusLabels as Record<string, string>) || {};
-  const customColors = (currentBusiness?.settings?.statusColors as Record<string, string>) || {};
+  // Get custom settings from business - safely cast settings to object
+  const settings = (currentBusiness?.settings && typeof currentBusiness.settings === 'object' && !Array.isArray(currentBusiness.settings))
+    ? currentBusiness.settings as Record<string, unknown>
+    : {};
+  const customLabels = (settings.statusLabels as Record<string, string>) || {};
+  const customColors = (settings.statusColors as Record<string, string>) || {};
   
   // Merge default config with custom labels and colors
   const statusConfig: StatusConfigItem[] = defaultStatusConfig.map(status => {
@@ -144,11 +147,15 @@ export function useKanbanSettings() {
       [statusId]: trimmedLabel || defaultLabel
     };
 
+    const currentSettings = (currentBusiness.settings && typeof currentBusiness.settings === 'object' && !Array.isArray(currentBusiness.settings))
+      ? currentBusiness.settings as Record<string, unknown>
+      : {};
+    
     const { error } = await supabase
       .from("businesses")
       .update({ 
         settings: { 
-          ...currentBusiness.settings, 
+          ...currentSettings, 
           statusLabels: newLabels 
         } 
       })
@@ -172,11 +179,15 @@ export function useKanbanSettings() {
       [statusId]: colorId
     };
 
+    const currentSettings = (currentBusiness.settings && typeof currentBusiness.settings === 'object' && !Array.isArray(currentBusiness.settings))
+      ? currentBusiness.settings as Record<string, unknown>
+      : {};
+    
     const { error } = await supabase
       .from("businesses")
       .update({ 
         settings: { 
-          ...currentBusiness.settings, 
+          ...currentSettings, 
           statusColors: newColors 
         } 
       })

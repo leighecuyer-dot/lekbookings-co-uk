@@ -1,19 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import type { Tables } from "@/integrations/supabase/types";
 
-interface Business {
-  id: string;
-  name: string;
-  slug: string;
-  industry: string | null;
-  logo_url: string | null;
-  timezone: string;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  settings: Record<string, unknown>;
-}
+type Business = Tables<"businesses">;
 
 interface UserRole {
   id: string;
@@ -21,13 +11,28 @@ interface UserRole {
   role: "owner" | "admin" | "staff" | "readonly";
 }
 
+interface ResellerClient {
+  id: string;
+  business_id: string;
+  reseller_id: string;
+  business: Business;
+}
+
+export type BusinessMode = "business" | "reseller";
+
 interface BusinessContextType {
   businesses: Business[];
   currentBusiness: Business | null;
   currentRole: UserRole | null;
+  businessId: string | null;
+  mode: BusinessMode;
+  isResellerMode: boolean;
+  resellerClientBusinesses: Business[];
   loading: boolean;
   isRealtimeActive: boolean;
   setCurrentBusiness: (business: Business | null) => void;
+  enterResellerMode: (businessId: string) => void;
+  exitResellerMode: () => void;
   refreshBusinesses: () => Promise<void>;
 }
 
@@ -36,16 +41,23 @@ const BusinessContext = createContext<BusinessContextType | undefined>(undefined
 export function BusinessProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [currentBusiness, setCurrentBusiness] = useState<Business | null>(null);
+  const [resellerClientBusinesses, setResellerClientBusinesses] = useState<Business[]>([]);
+  const [currentBusiness, setCurrentBusinessState] = useState<Business | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
+  const [mode, setMode] = useState<BusinessMode>("business");
   const [loading, setLoading] = useState(true);
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
-  const fetchBusinesses = async () => {
+  const isResellerMode = mode === "reseller";
+  const businessId = currentBusiness?.id ?? null;
+
+  const fetchBusinesses = useCallback(async () => {
     if (!user) {
       setBusinesses([]);
-      setCurrentBusiness(null);
+      setResellerClientBusinesses([]);
+      setCurrentBusinessState(null);
       setCurrentRole(null);
+      setMode("business");
       setLoading(false);
       return;
     }
@@ -64,9 +76,32 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Also fetch reseller client businesses if user is a reseller
+    const { data: resellerData } = await supabase
+      .from("resellers")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    let clientBusinesses: Business[] = [];
+    if (resellerData) {
+      const { data: clients } = await supabase
+        .from("reseller_clients")
+        .select("business_id, business:businesses(*)")
+        .eq("reseller_id", resellerData.id);
+
+      if (clients) {
+        clientBusinesses = clients
+          .map(c => c.business as unknown as Business)
+          .filter(Boolean);
+      }
+    }
+    setResellerClientBusinesses(clientBusinesses);
+
     if (!roles || roles.length === 0) {
       setBusinesses([]);
-      setCurrentBusiness(null);
+      setCurrentBusinessState(null);
       setCurrentRole(null);
       setLoading(false);
       return;
@@ -88,13 +123,13 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     const typedBusinesses = (businessData || []).map((b) => ({
       ...b,
       settings: (b.settings as Record<string, unknown>) || {},
-    }));
+    })) as Business[];
 
     setBusinesses(typedBusinesses);
 
-    // Set first business as current if none selected
-    if (typedBusinesses.length > 0 && !currentBusiness) {
-      setCurrentBusiness(typedBusinesses[0]);
+    // Set first business as current if none selected and not in reseller mode
+    if (typedBusinesses.length > 0 && !currentBusiness && mode !== "reseller") {
+      setCurrentBusinessState(typedBusinesses[0]);
       const role = roles.find((r) => r.business_id === typedBusinesses[0].id);
       if (role) {
         setCurrentRole(role as UserRole);
@@ -102,7 +137,36 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
 
     setLoading(false);
-  };
+  }, [user, currentBusiness, mode]);
+
+  // Enter reseller mode to manage a client business
+  const enterResellerMode = useCallback((targetBusinessId: string) => {
+    const clientBusiness = resellerClientBusinesses.find(b => b.id === targetBusinessId);
+    if (clientBusiness) {
+      setMode("reseller");
+      setCurrentBusinessState(clientBusiness);
+      setCurrentRole(null); // Resellers don't have user_roles for client businesses
+    }
+  }, [resellerClientBusinesses]);
+
+  // Exit reseller mode and return to own businesses
+  const exitResellerMode = useCallback(() => {
+    setMode("business");
+    // Restore to user's own first business
+    if (businesses.length > 0) {
+      setCurrentBusinessState(businesses[0]);
+    } else {
+      setCurrentBusinessState(null);
+    }
+  }, [businesses]);
+
+  const setCurrentBusiness = useCallback((business: Business | null) => {
+    setCurrentBusinessState(business);
+    // If setting to a user's own business, ensure we're in business mode
+    if (business && businesses.some(b => b.id === business.id)) {
+      setMode("business");
+    }
+  }, [businesses]);
 
   useEffect(() => {
     fetchBusinesses();
@@ -132,7 +196,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
             settings: (payload.new.settings as Record<string, unknown>) || {},
           } as Business;
           
-          setCurrentBusiness(updatedBusiness);
+          setCurrentBusinessState(updatedBusiness);
           setBusinesses(prev => 
             prev.map(b => b.id === updatedBusiness.id ? updatedBusiness : b)
           );
@@ -148,8 +212,9 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     };
   }, [currentBusiness?.id]);
 
+  // Fetch current role when business changes (only in business mode)
   useEffect(() => {
-    if (currentBusiness && user) {
+    if (currentBusiness && user && mode === "business") {
       supabase
         .from("user_roles")
         .select("*")
@@ -161,8 +226,10 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
             setCurrentRole(data as UserRole);
           }
         });
+    } else if (mode === "reseller") {
+      setCurrentRole(null);
     }
-  }, [currentBusiness, user]);
+  }, [currentBusiness, user, mode]);
 
   return (
     <BusinessContext.Provider
@@ -170,9 +237,15 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         businesses,
         currentBusiness,
         currentRole,
+        businessId,
+        mode,
+        isResellerMode,
+        resellerClientBusinesses,
         loading,
         isRealtimeActive,
         setCurrentBusiness,
+        enterResellerMode,
+        exitResellerMode,
         refreshBusinesses: fetchBusinesses,
       }}
     >
