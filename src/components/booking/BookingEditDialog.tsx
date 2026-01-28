@@ -16,8 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { usePaymentStatus } from "@/hooks/bookings";
 import { format, parseISO } from "date-fns";
-import { Trash2, Clock, User, Calendar } from "lucide-react";
+import { Trash2, Clock, User, Calendar, CreditCard, CheckCircle, CircleDollarSign } from "lucide-react";
 import { BookingImageUpload } from "./BookingImageUpload";
 
 interface Booking {
@@ -32,12 +33,17 @@ interface Booking {
   service_id: string | null;
   staff_id: string | null;
   image_urls: string[] | null;
+  payment_status?: string;
+  total_price?: number | null;
+  deposit_amount?: number | null;
+  amount_paid?: number | null;
 }
 
 interface Service {
   id: string;
   name: string;
   duration_minutes: number;
+  price?: number | null;
 }
 
 interface Staff {
@@ -70,6 +76,7 @@ export function BookingEditDialog({
   onUpdate,
 }: BookingEditDialogProps) {
   const { isResellerMode } = useBusiness();
+  const { getPaymentConfig, markDepositPaid, markPaidInFull } = usePaymentStatus();
   const [editData, setEditData] = useState({
     customerName: "",
     customerEmail: "",
@@ -81,6 +88,7 @@ export function BookingEditDialog({
     imageUrls: [] as string[],
   });
   const [loading, setLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     if (booking) {
@@ -215,6 +223,55 @@ export function BookingEditDialog({
 
   const service = services.find((s) => s.id === booking.service_id);
   const staff = staffList.find((s) => s.id === booking.staff_id);
+  const paymentConfig = getPaymentConfig();
+  
+  const paymentStatus = booking.payment_status || "unpaid";
+  const totalPrice = booking.total_price || service?.price || 0;
+  const depositAmount = booking.deposit_amount || 0;
+  const amountPaid = booking.amount_paid || 0;
+  
+  const handleMarkDepositPaid = async () => {
+    setPaymentLoading(true);
+    const success = await markDepositPaid(booking.id, {
+      id: booking.id,
+      status: booking.status,
+      payment_status: paymentStatus,
+      total_price: totalPrice,
+      deposit_amount: depositAmount,
+      amount_paid: amountPaid,
+    });
+    setPaymentLoading(false);
+    if (success) {
+      onUpdate();
+    }
+  };
+
+  const handleMarkPaidInFull = async () => {
+    setPaymentLoading(true);
+    const success = await markPaidInFull(booking.id, {
+      id: booking.id,
+      status: booking.status,
+      payment_status: paymentStatus,
+      total_price: totalPrice,
+      deposit_amount: depositAmount,
+      amount_paid: amountPaid,
+    });
+    setPaymentLoading(false);
+    if (success) {
+      onUpdate();
+    }
+  };
+
+  const getPaymentStatusBadge = () => {
+    switch (paymentStatus) {
+      case "paid":
+        return <Badge className="bg-primary/20 text-primary border-primary/30">Paid in Full</Badge>;
+      case "deposit_paid":
+        return <Badge className="bg-accent/20 text-accent-foreground border-accent/30">Deposit Paid</Badge>;
+      default:
+        return <Badge variant="outline" className="text-muted-foreground">Unpaid</Badge>;
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -253,6 +310,68 @@ export function BookingEditDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Payment Status */}
+          {(totalPrice > 0 || paymentConfig.requireDeposit) && (
+            <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-muted-foreground" />
+                  <Label className="font-medium">Payment</Label>
+                </div>
+                {getPaymentStatusBadge()}
+              </div>
+              
+              {totalPrice > 0 && (
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <div className="flex justify-between">
+                    <span>Total:</span>
+                    <span className="font-medium text-foreground">${totalPrice.toFixed(2)}</span>
+                  </div>
+                  {depositAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span>Deposit required:</span>
+                      <span>${depositAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>Amount paid:</span>
+                    <span className={amountPaid > 0 ? "text-primary font-medium" : ""}>
+                      ${amountPaid.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Payment Actions */}
+              {paymentStatus !== "paid" && (
+                <div className="flex gap-2 pt-2">
+                  {depositAmount > 0 && paymentStatus === "unpaid" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      disabled={paymentLoading}
+                      onClick={handleMarkDepositPaid}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Deposit Paid
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    disabled={paymentLoading}
+                    onClick={handleMarkPaidInFull}
+                  >
+                    <CircleDollarSign className="w-4 h-4 mr-1" />
+                    Paid in Full
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Customer Info */}
           <div className="space-y-2">

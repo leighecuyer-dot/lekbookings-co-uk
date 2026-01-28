@@ -16,54 +16,66 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          amount_paid: number | null
           business_id: string
           created_at: string
           customer_email: string | null
           customer_id: string | null
           customer_name: string | null
           customer_phone: string | null
+          deposit_amount: number | null
           end_time: string
           id: string
           image_urls: string[] | null
           notes: string | null
+          payment_status: string | null
           service_id: string | null
           staff_id: string | null
           start_time: string
           status: string
+          total_price: number | null
           updated_at: string
         }
         Insert: {
+          amount_paid?: number | null
           business_id: string
           created_at?: string
           customer_email?: string | null
           customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          deposit_amount?: number | null
           end_time: string
           id?: string
           image_urls?: string[] | null
           notes?: string | null
+          payment_status?: string | null
           service_id?: string | null
           staff_id?: string | null
           start_time: string
           status?: string
+          total_price?: number | null
           updated_at?: string
         }
         Update: {
+          amount_paid?: number | null
           business_id?: string
           created_at?: string
           customer_email?: string | null
           customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          deposit_amount?: number | null
           end_time?: string
           id?: string
           image_urls?: string[] | null
           notes?: string | null
+          payment_status?: string | null
           service_id?: string | null
           staff_id?: string | null
           start_time?: string
           status?: string
+          total_price?: number | null
           updated_at?: string
         }
         Relationships: [
