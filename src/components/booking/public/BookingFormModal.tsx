@@ -11,10 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, addDays, setHours, setMinutes, isBefore, startOfDay } from "date-fns";
-import { Clock, CheckCircle } from "lucide-react";
+import { Clock, CheckCircle, User } from "lucide-react";
 
 interface Service {
   id: string;
@@ -37,11 +38,44 @@ interface BookingFormModalProps {
   primaryColor: string;
 }
 
+interface SavedCustomerDetails {
+  name: string;
+  email: string;
+  phone: string;
+}
+
 const TIME_SLOTS = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
   "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
   "15:00", "15:30", "16:00", "16:30", "17:00"
 ];
+
+const STORAGE_KEY = "booking_customer_details";
+
+const getSavedDetails = (): SavedCustomerDetails | null => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveDetails = (details: SavedCustomerDetails) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(details));
+  } catch {
+    // Silently fail if localStorage is not available
+  }
+};
+
+const clearSavedDetails = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Silently fail
+  }
+};
 
 export function BookingFormModal({
   open,
@@ -56,6 +90,8 @@ export function BookingFormModal({
   const [staff, setStaff] = useState<Staff[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [rememberDetails, setRememberDetails] = useState(false);
+  const [hasSavedDetails, setHasSavedDetails] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -67,6 +103,18 @@ export function BookingFormModal({
   useEffect(() => {
     if (open && businessId) {
       fetchStaff();
+      // Load saved customer details
+      const saved = getSavedDetails();
+      if (saved) {
+        setFormData(prev => ({
+          ...prev,
+          name: saved.name,
+          email: saved.email,
+          phone: saved.phone,
+        }));
+        setHasSavedDetails(true);
+        setRememberDetails(true);
+      }
     }
     if (!open) {
       // Reset on close
@@ -74,7 +122,16 @@ export function BookingFormModal({
       setSelectedDate(undefined);
       setSelectedTime(null);
       setSelectedStaff(null);
-      setFormData({ name: "", email: "", phone: "", notes: "" });
+      setHasSavedDetails(false);
+      // Only reset form if no saved details
+      const saved = getSavedDetails();
+      if (saved) {
+        setFormData({ name: saved.name, email: saved.email, phone: saved.phone, notes: "" });
+        setRememberDetails(true);
+      } else {
+        setFormData({ name: "", email: "", phone: "", notes: "" });
+        setRememberDetails(false);
+      }
     }
   }, [open, businessId]);
 
@@ -136,6 +193,17 @@ export function BookingFormModal({
       console.error("Booking error:", error);
       toast.error("Failed to create booking. Please try again.");
     } else {
+      // Save or clear customer details based on checkbox
+      if (rememberDetails) {
+        saveDetails({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+        });
+      } else {
+        clearSavedDetails();
+      }
+      
       setStep("success");
       // Trigger email notification (fire and forget)
       try {
@@ -246,6 +314,13 @@ export function BookingFormModal({
 
         {step === "details" && (
           <div className="py-4 space-y-4">
+            {hasSavedDetails && (
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg text-sm">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Welcome back! Your details have been pre-filled.</span>
+              </div>
+            )}
+            
             <div className="text-sm text-muted-foreground mb-2">
               {selectedDate && format(selectedDate, "EEEE, MMMM d")} at {selectedTime}
             </div>
@@ -292,6 +367,17 @@ export function BookingFormModal({
                 placeholder="Any special requests..."
                 rows={2}
               />
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="remember"
+                checked={rememberDetails}
+                onCheckedChange={(checked) => setRememberDetails(checked === true)}
+              />
+              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                Remember my details for future bookings
+              </Label>
             </div>
 
             <div className="flex gap-2">
