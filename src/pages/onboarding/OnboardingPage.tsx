@@ -18,7 +18,7 @@ const STEPS = [
   { id: 3, title: "Contact", description: "How can customers reach you?" },
 ];
 
-export default function Onboarding() {
+export default function OnboardingPage() {
   const { user } = useAuth();
   const { refreshBusinesses } = useBusiness();
   const navigate = useNavigate();

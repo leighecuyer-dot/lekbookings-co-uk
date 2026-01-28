@@ -10,16 +10,16 @@ import { RouteGuard } from "@/components/routing/RouteGuard";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
-import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
-import Dashboard from "./pages/Dashboard";
-import CalendarPage from "./pages/CalendarPage";
-import CustomersPage from "./pages/CustomersPage";
-import ServicesPage from "./pages/ServicesPage";
-import StaffPage from "./pages/StaffPage";
-import SettingsPage from "./pages/SettingsPage";
-import InstallPage from "./pages/InstallPage";
-import ImportPage from "./pages/ImportPage";
+import AuthPage from "./pages/auth/AuthPage";
+import OnboardingPage from "./pages/onboarding/OnboardingPage";
+import DashboardPage from "./pages/dashboard/DashboardPage";
+import CalendarPage from "./pages/calendar/CalendarPage";
+import CustomersPage from "./pages/customers/CustomersPage";
+import ServicesPage from "./pages/services/ServicesPage";
+import StaffPage from "./pages/staff/StaffPage";
+import SettingsPage from "./pages/settings/SettingsPage";
+import InstallPage from "./pages/install/InstallPage";
+import ImportPage from "./pages/import/ImportPage";
 import NotFound from "./pages/NotFound";
 
 // Reseller Pages
@@ -40,7 +40,7 @@ const AppRoutes = () => (
       path="/auth" 
       element={
         <RouteGuard redirectAuthenticated>
-          <Auth />
+          <AuthPage />
         </RouteGuard>
       } 
     />
@@ -51,7 +51,7 @@ const AppRoutes = () => (
       path="/onboarding" 
       element={
         <RouteGuard requireAuth redirectIfHasBusiness>
-          <Onboarding />
+          <OnboardingPage />
         </RouteGuard>
       } 
     />
@@ -61,7 +61,7 @@ const AppRoutes = () => (
       path="/dashboard" 
       element={
         <RouteGuard requireAuth requireBusiness>
-          <Dashboard />
+          <DashboardPage />
         </RouteGuard>
       } 
     />
