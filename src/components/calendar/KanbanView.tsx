@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
-import { StatusConfigItem } from "@/hooks/useKanbanSettings";
+import { StatusConfigItem, useKanbanSettings } from "@/hooks/kanban";
+import { useBookingActions } from "@/hooks/bookings";
 import { BookingCard } from "./BookingCard";
 import { KanbanColumn } from "./KanbanColumn";
-import { useKanbanSettings } from "@/hooks/useKanbanSettings";
-import { useBookingActions } from "@/hooks/useBookingActions";
 import { KanbanSkeleton, KanbanMobileSkeleton } from "@/components/common/Skeletons";
 
 interface Booking {

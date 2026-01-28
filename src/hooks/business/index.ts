@@ -1,0 +1,1 @@
+export { useIndustries } from "./useIndustries";

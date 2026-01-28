@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Building2, ArrowRight, ArrowLeft, Check } from "lucide-react";
-import { useIndustries } from "@/hooks/useIndustries";
+import { useIndustries } from "@/hooks/business";
 
 const STEPS = [
   { id: 1, title: "Business Name", description: "What's your business called?" },

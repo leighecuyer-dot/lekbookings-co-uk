@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Pencil, Check } from "lucide-react";
-import { StatusConfigItem, colorPresets } from "@/hooks/useKanbanSettings";
+import { StatusConfigItem, colorPresets } from "@/hooks/kanban";
 import { BookingCard } from "./BookingCard";
 
 interface Booking {
