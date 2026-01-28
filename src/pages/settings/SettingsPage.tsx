@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Copy, ExternalLink } from "lucide-react";
+import { Copy, ExternalLink, Eye } from "lucide-react";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { GalleryManagement } from "@/components/settings/GalleryManagement";
 import { EmbedWidget } from "@/components/settings/EmbedWidget";
@@ -173,7 +173,7 @@ export default function SettingsPage() {
               Share this link with your customers to let them book online
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
                 value={bookingUrl}
@@ -183,13 +183,15 @@ export default function SettingsPage() {
               <Button variant="outline" size="icon" onClick={copyBookingUrl}>
                 <Copy className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="icon" asChild>
-                <a href={bookingUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </Button>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
+            <Button variant="outline" className="w-full" asChild>
+              <a href={bookingUrl} target="_blank" rel="noopener noreferrer">
+                <Eye className="w-4 h-4 mr-2" />
+                Preview Booking Page
+                <ExternalLink className="w-4 h-4 ml-auto" />
+              </a>
+            </Button>
+            <p className="text-sm text-muted-foreground">
               Share this link with customers so they can view your services and gallery.
             </p>
           </CardContent>
