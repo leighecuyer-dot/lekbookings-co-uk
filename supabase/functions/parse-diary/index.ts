@@ -1,100 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { 
+  getRateLimitKey, 
+  checkRateLimit, 
+  createRateLimitResponse 
+} from "./rateLimit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple in-memory rate limiting (per function instance)
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 10;
+const VALID_DATA_TYPES = ["bookings", "customers", "services", "staff"] as const;
+type DataType = typeof VALID_DATA_TYPES[number];
 
-function getRateLimitKey(req: Request): string {
-  // Use authorization header user ID or IP for rate limiting
-  const authHeader = req.headers.get("authorization") || "";
-  const clientInfo = req.headers.get("x-client-info") || "";
-  const forwarded = req.headers.get("x-forwarded-for") || "unknown";
-  return `${authHeader.slice(-20)}-${clientInfo}-${forwarded}`;
-}
-
-function checkRateLimit(key: string): { allowed: boolean; remaining: number; resetIn: number } {
-  const now = Date.now();
-  const record = rateLimitStore.get(key);
-
-  if (!record || now > record.resetTime) {
-    rateLimitStore.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
-    return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - 1, resetIn: RATE_LIMIT_WINDOW_MS };
-  }
-
-  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
-    return { allowed: false, remaining: 0, resetIn: record.resetTime - now };
-  }
-
-  record.count++;
-  return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - record.count, resetIn: record.resetTime - now };
-}
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  // Check rate limit
-  const rateLimitKey = getRateLimitKey(req);
-  const rateLimit = checkRateLimit(rateLimitKey);
-
-  if (!rateLimit.allowed) {
-    return new Response(
-      JSON.stringify({ 
-        error: "Too many requests. Please wait a moment and try again.",
-        retryAfter: Math.ceil(rateLimit.resetIn / 1000)
-      }), 
-      {
-        status: 429,
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "application/json",
-          "Retry-After": String(Math.ceil(rateLimit.resetIn / 1000))
-        },
-      }
-    );
-  }
-
-  try {
-    const { diaryText, dataType } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
-    if (!diaryText || !dataType) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: diaryText and dataType are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Validate dataType
-    const validDataTypes = ["bookings", "customers", "services", "staff"];
-    if (!validDataTypes.includes(dataType)) {
-      return new Response(
-        JSON.stringify({ error: `Invalid dataType. Must be one of: ${validDataTypes.join(", ")}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Limit input size to prevent abuse
-    if (diaryText.length > 50000) {
-      return new Response(
-        JSON.stringify({ error: "Input too large. Please limit diary text to 50,000 characters." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const systemPrompts: Record<string, string> = {
-      bookings: `You are an expert at parsing appointment diaries. Extract booking information from unstructured text.
+const systemPrompts: Record<DataType, string> = {
+  bookings: `You are an expert at parsing appointment diaries. Extract booking information from unstructured text.
 Return a JSON array of bookings with this structure:
 {
   "bookings": [
@@ -115,7 +35,7 @@ Be intelligent about interpreting times (e.g., "10am" = "10:00", "2:30" = "14:30
 Infer dates from context (e.g., "Monday" = next Monday, "tomorrow", etc.).
 If a service is mentioned, include it. If duration isn't specified, estimate based on service type.`,
 
-      customers: `You are an expert at parsing customer lists. Extract customer information from unstructured text.
+  customers: `You are an expert at parsing customer lists. Extract customer information from unstructured text.
 Return a JSON array of customers with this structure:
 {
   "customers": [
@@ -129,7 +49,7 @@ Return a JSON array of customers with this structure:
 }
 Extract any contact information you can find.`,
 
-      services: `You are an expert at parsing service lists. Extract service information from unstructured text.
+  services: `You are an expert at parsing service lists. Extract service information from unstructured text.
 Return a JSON array of services with this structure:
 {
   "services": [
@@ -143,7 +63,7 @@ Return a JSON array of services with this structure:
 }
 Infer durations based on service type if not explicitly stated.`,
 
-      staff: `You are an expert at parsing staff lists. Extract staff member information from unstructured text.
+  staff: `You are an expert at parsing staff lists. Extract staff member information from unstructured text.
 Return a JSON array of staff members with this structure:
 {
   "staff": [
@@ -155,9 +75,110 @@ Return a JSON array of staff members with this structure:
   ]
 }
 Extract any contact information you can find.`
-    };
+};
 
-    const systemPrompt = systemPrompts[dataType];
+function getToolSchema(dataType: DataType) {
+  const schemas: Record<DataType, object> = {
+    bookings: {
+      type: "object",
+      properties: {
+        customer_name: { type: "string" },
+        customer_phone: { type: "string" },
+        customer_email: { type: "string" },
+        service_name: { type: "string" },
+        staff_name: { type: "string" },
+        date: { type: "string" },
+        start_time: { type: "string" },
+        duration_minutes: { type: "number" },
+        notes: { type: "string" }
+      },
+      required: ["customer_name", "date", "start_time"]
+    },
+    customers: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        phone: { type: "string" },
+        email: { type: "string" },
+        notes: { type: "string" }
+      },
+      required: ["name"]
+    },
+    services: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        description: { type: "string" },
+        duration_minutes: { type: "number" },
+        price: { type: "number" }
+      },
+      required: ["name"]
+    },
+    staff: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        email: { type: "string" },
+        phone: { type: "string" }
+      },
+      required: ["name"]
+    }
+  };
+  return schemas[dataType];
+}
+
+function jsonResponse(data: unknown, status: number, headers: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json", ...headers }
+  });
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Check rate limit
+  const rateLimitKey = getRateLimitKey(req);
+  const rateLimit = checkRateLimit(rateLimitKey);
+
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit.resetIn, corsHeaders);
+  }
+
+  try {
+    const { diaryText, dataType } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    if (!diaryText || !dataType) {
+      return jsonResponse(
+        { error: "Missing required fields: diaryText and dataType are required" },
+        400
+      );
+    }
+
+    // Validate dataType
+    if (!VALID_DATA_TYPES.includes(dataType)) {
+      return jsonResponse(
+        { error: `Invalid dataType. Must be one of: ${VALID_DATA_TYPES.join(", ")}` },
+        400
+      );
+    }
+
+    // Limit input size to prevent abuse
+    if (diaryText.length > 50000) {
+      return jsonResponse(
+        { error: "Input too large. Please limit diary text to 50,000 characters." },
+        400
+      );
+    }
+
+    const validDataType = dataType as DataType;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -168,64 +189,24 @@ Extract any contact information you can find.`
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Parse the following ${dataType} data:\n\n${diaryText}` }
+          { role: "system", content: systemPrompts[validDataType] },
+          { role: "user", content: `Parse the following ${validDataType} data:\n\n${diaryText}` }
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "extract_data",
-              description: `Extract ${dataType} data from unstructured text`,
+              description: `Extract ${validDataType} data from unstructured text`,
               parameters: {
                 type: "object",
                 properties: {
-                  [dataType]: {
+                  [validDataType]: {
                     type: "array",
-                    items: dataType === "bookings" ? {
-                      type: "object",
-                      properties: {
-                        customer_name: { type: "string" },
-                        customer_phone: { type: "string" },
-                        customer_email: { type: "string" },
-                        service_name: { type: "string" },
-                        staff_name: { type: "string" },
-                        date: { type: "string" },
-                        start_time: { type: "string" },
-                        duration_minutes: { type: "number" },
-                        notes: { type: "string" }
-                      },
-                      required: ["customer_name", "date", "start_time"]
-                    } : dataType === "customers" ? {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        phone: { type: "string" },
-                        email: { type: "string" },
-                        notes: { type: "string" }
-                      },
-                      required: ["name"]
-                    } : dataType === "services" ? {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        description: { type: "string" },
-                        duration_minutes: { type: "number" },
-                        price: { type: "number" }
-                      },
-                      required: ["name"]
-                    } : {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        email: { type: "string" },
-                        phone: { type: "string" }
-                      },
-                      required: ["name"]
-                    }
+                    items: getToolSchema(validDataType)
                   }
                 },
-                required: [dataType]
+                required: [validDataType]
               }
             }
           }
@@ -236,21 +217,15 @@ Extract any contact information you can find.`
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI service is busy. Please try again in a few moments." }), 
-          {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+        return jsonResponse(
+          { error: "AI service is busy. Please try again in a few moments." },
+          429
         );
       }
       if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please contact support." }), 
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+        return jsonResponse(
+          { error: "AI credits exhausted. Please contact support." },
+          402
         );
       }
       const errorText = await response.text();
@@ -262,31 +237,22 @@ Extract any contact information you can find.`
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     
     if (!toolCall) {
-      return new Response(
-        JSON.stringify({ error: "No data could be extracted from the provided text. Please check the format and try again." }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        { error: "No data could be extracted from the provided text. Please check the format and try again." },
+        422
       );
     }
 
     const parsedData = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify(parsedData), {
-      headers: { 
-        ...corsHeaders, 
-        "Content-Type": "application/json",
-        "X-RateLimit-Remaining": String(rateLimit.remaining)
-      },
+    return jsonResponse(parsedData, 200, {
+      "X-RateLimit-Remaining": String(rateLimit.remaining)
     });
   } catch (error) {
     console.error("parse-diary error:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "An unexpected error occurred. Please try again." 
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+    return jsonResponse(
+      { error: error instanceof Error ? error.message : "An unexpected error occurred. Please try again." },
+      500
     );
   }
 });
