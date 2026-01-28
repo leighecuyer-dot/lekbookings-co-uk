@@ -106,6 +106,40 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     fetchBusinesses();
   }, [user]);
 
+  // Subscribe to realtime changes for the current business settings
+  useEffect(() => {
+    if (!currentBusiness) return;
+
+    const channel = supabase
+      .channel(`business-settings-${currentBusiness.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'businesses',
+          filter: `id=eq.${currentBusiness.id}`,
+        },
+        (payload) => {
+          // Update the current business with new settings
+          const updatedBusiness = {
+            ...payload.new,
+            settings: (payload.new.settings as Record<string, unknown>) || {},
+          } as Business;
+          
+          setCurrentBusiness(updatedBusiness);
+          setBusinesses(prev => 
+            prev.map(b => b.id === updatedBusiness.id ? updatedBusiness : b)
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentBusiness?.id]);
+
   useEffect(() => {
     if (currentBusiness && user) {
       supabase

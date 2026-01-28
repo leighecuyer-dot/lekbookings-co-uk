@@ -37,13 +37,16 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Search, MoreHorizontal } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Building2, Mail } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EmptyState } from "@/components/common/EmptyState";
+import { TableSkeleton } from "@/components/common/Skeletons";
+import { useIndustries } from "@/hooks/useIndustries";
 
 const TIERS = [
   { value: "essential", label: "Essential", price: 2000 },
@@ -52,7 +55,8 @@ const TIERS = [
 ];
 
 export default function ResellerClients() {
-  const { reseller, clients, refreshClients } = useReseller();
+  const { reseller, clients, refreshClients, loading: resellerLoading } = useReseller();
+  const { industries } = useIndustries();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,6 +67,7 @@ export default function ResellerClients() {
     businessPhone: "",
     industry: "",
     tier: "essential",
+    ownerEmail: "", // New: email for owner invite
   });
 
   const filteredClients = clients.filter(
@@ -76,59 +81,61 @@ export default function ResellerClients() {
 
     setLoading(true);
 
-    // Create the business first
-    const slug = newClient.businessName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+    try {
+      // Use the atomic RPC function instead of multiple client-side inserts
+      const { data, error } = await supabase.rpc("create_reseller_client_business", {
+        _business_name: newClient.businessName,
+        _business_email: newClient.businessEmail || null,
+        _business_phone: newClient.businessPhone || null,
+        _industry: newClient.industry || null,
+        _subscription_tier: newClient.tier,
+        _owner_email: newClient.ownerEmail || null,
+      });
 
-    const { data: business, error: bizError } = await supabase
-      .from("businesses")
-      .insert({
-        name: newClient.businessName,
-        slug: `${slug}-${Date.now()}`,
-        email: newClient.businessEmail || null,
-        phone: newClient.businessPhone || null,
-        industry: newClient.industry || null,
-      })
-      .select()
-      .single();
+      if (error) {
+        console.error("create_reseller_client_business error:", error);
+        if (error.message.includes("not_a_reseller")) {
+          toast.error("You are not authorized as a reseller");
+        } else {
+          toast.error("Failed to create client business");
+        }
+        setLoading(false);
+        return;
+      }
 
-    if (bizError) {
-      toast.error("Failed to create business");
+      const result = data as {
+        success: boolean;
+        business_id: string;
+        business_slug: string;
+        invite_id: string | null;
+        invite_email: string | null;
+      };
+
+      if (result.invite_email) {
+        toast.success(
+          `Client created! An invite has been sent to ${result.invite_email}`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.success("Client created successfully");
+      }
+
+      setDialogOpen(false);
+      setNewClient({
+        businessName: "",
+        businessEmail: "",
+        businessPhone: "",
+        industry: "",
+        tier: "essential",
+        ownerEmail: "",
+      });
+      refreshClients();
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("An unexpected error occurred");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Link to reseller
-    const tier = TIERS.find((t) => t.value === newClient.tier);
-    const markup = reseller.markup_percentage || 0;
-    const price = Math.round((tier?.price || 2000) * (1 + markup / 100));
-
-    const { error: linkError } = await supabase.from("reseller_clients").insert({
-      reseller_id: reseller.id,
-      business_id: business.id,
-      subscription_tier: newClient.tier,
-      monthly_price: price,
-    });
-
-    if (linkError) {
-      toast.error("Failed to link client");
-      setLoading(false);
-      return;
-    }
-
-    toast.success("Client added successfully");
-    setDialogOpen(false);
-    setNewClient({
-      businessName: "",
-      businessEmail: "",
-      businessPhone: "",
-      industry: "",
-      tier: "essential",
-    });
-    refreshClients();
-    setLoading(false);
   };
 
   const toggleClientStatus = async (clientId: string, currentStatus: boolean) => {
@@ -176,11 +183,11 @@ export default function ResellerClients() {
                     Add Client
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Add New Client</DialogTitle>
                     <DialogDescription>
-                      Create a new business account for your client
+                      Create a new business account for your client. Optionally invite an owner.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
@@ -196,7 +203,7 @@ export default function ResellerClients() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Email</Label>
+                        <Label>Business Email</Label>
                         <Input
                           type="email"
                           value={newClient.businessEmail}
@@ -219,13 +226,21 @@ export default function ResellerClients() {
                     </div>
                     <div className="space-y-2">
                       <Label>Industry</Label>
-                      <Input
+                      <Select
                         value={newClient.industry}
-                        onChange={(e) =>
-                          setNewClient({ ...newClient, industry: e.target.value })
-                        }
-                        placeholder="Hair Salon"
-                      />
+                        onValueChange={(v) => setNewClient({ ...newClient, industry: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select industry" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {industries.map((ind) => (
+                            <SelectItem key={ind.id} value={ind.id}>
+                              {ind.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label>Subscription Tier</Label>
@@ -245,6 +260,26 @@ export default function ResellerClients() {
                         </SelectContent>
                       </Select>
                     </div>
+                    
+                    {/* Owner Invite Section */}
+                    <div className="border-t pt-4 mt-4">
+                      <Label className="flex items-center gap-2 mb-2">
+                        <Mail className="w-4 h-4" />
+                        Owner Email (Optional)
+                      </Label>
+                      <Input
+                        type="email"
+                        value={newClient.ownerEmail}
+                        onChange={(e) =>
+                          setNewClient({ ...newClient, ownerEmail: e.target.value })
+                        }
+                        placeholder="owner@acme.com"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The owner will receive an invite to access and manage this business.
+                      </p>
+                    </div>
+                    
                     <Button
                       className="w-full gradient-primary"
                       onClick={handleAddClient}
@@ -259,75 +294,89 @@ export default function ResellerClients() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Business</TableHead>
-                <TableHead>Industry</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Monthly</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.length === 0 ? (
+          {resellerLoading ? (
+            <TableSkeleton rows={5} cols={6} />
+          ) : filteredClients.length === 0 && clients.length === 0 ? (
+            <EmptyState
+              icon={Building2}
+              title="No clients yet"
+              description="Add your first client business to start managing their accounts and earning revenue."
+              action={{
+                label: "Add First Client",
+                onClick: () => setDialogOpen(true),
+              }}
+            />
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <p className="text-muted-foreground">No clients found</p>
-                  </TableCell>
+                  <TableHead>Business</TableHead>
+                  <TableHead>Industry</TableHead>
+                  <TableHead>Tier</TableHead>
+                  <TableHead>Monthly</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ) : (
-                filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{client.business?.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {client.business?.email}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{client.business?.industry || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="capitalize">
-                        {client.subscription_tier}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      £{(client.monthly_price / 100).toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={client.is_active ? "default" : "secondary"}
-                        className={client.is_active ? "bg-green-500" : ""}
-                      >
-                        {client.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              toggleClientStatus(client.id, client.is_active)
-                            }
-                          >
-                            {client.is_active ? "Deactivate" : "Activate"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <p className="text-muted-foreground">No clients match your search</p>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredClients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{client.business?.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {client.business?.email}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{client.business?.industry || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="capitalize">
+                          {client.subscription_tier}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        £{(client.monthly_price / 100).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={client.is_active ? "default" : "secondary"}
+                          className={client.is_active ? "bg-green-500" : ""}
+                        >
+                          {client.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                toggleClientStatus(client.id, client.is_active)
+                              }
+                            >
+                              {client.is_active ? "Deactivate" : "Activate"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </ResellerLayout>
