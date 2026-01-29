@@ -35,6 +35,7 @@ import {
   Upload,
   Columns3,
   CalendarDays,
+  ExternalLink,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -48,9 +49,6 @@ const mainNavItems = [
   { title: "Import", href: "/import", icon: Upload },
 ];
 
-const settingsNavItems = [
-  { title: "Settings", href: "/settings", icon: Settings },
-];
 
 export function AppSidebar() {
   const location = useLocation();
@@ -136,19 +134,32 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {settingsNavItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === item.href}
-                  >
-                    <Link to={item.href}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </Link>
+              {/* Booking Page - External Link */}
+              {currentBusiness && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <a
+                      href={`${window.location.origin}/book/${currentBusiness.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Booking Page</span>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+              )}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === "/settings"}
+                >
+                  <Link to="/settings">
+                    <Settings className="w-4 h-4" />
+                    <span>Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight, Link2, Copy, ExternalLink } from "lucide-react";
+import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
@@ -319,45 +319,6 @@ export default function DashboardPage() {
             onRefresh={refetchData}
           />
         </div>
-
-        {/* Public Booking Link - Compact on mobile */}
-        {currentBusiness && (
-          <Card className="border-0 shadow-soft">
-            <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
-              <CardTitle className="text-sm sm:text-lg font-display flex items-center gap-2">
-                <Link2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                Your Booking Page
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-6 pt-0">
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-muted text-xs sm:text-sm font-mono truncate">
-                  {window.location.origin}/book/{currentBusiness.slug}
-                </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 sm:h-10 sm:w-10 shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/book/${currentBusiness.slug}`);
-                    toast.success("Link copied!");
-                  }}
-                >
-                  <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 shrink-0" asChild>
-                  <a
-                    href={`${window.location.origin}/book/${currentBusiness.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </a>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       <BookingEditDialog
