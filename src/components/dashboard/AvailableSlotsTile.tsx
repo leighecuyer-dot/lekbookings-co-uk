@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, CalendarDays, Sparkles, MessageSquare, Send, History, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { 
   startOfWeek, 
   endOfWeek, 
@@ -70,6 +71,7 @@ const SLOT_DURATION_MINUTES = 30;
 
 export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }: AvailableSlotsTileProps) {
   const navigate = useNavigate();
+  const { currentBusiness } = useBusiness();
   const [daySlots, setDaySlots] = useState<DaySlots[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
@@ -98,8 +100,20 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
         availableSlots: day.availableSlots,
       }));
 
+      // Get AI context from business (may not be in types yet)
+      const business = currentBusiness as typeof currentBusiness & {
+        ai_context?: string | null;
+        website_urls?: string[] | null;
+      };
+
       const { data, error } = await supabase.functions.invoke("suggest-slot-filling", {
-        body: { availabilityData, businessName },
+        body: { 
+          availabilityData, 
+          businessName,
+          industry: currentBusiness?.industry || null,
+          aiContext: business?.ai_context || null,
+          websiteUrls: business?.website_urls || [],
+        },
       });
 
       if (error) throw error;

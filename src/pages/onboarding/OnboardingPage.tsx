@@ -6,16 +6,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { Building2, ArrowRight, ArrowLeft, Check, Sparkles, Globe, X, Plus } from "lucide-react";
 import { useIndustries } from "@/hooks/business";
 
 const STEPS = [
   { id: 1, title: "Business Name", description: "What's your business called?" },
   { id: 2, title: "Industry", description: "What type of business do you run?" },
   { id: 3, title: "Contact", description: "How can customers reach you?" },
+  { id: 4, title: "AI Setup", description: "Help our AI understand your business (optional)" },
 ];
 
 export default function OnboardingPage() {
@@ -28,6 +31,9 @@ export default function OnboardingPage() {
   const [businessName, setBusinessName] = useState("");
   const [industry, setIndustry] = useState("");
   const [phone, setPhone] = useState("");
+  const [aiContext, setAiContext] = useState("");
+  const [websiteUrls, setWebsiteUrls] = useState<string[]>([]);
+  const [newUrl, setNewUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   if (!user) {
@@ -111,6 +117,17 @@ export default function OnboardingPage() {
       }
       if (!business) throw new Error("Failed to create business");
 
+      // Update AI context if provided
+      if (aiContext.trim() || websiteUrls.length > 0) {
+        await supabase
+          .from("businesses")
+          .update({
+            ai_context: aiContext.trim() || null,
+            website_urls: websiteUrls.length > 0 ? websiteUrls : [],
+          })
+          .eq("id", business.id);
+      }
+
       await refreshBusinesses();
       toast.success("Business created successfully!");
       navigate("/dashboard");
@@ -127,16 +144,48 @@ export default function OnboardingPage() {
       case 1: return businessName.trim().length > 0;
       case 2: return industry.length > 0;
       case 3: return true; // Phone is optional
+      case 4: return true; // AI context is optional
       default: return false;
     }
   };
 
   const handleNext = () => {
-    if (step < 3) {
+    if (step < 4) {
       setStep(step + 1);
     } else {
       handleSubmit();
     }
+  };
+
+  const addUrl = () => {
+    const trimmedUrl = newUrl.trim();
+    if (!trimmedUrl) return;
+
+    try {
+      new URL(trimmedUrl.startsWith("http") ? trimmedUrl : `https://${trimmedUrl}`);
+    } catch {
+      toast.error("Please enter a valid URL");
+      return;
+    }
+
+    const formattedUrl = trimmedUrl.startsWith("http") ? trimmedUrl : `https://${trimmedUrl}`;
+    
+    if (websiteUrls.includes(formattedUrl)) {
+      toast.error("This URL is already added");
+      return;
+    }
+
+    if (websiteUrls.length >= 3) {
+      toast.error("Maximum 3 URLs during setup");
+      return;
+    }
+
+    setWebsiteUrls([...websiteUrls, formattedUrl]);
+    setNewUrl("");
+  };
+
+  const removeUrl = (urlToRemove: string) => {
+    setWebsiteUrls(websiteUrls.filter((url) => url !== urlToRemove));
   };
 
   const handleBack = () => {
@@ -240,6 +289,75 @@ export default function OnboardingPage() {
               </div>
             )}
 
+            {/* Step 4: AI Setup (Optional) */}
+            {step === 4 && (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="flex items-center gap-2 text-primary mb-2">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-sm font-medium">Personalize your AI assistant</span>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="ai-context">Describe your business (optional)</Label>
+                  <Textarea
+                    id="ai-context"
+                    placeholder="E.g., 'Luxury hair salon specializing in color corrections. Our clients are professionals aged 25-45 who value premium service.'"
+                    value={aiContext}
+                    onChange={(e) => setAiContext(e.target.value)}
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    Website or social links (optional)
+                  </Label>
+                  
+                  {websiteUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {websiteUrls.map((url) => (
+                        <Badge
+                          key={url}
+                          variant="outline"
+                          className="flex items-center gap-1 py-1 px-2"
+                        >
+                          <span className="truncate max-w-[150px] text-xs">{url}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeUrl(url)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {websiteUrls.length < 3 && (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="www.yourbusiness.com"
+                        value={newUrl}
+                        onChange={(e) => setNewUrl(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addUrl())}
+                        className="flex-1"
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={addUrl}>
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                  This helps our AI give you better marketing ideas tailored to your specific business. You can always update this later in Settings.
+                </p>
+              </div>
+            )}
+
             {/* Navigation Buttons */}
             <div className="flex gap-3">
               {step > 1 && (
@@ -259,7 +377,7 @@ export default function OnboardingPage() {
                 disabled={loading || !canProceed()}
                 onClick={handleNext}
               >
-                {loading ? "Creating..." : step === 3 ? (
+                {loading ? "Creating..." : step === 4 ? (
                   <>
                     Complete Setup
                     <Check className="ml-2 w-4 h-4" />

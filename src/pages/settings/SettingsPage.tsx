@@ -15,6 +15,7 @@ import { GalleryManagement } from "@/components/settings/GalleryManagement";
 import { EmbedWidget } from "@/components/settings/EmbedWidget";
 import { PaymentSettings } from "@/components/settings/PaymentSettings";
 import { SocialLinksSettings } from "@/components/settings/SocialLinksSettings";
+import { AiContextSettings } from "@/components/settings/AiContextSettings";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -278,6 +279,9 @@ export default function SettingsPage() {
 
         {/* Payment Settings */}
         <PaymentSettings />
+
+        {/* AI Personalization */}
+        <AiContextSettings />
 
         {/* Theme Customization */}
         <ThemeCustomization />

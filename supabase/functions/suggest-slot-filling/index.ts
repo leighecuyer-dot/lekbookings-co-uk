@@ -5,13 +5,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Industry-specific prompts for tailored suggestions
+const industryPrompts: Record<string, string> = {
+  barbershop: "You specialize in barbershops and men's grooming. Consider walk-in promotions, loyalty programs, group bookings for sports teams, and social media campaigns showcasing fresh cuts.",
+  hair_salon: "You specialize in hair salons. Consider color service packages, referral programs, seasonal style promotions, and showcasing transformations on social media.",
+  med_spa: "You specialize in med spas and aesthetics. Consider package deals on treatments, membership programs, seasonal promotions (e.g., summer glow), and educational content about procedures.",
+  yoga_studio: "You specialize in yoga and wellness studios. Consider class passes, new student specials, corporate wellness programs, and community challenges.",
+  tattoo_studio: "You specialize in tattoo studios. Consider flash sales, guest artist events, portfolio showcases, and deposit promotions for larger pieces.",
+  pet_grooming: "You specialize in pet grooming. Consider seasonal packages, loyalty programs, breed-specific promotions, and referral discounts for multi-pet households.",
+  nail_salon: "You specialize in nail salons. Consider package deals, seasonal nail art promotions, bridal party packages, and loyalty punch cards.",
+  massage_therapy: "You specialize in massage therapy. Consider package deals, corporate partnerships, couples massage promotions, and membership subscriptions.",
+  fitness_gym: "You specialize in fitness and gyms. Consider trial memberships, personal training packages, group class promotions, and corporate wellness programs.",
+  dental_clinic: "You specialize in dental clinics. Consider new patient specials, teeth whitening promotions, family packages, and preventive care reminders.",
+  photography: "You specialize in photography studios. Consider mini-session events, seasonal photo packages, print bundles, and referral programs.",
+  other: "You're a general business advisor for appointment-based services. Provide practical, actionable suggestions for filling empty slots.",
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { availabilityData, businessName } = await req.json();
+    const { availabilityData, businessName, industry, aiContext, websiteUrls } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -27,22 +43,44 @@ serve(async (req) => {
     const totalBooked = availabilityData.reduce((sum: number, day: any) => sum + day.bookedSlots, 0);
     const fillRate = totalBooked / (totalAvailable + totalBooked) * 100;
 
-    const systemPrompt = `You are a business advisor helping a booking-based business fill their empty appointment slots. You provide practical, actionable suggestions tailored to their specific availability patterns.
+    // Get industry-specific guidance
+    const industryGuidance = industryPrompts[industry] || industryPrompts.other;
+
+    // Build system prompt with industry context
+    let systemPrompt = `You are a business advisor helping a booking-based business fill their empty appointment slots. ${industryGuidance}
 
 Be concise, friendly, and business-focused. Give 3-4 specific actionable ideas. Format your response with clear headers and bullet points. Keep the total response under 300 words.`;
 
-    const userPrompt = `Business: ${businessName || "My Business"}
+    // Build user prompt with business context
+    let userPrompt = `Business: ${businessName || "My Business"}`;
+    
+    if (industry) {
+      userPrompt += `\nIndustry: ${industry.replace(/_/g, " ")}`;
+    }
+
+    // Add custom AI context if provided
+    if (aiContext && aiContext.trim()) {
+      userPrompt += `\n\nBusiness Description: ${aiContext}`;
+    }
+
+    // Add website references if provided
+    if (websiteUrls && websiteUrls.length > 0) {
+      userPrompt += `\n\nReference websites for this business: ${websiteUrls.join(", ")}`;
+      systemPrompt += "\n\nThe user has provided website links for their business. Reference these to understand their brand, services, and target market when making suggestions.";
+    }
+
+    userPrompt += `
 
 Current Week Availability:
 ${availabilityContext}
 
 Summary: ${totalAvailable} slots available, ${totalBooked} booked (${fillRate.toFixed(0)}% fill rate)
 
-Based on this availability pattern, what specific strategies would you recommend to fill the empty slots? Consider:
+Based on this availability pattern and understanding of this specific business, what specific strategies would you recommend to fill the empty slots? Consider:
 - Which days need the most attention
-- Time-sensitive promotions
-- Client outreach strategies
-- Pricing or package ideas`;
+- Time-sensitive promotions that fit the business type
+- Client outreach strategies relevant to the industry
+- Pricing or package ideas that work for this type of service`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
