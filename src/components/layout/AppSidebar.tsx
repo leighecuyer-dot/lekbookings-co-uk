@@ -33,11 +33,15 @@ import {
   ChevronUp,
   Building2,
   Upload,
+  Columns3,
+  CalendarDays,
 } from "lucide-react";
 
 const mainNavItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Calendar", href: "/calendar", icon: Calendar },
+  { title: "Week View", href: "/week", icon: CalendarDays },
+  { title: "Kanban Board", href: "/kanban", icon: Columns3 },
   { title: "Customers", href: "/customers", icon: Users },
   { title: "Staff", href: "/staff", icon: UserCircle },
   { title: "Services", href: "/services", icon: Briefcase },
