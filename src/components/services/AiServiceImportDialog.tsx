@@ -178,6 +178,19 @@ export function AiServiceImportDialog({
     );
   };
 
+  const updateServiceName = (index: number, name: string) => {
+    setExtractedServices((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, name } : s))
+    );
+  };
+
+  const updateServicePrice = (index: number, price: string) => {
+    const numericPrice = price === "" ? null : parseFloat(price);
+    setExtractedServices((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, price: numericPrice } : s))
+    );
+  };
+
   const handleImport = async () => {
     const selectedServices = extractedServices.filter((s) => s.selected);
     if (selectedServices.length === 0) {
@@ -367,16 +380,28 @@ export function AiServiceImportDialog({
                     </button>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="font-medium truncate">{service.name}</h4>
-                        {service.price != null && (
-                          <span className="text-sm font-medium text-primary shrink-0">
-                            £{service.price.toFixed(2)}
-                          </span>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={service.name}
+                          onChange={(e) => updateServiceName(index, e.target.value)}
+                          className="flex-1 h-8 font-medium"
+                          placeholder="Service name"
+                        />
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-sm text-muted-foreground">£</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={service.price ?? ""}
+                            onChange={(e) => updateServicePrice(index, e.target.value)}
+                            className="w-20 h-8 text-right"
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
                       {service.description && (
-                        <p className="text-sm text-muted-foreground truncate mt-0.5">
+                        <p className="text-sm text-muted-foreground truncate mt-1">
                           {service.description}
                         </p>
                       )}
