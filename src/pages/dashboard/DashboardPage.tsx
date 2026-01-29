@@ -55,9 +55,13 @@ export default function DashboardPage() {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const handleSendMessages = () => {
-    // Navigate to customers page for now - messaging feature can be added later
-    toast.info("Select customers to message from the Customers page");
+  const handleSendSMS = () => {
+    toast.info("SMS campaign coming soon! Select customers from the Customers page.");
+    navigate("/customers");
+  };
+
+  const handleSendEmail = () => {
+    toast.info("Email campaign coming soon! Select customers from the Customers page.");
     navigate("/customers");
   };
   useEffect(() => {
@@ -297,7 +301,8 @@ export default function DashboardPage() {
             <WeeklyPerformanceTile
               businessId={currentBusiness.id}
               currentWeekBookings={stats.weekBookings}
-              onSendMessages={handleSendMessages}
+              onSendSMS={handleSendSMS}
+              onSendEmail={handleSendEmail}
             />
           )}
 
