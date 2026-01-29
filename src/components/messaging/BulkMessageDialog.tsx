@@ -561,8 +561,8 @@ export function BulkMessageDialog({
             )}
 
             {/* Message Input */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <div className="flex items-center justify-between mb-2">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Message</p>
                 <span className="text-xs text-muted-foreground">
                   {message.length} characters
@@ -572,28 +572,30 @@ export function BulkMessageDialog({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Type your message..."
-                className="flex-1 min-h-[120px] resize-none"
+                className="min-h-[120px] resize-none"
               />
-              <div className="flex items-start gap-2 mt-2 p-2 bg-muted rounded-lg">
-                <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground">
-                  Use <code className="bg-background px-1 rounded">{"{name}"}</code> for customer name and{" "}
-                  <code className="bg-background px-1 rounded">{"{business}"}</code> for your business name.
-                </p>
-              </div>
             </div>
 
             {/* Preview */}
             {selectedCount > 0 && (
               <div className="border rounded-lg p-3 bg-muted/50">
                 <p className="text-xs font-medium text-muted-foreground mb-1">Preview</p>
-                <p className="text-sm">
+                <p className="text-sm whitespace-pre-wrap">
                   {getPreviewMessage(
                     customers.find((c) => selectedIds.has(c.id))?.name || "Customer"
                   )}
                 </p>
               </div>
             )}
+
+            {/* Help text */}
+            <div className="flex items-start gap-2 p-2 bg-muted rounded-lg">
+              <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                Use <code className="bg-background px-1 rounded">{"{name}"}</code> for customer name and{" "}
+                <code className="bg-background px-1 rounded">{"{business}"}</code> for your business name.
+              </p>
+            </div>
           </TabsContent>
         </Tabs>
 
