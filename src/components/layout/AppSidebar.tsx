@@ -39,6 +39,7 @@ import {
   ExternalLink,
   Plus,
   UserPlus,
+  UserCog,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -114,13 +115,13 @@ export function AppSidebar() {
             Quick Actions
           </SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     size="default"
-                    className="flex-1 h-10 md:h-11 text-sm gap-2"
+                    className="flex-1 h-10 md:h-11 text-xs gap-1 px-2"
                     asChild
                   >
                     <Link to="/customers?action=add">
@@ -138,7 +139,7 @@ export function AppSidebar() {
                   <Button
                     variant="outline"
                     size="default"
-                    className="flex-1 h-10 md:h-11 text-sm gap-2"
+                    className="flex-1 h-10 md:h-11 text-xs gap-1 px-2"
                     asChild
                   >
                     <Link to="/services?action=add">
@@ -149,6 +150,24 @@ export function AppSidebar() {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>Add a new service</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="default"
+                    className="flex-1 h-10 md:h-11 text-xs gap-1 px-2"
+                    asChild
+                  >
+                    <Link to="/staff?action=add">
+                      <UserCog className="w-4 h-4" />
+                      Staff
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Add a new staff member</p>
                 </TooltipContent>
               </Tooltip>
             </div>
