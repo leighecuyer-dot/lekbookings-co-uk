@@ -517,7 +517,7 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
               </ScrollArea>
               
               {onSendCampaign && (
-                <div className="pt-4 border-t mt-4 shrink-0">
+                <div className="pt-6 border-t mt-6 shrink-0">
                   <p className="text-xs text-muted-foreground mb-3">
                     Ready to act on these suggestions?
                   </p>
