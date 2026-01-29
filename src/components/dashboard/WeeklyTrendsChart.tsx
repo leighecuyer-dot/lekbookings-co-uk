@@ -4,6 +4,7 @@ import { Loader2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, subWeeks, format, parseISO } from "date-fns";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface WeeklyTrendsChartProps {
   businessId: string;
@@ -14,12 +15,16 @@ interface WeekData {
   week: string;
   weekLabel: string;
   bookings: number;
+  revenue: number;
   isCurrent: boolean;
 }
+
+type MetricType = "bookings" | "revenue";
 
 export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTrendsChartProps) {
   const [weeklyData, setWeeklyData] = useState<WeekData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [metric, setMetric] = useState<MetricType>("bookings");
 
   useEffect(() => {
     const fetchTrends = async () => {
@@ -33,7 +38,7 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
         
         const { data: bookings, error } = await supabase
           .from("bookings")
-          .select("start_time")
+          .select("start_time, total_price")
           .eq("business_id", businessId)
           .gte("start_time", eightWeeksAgo.toISOString())
           .neq("status", "cancelled");
@@ -41,23 +46,27 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
         if (error) throw error;
         
         // Group bookings by week
-        const weeklyCountsMap = new Map<string, number>();
+        const weeklyCountsMap = new Map<string, { count: number; revenue: number }>();
         
         // Initialize all 8 weeks with 0
         for (let i = 7; i >= 0; i--) {
           const weekStart = subWeeks(currentWeekStart, i);
           const weekKey = format(weekStart, "yyyy-MM-dd");
-          weeklyCountsMap.set(weekKey, 0);
+          weeklyCountsMap.set(weekKey, { count: 0, revenue: 0 });
         }
         
-        // Count bookings per week
+        // Count bookings and sum revenue per week
         bookings?.forEach(booking => {
           const bookingDate = parseISO(booking.start_time);
           const weekStart = startOfWeek(bookingDate, { weekStartsOn: 1 });
           const weekKey = format(weekStart, "yyyy-MM-dd");
           
           if (weeklyCountsMap.has(weekKey)) {
-            weeklyCountsMap.set(weekKey, (weeklyCountsMap.get(weekKey) || 0) + 1);
+            const current = weeklyCountsMap.get(weekKey)!;
+            weeklyCountsMap.set(weekKey, {
+              count: current.count + 1,
+              revenue: current.revenue + (booking.total_price || 0),
+            });
           }
         });
         
@@ -65,14 +74,15 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
         const data: WeekData[] = [];
         const currentWeekKey = format(currentWeekStart, "yyyy-MM-dd");
         
-        weeklyCountsMap.forEach((count, weekKey) => {
+        weeklyCountsMap.forEach((value, weekKey) => {
           const weekDate = parseISO(weekKey);
           const isCurrent = weekKey === currentWeekKey;
           
           data.push({
             week: weekKey,
             weekLabel: format(weekDate, "MMM d"),
-            bookings: isCurrent ? currentWeekBookings : count,
+            bookings: isCurrent ? currentWeekBookings : value.count,
+            revenue: value.revenue,
             isCurrent,
           });
         });
@@ -101,10 +111,24 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
     );
   }
 
-  const maxBookings = Math.max(...weeklyData.map(d => d.bookings), 1);
-  const avgBookings = weeklyData.length > 1 
-    ? weeklyData.slice(0, -1).reduce((sum, d) => sum + d.bookings, 0) / (weeklyData.length - 1)
+  const maxValue = Math.max(...weeklyData.map(d => metric === "bookings" ? d.bookings : d.revenue), 1);
+  const avgValue = weeklyData.length > 1 
+    ? weeklyData.slice(0, -1).reduce((sum, d) => sum + (metric === "bookings" ? d.bookings : d.revenue), 0) / (weeklyData.length - 1)
     : 0;
+
+  const formatValue = (value: number) => {
+    if (metric === "revenue") {
+      return `£${value.toFixed(0)}`;
+    }
+    return value.toString();
+  };
+
+  const formatAvg = (value: number) => {
+    if (metric === "revenue") {
+      return `£${value.toFixed(0)}`;
+    }
+    return value.toFixed(1);
+  };
 
   return (
     <Card className="border-0 shadow-soft">
@@ -112,24 +136,40 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <span className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            8-Week Booking Trends
+            8-Week Trends
           </span>
-          <span className="text-xs font-normal text-muted-foreground">
-            Avg: {avgBookings.toFixed(1)}/week
-          </span>
+          <div className="flex items-center gap-3">
+            <Tabs value={metric} onValueChange={(v) => setMetric(v as MetricType)}>
+              <TabsList className="h-7">
+                <TabsTrigger value="bookings" className="text-xs px-2 py-1 h-5">
+                  Bookings
+                </TabsTrigger>
+                <TabsTrigger value="revenue" className="text-xs px-2 py-1 h-5">
+                  Revenue
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Avg: {formatAvg(avgValue)}{metric === "bookings" ? "/week" : "/week"}
+        </p>
       </CardHeader>
       <CardContent>
         <div className="h-[180px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={weeklyData}
-              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              margin={{ top: 10, right: 10, left: metric === "revenue" ? 0 : -20, bottom: 0 }}
             >
               <defs>
                 <linearGradient id="bookingsGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -143,8 +183,9 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                width={30}
-                domain={[0, Math.ceil(maxBookings * 1.1)]}
+                width={metric === "revenue" ? 45 : 30}
+                domain={[0, Math.ceil(maxValue * 1.1)]}
+                tickFormatter={(value) => metric === "revenue" ? `£${value}` : value}
               />
               <Tooltip
                 content={({ active, payload }) => {
@@ -157,7 +198,10 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
                           {data.isCurrent && " (Current)"}
                         </p>
                         <p className="text-sm font-semibold text-foreground">
-                          {data.bookings} bookings
+                          {metric === "bookings" 
+                            ? `${data.bookings} bookings`
+                            : `£${data.revenue.toFixed(2)}`
+                          }
                         </p>
                       </div>
                     );
@@ -167,19 +211,20 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
               />
               <Area
                 type="monotone"
-                dataKey="bookings"
-                stroke="hsl(var(--primary))"
+                dataKey={metric}
+                stroke={metric === "bookings" ? "hsl(var(--primary))" : "hsl(var(--chart-2))"}
                 strokeWidth={2}
-                fill="url(#bookingsGradient)"
+                fill={metric === "bookings" ? "url(#bookingsGradient)" : "url(#revenueGradient)"}
                 dot={(props) => {
                   const { cx, cy, payload } = props;
+                  const color = metric === "bookings" ? "hsl(var(--primary))" : "hsl(var(--chart-2))";
                   if (payload.isCurrent) {
                     return (
                       <circle
                         cx={cx}
                         cy={cy}
                         r={5}
-                        fill="hsl(var(--primary))"
+                        fill={color}
                         stroke="hsl(var(--background))"
                         strokeWidth={2}
                       />
@@ -190,14 +235,14 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
                       cx={cx}
                       cy={cy}
                       r={3}
-                      fill="hsl(var(--primary))"
+                      fill={color}
                       fillOpacity={0.5}
                     />
                   );
                 }}
                 activeDot={{
                   r: 6,
-                  fill: "hsl(var(--primary))",
+                  fill: metric === "bookings" ? "hsl(var(--primary))" : "hsl(var(--chart-2))",
                   stroke: "hsl(var(--background))",
                   strokeWidth: 2,
                 }}
