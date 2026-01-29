@@ -26,6 +26,7 @@ import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { WeekView } from "@/components/calendar/WeekView";
 import { KanbanView } from "@/components/calendar/KanbanView";
 import { StatusFilter } from "@/components/calendar/StatusFilter";
+import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 
 type ViewMode = "day" | "week" | "kanban";
 
@@ -81,6 +82,13 @@ export default function CalendarPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  
+  // Swipe gestures for mobile day navigation
+  const swipeHandlers = useSwipeGesture({
+    onSwipeLeft: () => setSelectedDate(addDays(selectedDate, 1)),
+    onSwipeRight: () => setSelectedDate(addDays(selectedDate, -1)),
+    threshold: 50,
+  });
   
   // New booking form
   const [newBooking, setNewBooking] = useState({
@@ -512,7 +520,12 @@ export default function CalendarPage() {
           <Card className="border-0 shadow-soft flex-1 flex flex-col min-h-0">
             <CardContent className="p-3 sm:p-6 flex-1 flex flex-col min-h-0 overflow-hidden">
               {viewMode === "day" && (
-                <div className="flex flex-col h-full">
+                <div 
+                  className="flex flex-col h-full"
+                  onTouchStart={swipeHandlers.onTouchStart}
+                  onTouchMove={swipeHandlers.onTouchMove}
+                  onTouchEnd={swipeHandlers.onTouchEnd}
+                >
                   <div className="flex items-center justify-between mb-3 sm:mb-6 shrink-0">
                     <div className="flex items-center gap-1 sm:gap-2">
                       <Button
