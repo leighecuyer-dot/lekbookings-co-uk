@@ -28,6 +28,7 @@ import { KanbanView } from "@/components/calendar/KanbanView";
 import { DayTimelineView } from "@/components/calendar/DayTimelineView";
 import { StatusFilter } from "@/components/calendar/StatusFilter";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
+import { useStaffLeave } from "@/hooks/staff/useStaffLeave";
 
 type ViewMode = "day" | "week" | "kanban";
 
@@ -57,9 +58,20 @@ interface Service {
   price?: number | null;
 }
 
+interface WorkingHoursDay {
+  start: string;
+  end: string;
+  enabled?: boolean;
+}
+
+interface WorkingHours {
+  [key: string]: WorkingHoursDay;
+}
+
 interface Staff {
   id: string;
   name: string;
+  working_hours?: WorkingHours | null;
 }
 
 interface Customer {
@@ -72,6 +84,7 @@ interface Customer {
 export default function CalendarPage() {
   const { currentBusiness, isResellerMode } = useBusiness();
   const { createBooking: resellerCreateBooking, updateBookingStatus: resellerUpdateBookingStatus } = useResellerOperations();
+  const { isOnLeave } = useStaffLeave(currentBusiness?.id || null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -145,7 +158,7 @@ export default function CalendarPage() {
         .eq("is_active", true),
       supabase
         .from("staff")
-        .select("id, name")
+        .select("id, name, working_hours")
         .eq("business_id", currentBusiness.id)
         .eq("is_active", true),
       supabase
@@ -157,7 +170,7 @@ export default function CalendarPage() {
 
     if (bookingsRes.data) setBookings(bookingsRes.data);
     if (servicesRes.data) setServices(servicesRes.data);
-    if (staffRes.data) setStaffList(staffRes.data);
+    if (staffRes.data) setStaffList(staffRes.data as unknown as Staff[]);
     if (customersRes.data) setCustomers(customersRes.data);
     setLoading(false);
   };
@@ -573,6 +586,7 @@ export default function CalendarPage() {
                       onBookingClick={handleBookingClick}
                       onSlotClick={handleSlotClick}
                       loading={loading}
+                      isOnLeave={isOnLeave}
                     />
                   </div>
                 </div>

@@ -1,7 +1,13 @@
 import { format, parseISO, setHours, setMinutes } from "date-fns";
-import { Clock, Plus } from "lucide-react";
+import { Clock, Plus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Booking {
   id: string;
@@ -20,9 +26,20 @@ interface Service {
   color: string | null;
 }
 
+interface WorkingHoursDay {
+  start: string;
+  end: string;
+  enabled?: boolean;
+}
+
+interface WorkingHours {
+  [key: string]: WorkingHoursDay;
+}
+
 interface Staff {
   id: string;
   name: string;
+  working_hours?: WorkingHours | null;
 }
 
 interface DayTimelineViewProps {
@@ -33,6 +50,7 @@ interface DayTimelineViewProps {
   onBookingClick: (booking: Booking) => void;
   onSlotClick: (time: string) => void;
   loading?: boolean;
+  isOnLeave?: (staffId: string, date: Date) => boolean;
 }
 
 // Generate time slots from 8:00 to 18:00 (30-min intervals)
@@ -57,6 +75,64 @@ const getStatusColor = (status: string) => {
   }
 };
 
+// Helper to check if a staff member is available at a specific time slot
+function isStaffAvailableAtSlot(
+  staff: Staff,
+  slotTime: string,
+  date: Date,
+  isOnLeave?: (staffId: string, date: Date) => boolean
+): boolean {
+  // Check if on leave
+  if (isOnLeave && isOnLeave(staff.id, date)) {
+    return false;
+  }
+
+  // Check working hours
+  if (!staff.working_hours) return false;
+
+  const dayName = format(date, "EEEE").toLowerCase();
+  const dayHours = staff.working_hours[dayName];
+
+  if (!dayHours) return false;
+  if (dayHours.enabled === false) return false;
+
+  return slotTime >= dayHours.start && slotTime < dayHours.end;
+}
+
+// Get available staff for a slot
+function getAvailableStaffForSlot(
+  staffList: Staff[],
+  slotTime: string,
+  date: Date,
+  bookings: Booking[],
+  isOnLeave?: (staffId: string, date: Date) => boolean
+): Staff[] {
+  // Find staff who are booked at this slot
+  const [slotHour, slotMinute] = slotTime.split(":").map(Number);
+  const slotDate = setMinutes(setHours(date, slotHour), slotMinute);
+  const slotTimestamp = slotDate.getTime();
+
+  const bookedStaffIds = new Set(
+    bookings
+      .filter((booking) => {
+        const bookingStart = parseISO(booking.start_time).getTime();
+        const bookingEnd = parseISO(booking.end_time).getTime();
+        return slotTimestamp >= bookingStart && slotTimestamp < bookingEnd;
+      })
+      .map((booking) => booking.staff_id)
+      .filter(Boolean)
+  );
+
+  return staffList.filter((staff) => {
+    // Must be available at this time
+    if (!isStaffAvailableAtSlot(staff, slotTime, date, isOnLeave)) {
+      return false;
+    }
+    // Must not be already booked
+    return !bookedStaffIds.has(staff.id);
+  });
+}
+
 export function DayTimelineView({
   selectedDate,
   bookings,
@@ -65,6 +141,7 @@ export function DayTimelineView({
   onBookingClick,
   onSlotClick,
   loading,
+  isOnLeave,
 }: DayTimelineViewProps) {
   // Check if a time slot has a booking
   const getBookingForSlot = (slotTime: string) => {
@@ -103,100 +180,159 @@ export function DayTimelineView({
   }
 
   return (
-    <div className="space-y-1">
-      {TIME_SLOTS.map((slot) => {
-        const booking = getBookingForSlot(slot);
-        const isStart = booking ? isBookingStart(slot, booking) : false;
-        const service = booking ? services.find((s) => s.id === booking.service_id) : null;
-        const staff = booking ? staffList.find((s) => s.id === booking.staff_id) : null;
+    <TooltipProvider>
+      <div className="space-y-1">
+        {TIME_SLOTS.map((slot) => {
+          const booking = getBookingForSlot(slot);
+          const isStart = booking ? isBookingStart(slot, booking) : false;
+          const service = booking ? services.find((s) => s.id === booking.service_id) : null;
+          const staff = booking ? staffList.find((s) => s.id === booking.staff_id) : null;
 
-        // If this slot is occupied by a booking but isn't the start, skip rendering
-        if (booking && !isStart) {
-          return null;
-        }
+          // If this slot is occupied by a booking but isn't the start, skip rendering
+          if (booking && !isStart) {
+            return null;
+          }
 
-        // If this is the start of a booking, render the booking card
-        if (booking && isStart) {
-          const slotSpan = getBookingSlotSpan(booking);
-          // Height: each slot is ~52px (min-h-[52px] + gap)
-          const height = slotSpan * 52 - 4; // Subtract gap
+          // If this is the start of a booking, render the booking card
+          if (booking && isStart) {
+            const slotSpan = getBookingSlotSpan(booking);
+            // Height: each slot is ~52px (min-h-[52px] + gap)
+            const height = slotSpan * 52 - 4; // Subtract gap
+
+            return (
+              <div
+                key={slot}
+                onClick={() => onBookingClick(booking)}
+                className="flex items-stretch gap-2 sm:gap-3 cursor-pointer hover:scale-[1.01] transition-transform"
+                style={{ minHeight: `${height}px` }}
+              >
+                {/* Time label */}
+                <div className="w-12 sm:w-16 shrink-0 text-xs sm:text-sm text-muted-foreground pt-2">
+                  {slot}
+                </div>
+
+                {/* Booking card */}
+                <div
+                  className="flex-1 flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background"
+                  style={{
+                    borderLeft: service?.color ? `4px solid ${service.color}` : undefined,
+                  }}
+                >
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
+                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-background text-sm sm:text-base">
+                        {format(parseISO(booking.start_time), "HH:mm")}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-background/60">
+                        {format(parseISO(booking.end_time), "HH:mm")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-background truncate text-sm sm:text-base">
+                      {booking.customer_name}
+                    </p>
+                    <p className="text-xs sm:text-sm text-background/70 truncate">
+                      {service?.name || "No service"}
+                      {staff && ` • ${staff.name}`}
+                    </p>
+                  </div>
+
+                  <Badge className={`${getStatusColor(booking.status)} text-[10px] sm:text-xs`}>
+                    {booking.status}
+                  </Badge>
+                </div>
+              </div>
+            );
+          }
+
+          // Free slot - show available staff
+          const availableStaff = getAvailableStaffForSlot(
+            staffList,
+            slot,
+            selectedDate,
+            bookings,
+            isOnLeave
+          );
+          const hasAvailableStaff = availableStaff.length > 0;
 
           return (
             <div
               key={slot}
-              onClick={() => onBookingClick(booking)}
-              className="flex items-stretch gap-2 sm:gap-3 cursor-pointer hover:scale-[1.01] transition-transform"
-              style={{ minHeight: `${height}px` }}
+              onClick={() => hasAvailableStaff && onSlotClick(slot)}
+              className={cn(
+                "flex items-center gap-2 sm:gap-3 min-h-[52px] group",
+                hasAvailableStaff ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+              )}
             >
               {/* Time label */}
-              <div className="w-12 sm:w-16 shrink-0 text-xs sm:text-sm text-muted-foreground pt-2">
+              <div className="w-12 sm:w-16 shrink-0 text-xs sm:text-sm text-muted-foreground">
                 {slot}
               </div>
 
-              {/* Booking card */}
-              <div
-                className="flex-1 flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background"
-                style={{
-                  borderLeft: service?.color ? `4px solid ${service.color}` : undefined,
-                }}
-              >
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
-                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-background text-sm sm:text-base">
-                      {format(parseISO(booking.start_time), "HH:mm")}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-background/60">
-                      {format(parseISO(booking.end_time), "HH:mm")}
-                    </p>
-                  </div>
+              {/* Free slot indicator */}
+              <div className={cn(
+                "flex-1 flex items-center justify-between gap-2 p-2 sm:p-3 rounded-xl border-2 border-dashed transition-all",
+                hasAvailableStaff
+                  ? "border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5"
+                  : "border-muted-foreground/10 bg-muted/30"
+              )}>
+                <div className="flex items-center gap-2">
+                  <Plus className={cn(
+                    "w-4 h-4 transition-colors",
+                    hasAvailableStaff
+                      ? "text-muted-foreground/40 group-hover:text-primary"
+                      : "text-muted-foreground/20"
+                  )} />
+                  <span className={cn(
+                    "text-xs sm:text-sm transition-colors",
+                    hasAvailableStaff
+                      ? "text-muted-foreground/40 group-hover:text-primary"
+                      : "text-muted-foreground/30"
+                  )}>
+                    {hasAvailableStaff ? "Available" : "No staff available"}
+                  </span>
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-background truncate text-sm sm:text-base">
-                    {booking.customer_name}
-                  </p>
-                  <p className="text-xs sm:text-sm text-background/70 truncate">
-                    {service?.name || "No service"}
-                    {staff && ` • ${staff.name}`}
-                  </p>
-                </div>
-
-                <Badge className={`${getStatusColor(booking.status)} text-[10px] sm:text-xs`}>
-                  {booking.status}
-                </Badge>
+                {/* Staff availability indicator */}
+                {staffList.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className={cn(
+                        "flex items-center gap-1 px-2 py-1 rounded-full text-xs",
+                        hasAvailableStaff
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        <Users className="w-3 h-3" />
+                        <span>{availableStaff.length}/{staffList.length}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-[200px]">
+                      {hasAvailableStaff ? (
+                        <div>
+                          <p className="font-medium mb-1">Available staff:</p>
+                          <ul className="text-xs space-y-0.5">
+                            {availableStaff.map((s) => (
+                              <li key={s.id}>• {s.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p>No staff available at this time</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
             </div>
           );
-        }
-
-        // Free slot - clickable to create booking
-        return (
-          <div
-            key={slot}
-            onClick={() => onSlotClick(slot)}
-            className="flex items-center gap-2 sm:gap-3 min-h-[52px] group cursor-pointer"
-          >
-            {/* Time label */}
-            <div className="w-12 sm:w-16 shrink-0 text-xs sm:text-sm text-muted-foreground">
-              {slot}
-            </div>
-
-            {/* Free slot indicator */}
-            <div className={cn(
-              "flex-1 flex items-center gap-2 p-2 sm:p-3 rounded-xl border-2 border-dashed",
-              "border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5 transition-all"
-            )}>
-              <Plus className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-              <span className="text-xs sm:text-sm text-muted-foreground/40 group-hover:text-primary transition-colors">
-                Available
-              </span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+        })}
+      </div>
+    </TooltipProvider>
   );
 }
