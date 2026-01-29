@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CalendarDays } from "lucide-react";
@@ -36,8 +37,14 @@ interface WorkingHours {
 const SLOT_DURATION_MINUTES = 30; // Default slot duration
 
 export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
+  const navigate = useNavigate();
   const [daySlots, setDaySlots] = useState<DaySlots[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleDayClick = (date: Date) => {
+    const dateParam = format(date, "yyyy-MM-dd");
+    navigate(`/calendar?date=${dateParam}`);
+  };
 
   useEffect(() => {
     const calculateSlots = async () => {
@@ -198,10 +205,11 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
             const isPast = isBefore(day.date, new Date()) && !isToday(day.date);
             
             return (
-              <div
+              <button
                 key={day.dayName}
+                onClick={() => handleDayClick(day.date)}
                 className={cn(
-                  "flex flex-col items-center p-1.5 rounded-lg border text-center transition-colors",
+                  "flex flex-col items-center p-1.5 rounded-lg border text-center transition-all hover:scale-105 hover:shadow-md cursor-pointer",
                   isPast ? "opacity-40" : "",
                   isToday(day.date) ? "ring-1 ring-primary" : "",
                   getStatusStyles(status)
@@ -216,7 +224,7 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
                 <span className="text-[9px] opacity-70">
                   {status === "closed" ? "off" : "slots"}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>
