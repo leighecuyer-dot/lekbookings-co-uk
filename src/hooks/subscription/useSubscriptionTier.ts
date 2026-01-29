@@ -8,6 +8,7 @@ export interface TierLimits {
   maxBookingsPerMonth: number;
   maxSmsPerMonth: number;
   hasAdvancedAnalytics: boolean;
+  hasCampaignReports: boolean;
   hasApiAccess: boolean;
   hasFullPageBuilder: boolean;
 }
@@ -18,6 +19,7 @@ const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     maxBookingsPerMonth: 100,
     maxSmsPerMonth: 50,
     hasAdvancedAnalytics: false,
+    hasCampaignReports: false,
     hasApiAccess: false,
     hasFullPageBuilder: false,
   },
@@ -26,6 +28,7 @@ const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     maxBookingsPerMonth: Infinity,
     maxSmsPerMonth: 200,
     hasAdvancedAnalytics: true,
+    hasCampaignReports: true,
     hasApiAccess: false,
     hasFullPageBuilder: false,
   },
@@ -34,6 +37,7 @@ const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     maxBookingsPerMonth: Infinity,
     maxSmsPerMonth: Infinity,
     hasAdvancedAnalytics: true,
+    hasCampaignReports: true,
     hasApiAccess: true,
     hasFullPageBuilder: true,
   },
@@ -42,6 +46,7 @@ const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     maxBookingsPerMonth: 100,
     maxSmsPerMonth: 50,
     hasAdvancedAnalytics: false,
+    hasCampaignReports: false,
     hasApiAccess: false,
     hasFullPageBuilder: false,
   },
