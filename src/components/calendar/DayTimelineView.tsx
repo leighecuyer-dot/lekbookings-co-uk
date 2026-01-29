@@ -48,7 +48,7 @@ interface DayTimelineViewProps {
   services: Service[];
   staffList: Staff[];
   onBookingClick: (booking: Booking) => void;
-  onSlotClick: (time: string) => void;
+  onSlotClick: (time: string, staffId?: string) => void;
   loading?: boolean;
   isOnLeave?: (staffId: string, date: Date) => boolean;
 }
@@ -260,10 +260,13 @@ export function DayTimelineView({
           );
           const hasAvailableStaff = availableStaff.length > 0;
 
+          // Pre-select the first available staff member when clicking a slot
+          const preSelectedStaffId = availableStaff.length > 0 ? availableStaff[0].id : undefined;
+
           return (
             <div
               key={slot}
-              onClick={() => hasAvailableStaff && onSlotClick(slot)}
+              onClick={() => hasAvailableStaff && onSlotClick(slot, preSelectedStaffId)}
               className={cn(
                 "flex items-center gap-2 sm:gap-3 min-h-[52px] group",
                 hasAvailableStaff ? "cursor-pointer" : "cursor-not-allowed opacity-50"
