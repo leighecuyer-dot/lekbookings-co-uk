@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Info,
   Mail,
+  Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -38,12 +39,22 @@ interface Customer {
   lastBooking?: string | null;
 }
 
+export interface AvailabilityContext {
+  daysWithOpenings: Array<{
+    dayName: string;
+    date: string;
+    availableSlots: number;
+  }>;
+  totalAvailable: number;
+}
+
 interface BulkMessageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   businessId: string;
   businessName: string;
   messageType: "sms" | "whatsapp" | "email";
+  availabilityContext?: AvailabilityContext;
 }
 
 const MESSAGE_TEMPLATES = {
@@ -100,12 +111,69 @@ const MESSAGE_TEMPLATES = {
   ],
 };
 
+// Generate dynamic templates based on availability context
+const generateDynamicTemplates = (
+  context: AvailabilityContext | undefined,
+  messageType: "sms" | "whatsapp" | "email"
+) => {
+  if (!context || context.daysWithOpenings.length === 0) {
+    return [];
+  }
+
+  const topDays = context.daysWithOpenings.slice(0, 3);
+  const firstDay = topDays[0];
+  const daysList = topDays.map(d => d.dayName).join(", ");
+  
+  const emoji = messageType === "whatsapp" ? " 📅" : "";
+  const greeting = messageType === "email" ? "Dear {name}," : "Hi {name}!";
+  const signoff = messageType === "email" ? "\n\nBest regards,\n{business}" : "";
+  const lineBreak = messageType === "email" ? "\n\n" : messageType === "whatsapp" ? "\n\n" : " ";
+
+  const templates = [];
+
+  // Single day highlight
+  if (firstDay) {
+    templates.push({
+      id: "day-specific",
+      name: `${firstDay.dayName} Openings`,
+      message: messageType === "email"
+        ? `${greeting}\n\nWe have ${firstDay.availableSlots} openings this ${firstDay.dayName} at {business}!${lineBreak}Book now to secure your preferred time slot.${signoff}`
+        : `${greeting}${emoji}${lineBreak}We have ${firstDay.availableSlots} openings this ${firstDay.dayName} at {business}!${lineBreak}Book now before they fill up!`,
+    });
+  }
+
+  // Multiple days
+  if (topDays.length > 1) {
+    templates.push({
+      id: "multiple-days",
+      name: "This Week's Slots",
+      message: messageType === "email"
+        ? `${greeting}\n\nWe have availability on ${daysList} this week at {business}.${lineBreak}With ${context.totalAvailable} slots available, now is the perfect time to book your appointment.${signoff}`
+        : `${greeting}${emoji}${lineBreak}We have openings on ${daysList} this week at {business}!${lineBreak}${context.totalAvailable} slots available - book now!`,
+    });
+  }
+
+  // Urgency template
+  if (context.totalAvailable <= 10) {
+    templates.push({
+      id: "limited-slots",
+      name: "Limited Availability",
+      message: messageType === "email"
+        ? `${greeting}\n\nJust ${context.totalAvailable} slots left this week at {business}!${lineBreak}These tend to fill up fast, so book now to secure your spot.${signoff}`
+        : `${greeting}${emoji}${lineBreak}Only ${context.totalAvailable} slots left this week at {business}!${lineBreak}Book now before they're gone!`,
+    });
+  }
+
+  return templates;
+};
+
 export function BulkMessageDialog({
   open,
   onOpenChange,
   businessId,
   businessName,
   messageType,
+  availabilityContext,
 }: BulkMessageDialogProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -116,16 +184,33 @@ export function BulkMessageDialog({
   const [sending, setSending] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "inactive">("inactive");
 
-  const templates = MESSAGE_TEMPLATES[messageType];
+  const staticTemplates = MESSAGE_TEMPLATES[messageType];
+  const dynamicTemplates = useMemo(
+    () => generateDynamicTemplates(availabilityContext, messageType),
+    [availabilityContext, messageType]
+  );
+  const allTemplates = [...dynamicTemplates, ...staticTemplates];
 
   useEffect(() => {
     if (open && businessId) {
       fetchCustomers();
-      // Reset message to first template of current type
-      setMessage(templates[0].message);
-      setEmailSubject(messageType === "email" ? "We have availability this week!" : "");
+      // Use dynamic template if available, otherwise use first static template
+      const defaultTemplate = dynamicTemplates.length > 0 ? dynamicTemplates[0] : staticTemplates[0];
+      setMessage(defaultTemplate.message);
+      
+      // Set dynamic email subject based on context
+      if (messageType === "email") {
+        if (availabilityContext?.daysWithOpenings[0]) {
+          const firstDay = availabilityContext.daysWithOpenings[0];
+          setEmailSubject(`We have ${firstDay.availableSlots} openings this ${firstDay.dayName}!`);
+        } else {
+          setEmailSubject("We have availability this week!");
+        }
+      } else {
+        setEmailSubject("");
+      }
     }
-  }, [open, businessId, messageType]);
+  }, [open, businessId, messageType, availabilityContext]);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -222,7 +307,7 @@ export function BulkMessageDialog({
     }
   };
 
-  const applyTemplate = (template: (typeof templates)[0]) => {
+  const applyTemplate = (template: (typeof allTemplates)[0]) => {
     setMessage(template.message);
     if (messageType === "email") {
       // Set a default subject based on template
@@ -230,6 +315,11 @@ export function BulkMessageDialog({
         "slots-available": "We have availability this week!",
         "special-offer": "Exclusive offer just for you!",
         "reminder": "We miss you! Book your next appointment",
+        "day-specific": availabilityContext?.daysWithOpenings[0]
+          ? `We have ${availabilityContext.daysWithOpenings[0].availableSlots} openings this ${availabilityContext.daysWithOpenings[0].dayName}!`
+          : "We have availability this week!",
+        "multiple-days": "Your week's openings at " + businessName,
+        "limited-slots": "Only a few slots left this week!",
       };
       setEmailSubject(subjectMap[template.id] || "Message from " + businessName);
     }
@@ -418,11 +508,34 @@ export function BulkMessageDialog({
           </TabsContent>
 
           <TabsContent value="compose" className="flex-1 flex flex-col min-h-0 mt-4 space-y-4">
-            {/* Templates */}
+            {/* Dynamic Templates from AI Context */}
+            {dynamicTemplates.length > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  Based on Your Availability
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {dynamicTemplates.map((template) => (
+                    <Button
+                      key={template.id}
+                      variant="default"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => applyTemplate(template)}
+                    >
+                      {template.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Static Templates */}
             <div>
               <p className="text-sm font-medium mb-2">Quick Templates</p>
               <div className="flex gap-2 flex-wrap">
-                {templates.map((template) => (
+                {staticTemplates.map((template) => (
                   <Button
                     key={template.id}
                     variant="outline"

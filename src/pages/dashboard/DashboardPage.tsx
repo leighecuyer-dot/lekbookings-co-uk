@@ -17,7 +17,7 @@ import { WeeklyPerformanceTile } from "@/components/dashboard/WeeklyPerformanceT
 import { AvailableSlotsTile } from "@/components/dashboard/AvailableSlotsTile";
 import { WeeklyTrendsChart } from "@/components/dashboard/WeeklyTrendsChart";
 import { RevenueGrowthTile } from "@/components/dashboard/RevenueGrowthTile";
-import { BulkMessageDialog } from "@/components/messaging/BulkMessageDialog";
+import { BulkMessageDialog, type AvailabilityContext } from "@/components/messaging/BulkMessageDialog";
 interface Booking {
   id: string;
   start_time: string;
@@ -60,19 +60,23 @@ export default function DashboardPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageType, setMessageType] = useState<"sms" | "whatsapp" | "email">("sms");
+  const [availabilityContext, setAvailabilityContext] = useState<AvailabilityContext | undefined>(undefined);
 
   const handleSendSMS = () => {
     setMessageType("sms");
+    setAvailabilityContext(undefined);
     setMessageDialogOpen(true);
   };
 
   const handleSendEmail = () => {
     setMessageType("email");
+    setAvailabilityContext(undefined);
     setMessageDialogOpen(true);
   };
 
   const handleSendWhatsApp = () => {
     setMessageType("whatsapp");
+    setAvailabilityContext(undefined);
     setMessageDialogOpen(true);
   };
   useEffect(() => {
@@ -328,8 +332,9 @@ export default function DashboardPage() {
             <AvailableSlotsTile 
               businessId={currentBusiness.id} 
               businessName={currentBusiness.name}
-              onSendCampaign={(type) => {
+              onSendCampaign={(type, context) => {
                 setMessageType(type);
+                setAvailabilityContext(context);
                 setMessageDialogOpen(true);
               }}
             />
@@ -397,6 +402,7 @@ export default function DashboardPage() {
           businessId={currentBusiness.id}
           businessName={currentBusiness.name}
           messageType={messageType}
+          availabilityContext={availabilityContext}
         />
       )}
     </DashboardLayout>
