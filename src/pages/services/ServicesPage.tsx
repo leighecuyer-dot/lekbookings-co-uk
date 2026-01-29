@@ -18,7 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Clock, DollarSign, MoreHorizontal, Briefcase, Sparkles } from "lucide-react";
+import { Plus, Clock, DollarSign, MoreHorizontal, Briefcase, Sparkles, Pencil } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,9 +54,19 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
   
   const [newService, setNewService] = useState({
+    name: "",
+    description: "",
+    duration: "30",
+    price: "",
+    color: COLORS[0],
+  });
+
+  const [editForm, setEditForm] = useState({
     name: "",
     description: "",
     duration: "30",
@@ -144,6 +154,46 @@ export default function ServicesPage() {
       toast.success("Service deleted");
       fetchServices();
     }
+  };
+
+  const handleEditClick = (service: Service) => {
+    setEditingService(service);
+    setEditForm({
+      name: service.name,
+      description: service.description || "",
+      duration: service.duration_minutes.toString(),
+      price: service.price?.toString() || "",
+      color: service.color || COLORS[0],
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateService = async () => {
+    if (!editingService || !editForm.name) {
+      toast.error("Please enter a service name");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("services")
+      .update({
+        name: editForm.name,
+        description: editForm.description || null,
+        duration_minutes: parseInt(editForm.duration) || 30,
+        price: editForm.price ? parseFloat(editForm.price) : null,
+        color: editForm.color,
+      })
+      .eq("id", editingService.id);
+
+    if (error) {
+      toast.error("Failed to update service");
+      return;
+    }
+
+    toast.success("Service updated!");
+    setEditDialogOpen(false);
+    setEditingService(null);
+    fetchServices();
   };
 
   return (
@@ -285,6 +335,12 @@ export default function ServicesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={() => handleEditClick(service)}
+                          >
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() =>
                               handleToggleActive(service.id, service.is_active)
                             }
@@ -333,6 +389,87 @@ export default function ServicesPage() {
           onImportComplete={fetchServices}
         />
       )}
+
+      {/* Edit Service Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Service</DialogTitle>
+            <DialogDescription>
+              Update the details for this service
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Service Name *</Label>
+              <Input
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
+                placeholder="Haircut"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={editForm.description}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, description: e.target.value })
+                }
+                placeholder="Describe this service..."
+                rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Duration (minutes)</Label>
+                <Input
+                  type="number"
+                  value={editForm.duration}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, duration: e.target.value })
+                  }
+                  placeholder="30"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Price ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editForm.price}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, price: e.target.value })
+                  }
+                  placeholder="50.00"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex gap-2">
+                {COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      editForm.color === color
+                        ? "border-foreground scale-110"
+                        : "border-transparent"
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setEditForm({ ...editForm, color })}
+                  />
+                ))}
+              </div>
+            </div>
+            <Button onClick={handleUpdateService} className="w-full gradient-primary">
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
