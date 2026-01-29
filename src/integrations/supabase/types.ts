@@ -203,6 +203,7 @@ export type Database = {
       businesses: {
         Row: {
           address: string | null
+          ai_context: string | null
           created_at: string
           email: string | null
           id: string
@@ -214,9 +215,11 @@ export type Database = {
           slug: string
           timezone: string
           updated_at: string
+          website_urls: string[] | null
         }
         Insert: {
           address?: string | null
+          ai_context?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -228,9 +231,11 @@ export type Database = {
           slug: string
           timezone?: string
           updated_at?: string
+          website_urls?: string[] | null
         }
         Update: {
           address?: string | null
+          ai_context?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -242,6 +247,7 @@ export type Database = {
           slug?: string
           timezone?: string
           updated_at?: string
+          website_urls?: string[] | null
         }
         Relationships: []
       }
@@ -888,6 +894,7 @@ export type Database = {
         }
         Returns: {
           address: string | null
+          ai_context: string | null
           created_at: string
           email: string | null
           id: string
@@ -899,6 +906,7 @@ export type Database = {
           slug: string
           timezone: string
           updated_at: string
+          website_urls: string[] | null
         }
         SetofOptions: {
           from: "*"
