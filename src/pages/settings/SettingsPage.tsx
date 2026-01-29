@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Copy, ExternalLink, Eye } from "lucide-react";
+import { Copy, ExternalLink, Eye, Mail } from "lucide-react";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { GalleryManagement } from "@/components/settings/GalleryManagement";
 import { EmbedWidget } from "@/components/settings/EmbedWidget";
@@ -38,6 +39,8 @@ export default function SettingsPage() {
     address: "",
     timezone: "UTC",
   });
+  
+  const [dailyDigestEnabled, setDailyDigestEnabled] = useState(false);
 
   useEffect(() => {
     if (currentBusiness) {
@@ -48,6 +51,9 @@ export default function SettingsPage() {
         address: currentBusiness.address || "",
         timezone: currentBusiness.timezone,
       });
+      // Load daily digest setting from business settings
+      const settings = currentBusiness.settings as Record<string, unknown> | null;
+      setDailyDigestEnabled(settings?.dailyDigestEnabled === true);
     }
   }, [currentBusiness]);
 
@@ -82,6 +88,28 @@ export default function SettingsPage() {
   const copyBookingUrl = () => {
     navigator.clipboard.writeText(bookingUrl);
     toast.success("Booking link copied!");
+  };
+
+  const handleDailyDigestToggle = async (enabled: boolean) => {
+    if (!currentBusiness) return;
+    
+    setDailyDigestEnabled(enabled);
+    
+    const currentSettings = (currentBusiness.settings as Record<string, unknown>) || {};
+    const newSettings = { ...currentSettings, dailyDigestEnabled: enabled };
+    
+    const { error } = await supabase
+      .from("businesses")
+      .update({ settings: newSettings })
+      .eq("id", currentBusiness.id);
+
+    if (error) {
+      toast.error("Failed to update notification settings");
+      setDailyDigestEnabled(!enabled); // Revert on error
+    } else {
+      toast.success(enabled ? "Daily digest enabled" : "Daily digest disabled");
+      refreshBusinesses();
+    }
   };
 
   return (
@@ -168,6 +196,39 @@ export default function SettingsPage() {
 
         {/* Social Media Links */}
         <SocialLinksSettings />
+
+        {/* Email Notifications */}
+        <Card className="border-0 shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Email Notifications
+            </CardTitle>
+            <CardDescription>
+              Configure automated email notifications
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="daily-digest">Daily Digest</Label>
+                <p className="text-sm text-muted-foreground">
+                  Receive a morning email with your day's scheduled bookings
+                </p>
+              </div>
+              <Switch
+                id="daily-digest"
+                checked={dailyDigestEnabled}
+                onCheckedChange={handleDailyDigestToggle}
+              />
+            </div>
+            {dailyDigestEnabled && (
+              <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                You'll receive a daily summary at 7:00 AM in your timezone ({formData.timezone})
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Booking Link */}
         <Card className="border-0 shadow-soft">
