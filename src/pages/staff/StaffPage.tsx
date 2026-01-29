@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock } from "lucide-react";
+import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { StaffAvailabilityModal } from "@/components/staff/StaffAvailabilityModal";
+import { useSubscriptionTier } from "@/hooks/subscription/useSubscriptionTier";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface WorkingHours {
   monday: { enabled: boolean; start: string; end: string };
@@ -47,6 +49,7 @@ interface Staff {
 
 export default function StaffPage() {
   const { currentBusiness } = useBusiness();
+  const { tier, limits, canAddStaff, loading: tierLoading } = useSubscriptionTier(currentBusiness?.id ?? null);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -58,6 +61,8 @@ export default function StaffPage() {
     email: "",
     phone: "",
   });
+
+  const staffLimitReached = !canAddStaff(staffList.length);
 
   useEffect(() => {
     if (currentBusiness) {
@@ -95,6 +100,12 @@ export default function StaffPage() {
   const handleCreateStaff = async () => {
     if (!currentBusiness || !newStaff.name) {
       toast.error("Please enter a staff name");
+      return;
+    }
+
+    // Check staff limit
+    if (staffLimitReached) {
+      toast.error(`Your ${tier} plan allows up to ${limits.maxStaff} staff member${limits.maxStaff > 1 ? 's' : ''}. Upgrade to add more.`);
       return;
     }
 
@@ -152,60 +163,79 @@ export default function StaffPage() {
       title="Staff"
       description="Manage your team members"
       actions={
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gradient-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Staff
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Staff Member</DialogTitle>
-              <DialogDescription>
-                Add a new team member to your business
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input
-                  value={newStaff.name}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, name: e.target.value })
-                  }
-                  placeholder="Jane Smith"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={newStaff.email}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, email: e.target.value })
-                  }
-                  placeholder="jane@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input
-                  value={newStaff.phone}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, phone: e.target.value })
-                  }
-                  placeholder="+1 555 123 4567"
-                />
-              </div>
-              <Button onClick={handleCreateStaff} className="w-full gradient-primary">
-                Add Staff Member
+        staffLimitReached ? (
+          <Button variant="outline" className="gap-2" disabled>
+            <Lock className="w-4 h-4" />
+            Staff Limit Reached
+          </Button>
+        ) : (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gradient-primary">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Staff
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Staff Member</DialogTitle>
+                <DialogDescription>
+                  Add a new team member to your business
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Name *</Label>
+                  <Input
+                    value={newStaff.name}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, name: e.target.value })
+                    }
+                    placeholder="Jane Smith"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={newStaff.email}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, email: e.target.value })
+                    }
+                    placeholder="jane@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input
+                    value={newStaff.phone}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, phone: e.target.value })
+                    }
+                    placeholder="+1 555 123 4567"
+                  />
+                </div>
+                <Button onClick={handleCreateStaff} className="w-full gradient-primary">
+                  Add Staff Member
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
       }
     >
+      {/* Upgrade Alert when limit reached */}
+      {staffLimitReached && (
+        <Alert className="mb-4 border-primary/20 bg-primary/5">
+          <Crown className="h-4 w-4 text-primary" />
+          <AlertTitle className="text-primary">Upgrade to add more staff</AlertTitle>
+          <AlertDescription>
+            Your {tier} plan includes {limits.maxStaff} staff member{limits.maxStaff > 1 ? 's' : ''}. 
+            {tier === "essential" ? " Upgrade to Professional for up to 5 staff members." : " Upgrade to Enterprise for unlimited staff."}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading...</div>
       ) : staffList.length === 0 ? (
