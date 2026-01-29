@@ -9,11 +9,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Camera, Link, Loader2, Upload, Check, X, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+const CURRENCY_OPTIONS = [
+  { code: "GBP", symbol: "£", label: "GBP (£)" },
+  { code: "USD", symbol: "$", label: "USD ($)" },
+  { code: "EUR", symbol: "€", label: "EUR (€)" },
+  { code: "AUD", symbol: "A$", label: "AUD (A$)" },
+  { code: "CAD", symbol: "C$", label: "CAD (C$)" },
+  { code: "NZD", symbol: "NZ$", label: "NZD (NZ$)" },
+  { code: "CHF", symbol: "CHF", label: "CHF" },
+  { code: "JPY", symbol: "¥", label: "JPY (¥)" },
+  { code: "CNY", symbol: "¥", label: "CNY (¥)" },
+  { code: "INR", symbol: "₹", label: "INR (₹)" },
+  { code: "ZAR", symbol: "R", label: "ZAR (R)" },
+  { code: "AED", symbol: "د.إ", label: "AED (د.إ)" },
+  { code: "SGD", symbol: "S$", label: "SGD (S$)" },
+  { code: "HKD", symbol: "HK$", label: "HKD (HK$)" },
+];
 
 interface ExtractedService {
   name: string;
@@ -372,7 +396,7 @@ export function AiServiceImportDialog({
           </div>
         ) : (
           <div className="flex-1 overflow-hidden flex flex-col py-4">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 gap-2">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => {
@@ -397,9 +421,23 @@ export function AiServiceImportDialog({
                   {selectedCount} of {extractedServices.length} selected
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={resetState}>
-                Start Over
-              </Button>
+              <div className="flex items-center gap-2">
+                <Select value={detectedCurrency} onValueChange={setDetectedCurrency}>
+                  <SelectTrigger className="w-[110px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_OPTIONS.map((currency) => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="sm" onClick={resetState}>
+                  Start Over
+                </Button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-2">
