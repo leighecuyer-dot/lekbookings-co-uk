@@ -168,10 +168,10 @@ export default function DashboardPage() {
   ];
 
   const quickActions = [
-    { title: "New Booking", href: "/calendar", icon: Plus },
-    { title: "Add Customer", href: "/customers?action=add", icon: Users },
-    { title: "Add Service", href: "/services?action=add", icon: Clock },
-    { title: "View Calendar", href: "/calendar", icon: Calendar },
+    { title: "New Booking", description: "Create a new appointment", href: "/calendar", icon: Plus },
+    { title: "Add Customer", description: "Register a new client", href: "/customers?action=add", icon: Users },
+    { title: "Add Service", description: "Define a new service offering", href: "/services?action=add", icon: Clock },
+    { title: "View Calendar", description: "See all appointments", href: "/calendar", icon: Calendar },
   ];
 
   const refetchData = async () => {
@@ -361,16 +361,19 @@ export default function DashboardPage() {
                 <Button
                   key={action.title}
                   variant="outline"
-                  className="w-full justify-between h-10"
+                  className="w-full justify-between h-auto py-2"
                   size="sm"
                   asChild
                 >
                   <Link to={action.href}>
                     <span className="flex items-center gap-2">
-                      <action.icon className="w-4 h-4" />
-                      {action.title}
+                      <action.icon className="w-4 h-4 shrink-0" />
+                      <span className="flex flex-col items-start">
+                        <span className="font-medium">{action.title}</span>
+                        <span className="text-xs text-muted-foreground font-normal">{action.description}</span>
+                      </span>
                     </span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 shrink-0" />
                   </Link>
                 </Button>
               ))}
