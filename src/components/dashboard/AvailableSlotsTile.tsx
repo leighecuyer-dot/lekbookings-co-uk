@@ -33,10 +33,19 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { AiSuggestionsHistory } from "./AiSuggestionsHistory";
 
+export interface AvailabilityContext {
+  daysWithOpenings: Array<{
+    dayName: string;
+    date: string;
+    availableSlots: number;
+  }>;
+  totalAvailable: number;
+}
+
 interface AvailableSlotsTileProps {
   businessId: string;
   businessName?: string;
-  onSendCampaign?: (type: "sms" | "whatsapp" | "email") => void;
+  onSendCampaign?: (type: "sms" | "whatsapp" | "email", context: AvailabilityContext) => void;
 }
 
 interface TimeSlot {
@@ -146,7 +155,20 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
         .eq("id", currentSuggestionId);
     }
     setAiDialogOpen(false);
-    onSendCampaign?.(type);
+    
+    // Build availability context from current daySlots
+    const context: AvailabilityContext = {
+      daysWithOpenings: daySlots
+        .filter(d => d.availableSlots > 0)
+        .map(d => ({
+          dayName: d.dayName,
+          date: format(d.date, "yyyy-MM-dd"),
+          availableSlots: d.availableSlots,
+        })),
+      totalAvailable: daySlots.reduce((sum, d) => sum + d.availableSlots, 0),
+    };
+    
+    onSendCampaign?.(type, context);
   };
 
   useEffect(() => {
