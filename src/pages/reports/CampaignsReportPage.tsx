@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useSubscriptionTier } from "@/hooks/subscription/useSubscriptionTier";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, subDays, isWithinInterval } from "date-fns";
-import { BarChart3, TrendingUp, Users, MessageSquare, Target, Calendar, DollarSign, Percent } from "lucide-react";
+import { BarChart3, TrendingUp, Users, MessageSquare, Target, Calendar, DollarSign, Percent, Lock, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 
 interface Campaign {
@@ -37,7 +40,11 @@ interface CampaignConversion {
 
 export default function CampaignsReportPage() {
   const { currentBusiness } = useBusiness();
+  const { limits, tier, loading: tierLoading } = useSubscriptionTier(currentBusiness?.id || null);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
+
+  // Check if user has access to campaign reports
+  const hasAccess = limits.hasCampaignReports;
 
   // Fetch campaigns
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
@@ -121,7 +128,55 @@ export default function CampaignsReportPage() {
     return <Badge variant={variants[type] || "default"}>{type.toUpperCase()}</Badge>;
   };
 
-  const isLoading = campaignsLoading || conversionsLoading;
+  const isLoading = campaignsLoading || conversionsLoading || tierLoading;
+
+  // Show paywall for Essential tier
+  if (!tierLoading && !hasAccess) {
+    return (
+      <DashboardLayout
+        title="Campaign Reports"
+        description="Track and analyze your marketing campaign performance"
+      >
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Card className="max-w-md w-full">
+            <CardHeader className="text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Lock className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="flex items-center justify-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-500" />
+                Professional Feature
+              </CardTitle>
+              <CardDescription>
+                Campaign Reports is available on Professional and Enterprise plans
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <BarChart3 className="h-4 w-4" />
+                <AlertTitle>Unlock Campaign Analytics</AlertTitle>
+                <AlertDescription>
+                  Track conversion rates, measure ROI, and see which campaigns drive the most bookings.
+                </AlertDescription>
+              </Alert>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p className="font-medium">What you'll get:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Campaign performance tracking</li>
+                  <li>Conversion attribution (7-day window)</li>
+                  <li>Revenue per campaign metrics</li>
+                  <li>Delivery rate analytics</li>
+                </ul>
+              </div>
+              <Button className="w-full" asChild>
+                <Link to="/settings">Upgrade to Professional</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout
