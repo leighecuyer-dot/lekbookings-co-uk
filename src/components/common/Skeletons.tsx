@@ -79,55 +79,35 @@ export function DashboardSkeleton() {
 
 export function KanbanSkeleton() {
   return (
-    <div className="hidden md:grid md:grid-cols-4 gap-4 min-h-[500px] animate-in fade-in duration-300">
+    <div className="flex gap-4 h-full animate-in fade-in duration-300 overflow-x-auto pb-4 px-1">
       {[1, 2, 3, 4].map((col) => (
-        <div key={col} className="flex flex-col">
-          <div className="p-4 rounded-t-xl border-2 border-border bg-muted/30">
+        <div key={col} className="flex flex-col w-72 shrink-0">
+          <div className="px-3 py-2 rounded-t-xl bg-muted/50">
             <div className="flex items-center gap-2">
-              <Skeleton className="w-5 h-5 rounded" />
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="ml-auto h-5 w-8 rounded-full" />
+              <Skeleton className="w-4 h-4 rounded" />
+              <Skeleton className="h-4 w-20 flex-1" />
+              <Skeleton className="h-5 w-6 rounded-full" />
             </div>
           </div>
-          <div className="flex-1 bg-muted/20 rounded-b-xl border-2 border-t-0 border-border p-3 space-y-3">
-            {[1, 2].map((card) => (
-              <div key={card} className="rounded-xl bg-background border-2 border-border p-3">
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-3 w-16 mb-3" />
-                <div className="flex gap-2">
-                  <Skeleton className="h-3 w-12" />
-                  <Skeleton className="h-3 w-16" />
+          <div className="flex-1 bg-muted/30 rounded-b-xl p-2 space-y-2">
+            {[1, 2, 3].map((card) => (
+              <div key={card} className="bg-card rounded-lg shadow-sm border border-border p-3">
+                <div className="flex items-start gap-2">
+                  <Skeleton className="w-4 h-4 shrink-0" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-24 mb-1" />
+                    <Skeleton className="h-3 w-16 mb-2" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-14" />
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-export function KanbanMobileSkeleton() {
-  return (
-    <div className="md:hidden animate-in fade-in duration-300">
-      <div className="flex gap-2 overflow-x-auto pb-4 -mx-2 px-2">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-10 w-28 rounded-full flex-shrink-0" />
-        ))}
-      </div>
-      <Skeleton className="h-20 w-full rounded-xl mb-4" />
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-xl bg-background border-2 border-border p-4">
-            <Skeleton className="h-5 w-32 mb-2" />
-            <Skeleton className="h-4 w-24 mb-3" />
-            <div className="flex gap-3">
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
