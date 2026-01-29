@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, CalendarDays, Sparkles, MessageSquare, Send, History } from "lucide-react";
+import { Loader2, CalendarDays, Sparkles, MessageSquare, Send, History, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   startOfWeek, 
@@ -36,7 +36,7 @@ import { AiSuggestionsHistory } from "./AiSuggestionsHistory";
 interface AvailableSlotsTileProps {
   businessId: string;
   businessName?: string;
-  onSendCampaign?: (type: "sms" | "whatsapp") => void;
+  onSendCampaign?: (type: "sms" | "whatsapp" | "email") => void;
 }
 
 interface TimeSlot {
@@ -135,7 +135,7 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
     }
   };
 
-  const handleCampaignSent = async (type: "sms" | "whatsapp") => {
+  const handleCampaignSent = async (type: "sms" | "whatsapp" | "email") => {
     if (currentSuggestionId) {
       await supabase
         .from("ai_suggestions")
@@ -463,23 +463,32 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
                   <p className="text-xs text-muted-foreground mb-3">
                     Ready to act on these suggestions?
                   </p>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-1 gap-2"
-                      onClick={() => handleCampaignSent("sms")}
+                      className="gap-1.5"
+                      onClick={() => handleCampaignSent("email")}
                     >
-                      <MessageSquare className="h-4 w-4" />
-                      Send SMS
+                      <Mail className="h-4 w-4" />
+                      Email
                     </Button>
                     <Button
                       size="sm"
-                      className="flex-1 gap-2"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => handleCampaignSent("sms")}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      SMS
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-1.5"
                       onClick={() => handleCampaignSent("whatsapp")}
                     >
                       <Send className="h-4 w-4" />
-                      Send WhatsApp
+                      WhatsApp
                     </Button>
                   </div>
                 </div>

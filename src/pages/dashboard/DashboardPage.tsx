@@ -59,7 +59,7 @@ export default function DashboardPage() {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
-  const [messageType, setMessageType] = useState<"sms" | "whatsapp">("sms");
+  const [messageType, setMessageType] = useState<"sms" | "whatsapp" | "email">("sms");
 
   const handleSendSMS = () => {
     setMessageType("sms");
@@ -67,7 +67,8 @@ export default function DashboardPage() {
   };
 
   const handleSendEmail = () => {
-    toast.info("Email campaign coming soon!");
+    setMessageType("email");
+    setMessageDialogOpen(true);
   };
 
   const handleSendWhatsApp = () => {

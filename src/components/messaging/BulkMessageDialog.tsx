@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
+  Mail,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -42,26 +43,62 @@ interface BulkMessageDialogProps {
   onOpenChange: (open: boolean) => void;
   businessId: string;
   businessName: string;
-  messageType: "sms" | "whatsapp";
+  messageType: "sms" | "whatsapp" | "email";
 }
 
-const MESSAGE_TEMPLATES = [
-  {
-    id: "slots-available",
-    name: "Available Slots",
-    message: "Hi {name}! We have availability this week at {business}. Book your appointment now and secure your preferred time! Reply to book.",
-  },
-  {
-    id: "special-offer",
-    name: "Special Offer",
-    message: "Hi {name}! As a valued customer of {business}, we're offering you priority booking this week. Limited slots available - book now!",
-  },
-  {
-    id: "reminder",
-    name: "We Miss You",
-    message: "Hi {name}! It's been a while since your last visit to {business}. We'd love to see you again! Book your next appointment today.",
-  },
-];
+const MESSAGE_TEMPLATES = {
+  sms: [
+    {
+      id: "slots-available",
+      name: "Available Slots",
+      message: "Hi {name}! We have availability this week at {business}. Book your appointment now and secure your preferred time! Reply to book.",
+    },
+    {
+      id: "special-offer",
+      name: "Special Offer",
+      message: "Hi {name}! As a valued customer of {business}, we're offering you priority booking this week. Limited slots available - book now!",
+    },
+    {
+      id: "reminder",
+      name: "We Miss You",
+      message: "Hi {name}! It's been a while since your last visit to {business}. We'd love to see you again! Book your next appointment today.",
+    },
+  ],
+  whatsapp: [
+    {
+      id: "slots-available",
+      name: "Available Slots",
+      message: "Hi {name}! 👋\n\nWe have availability this week at {business}. Book your appointment now and secure your preferred time!\n\nReply to book or tap to call us.",
+    },
+    {
+      id: "special-offer",
+      name: "Special Offer",
+      message: "Hi {name}! 🌟\n\nAs a valued customer of {business}, we're offering you priority booking this week.\n\nLimited slots available - book now!",
+    },
+    {
+      id: "reminder",
+      name: "We Miss You",
+      message: "Hi {name}! 💫\n\nIt's been a while since your last visit to {business}. We'd love to see you again!\n\nBook your next appointment today.",
+    },
+  ],
+  email: [
+    {
+      id: "slots-available",
+      name: "Available Slots",
+      message: "Dear {name},\n\nWe have availability this week at {business} and wanted to reach out to offer you priority booking.\n\nBook your appointment now and secure your preferred time slot before they fill up.\n\nWe look forward to seeing you soon!\n\nBest regards,\n{business}",
+    },
+    {
+      id: "special-offer",
+      name: "Special Offer",
+      message: "Dear {name},\n\nAs a valued customer of {business}, we're excited to offer you an exclusive priority booking opportunity this week.\n\nLimited slots are available, so book now to secure your preferred time.\n\nThank you for choosing us!\n\nBest regards,\n{business}",
+    },
+    {
+      id: "reminder",
+      name: "We Miss You",
+      message: "Dear {name},\n\nIt's been a while since your last visit to {business}, and we wanted to let you know we'd love to see you again!\n\nWe have appointments available this week and would be happy to book you in at a time that works for you.\n\nWe hope to see you soon!\n\nBest regards,\n{business}",
+    },
+  ],
+};
 
 export function BulkMessageDialog({
   open,
@@ -73,26 +110,40 @@ export function BulkMessageDialog({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [message, setMessage] = useState(MESSAGE_TEMPLATES[0].message);
+  const [message, setMessage] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "inactive">("inactive");
 
+  const templates = MESSAGE_TEMPLATES[messageType];
+
   useEffect(() => {
     if (open && businessId) {
       fetchCustomers();
+      // Reset message to first template of current type
+      setMessage(templates[0].message);
+      setEmailSubject(messageType === "email" ? "We have availability this week!" : "");
     }
-  }, [open, businessId]);
+  }, [open, businessId, messageType]);
 
   const fetchCustomers = async () => {
     setLoading(true);
     try {
       // Fetch customers with their last booking
-      const { data: customersData, error: customersError } = await supabase
+      // For email, we need customers with email; for SMS/WhatsApp, we need phone
+      const query = supabase
         .from("customers")
         .select("id, name, phone, email")
-        .eq("business_id", businessId)
-        .not("phone", "is", null);
+        .eq("business_id", businessId);
+      
+      if (messageType === "email") {
+        query.not("email", "is", null);
+      } else {
+        query.not("phone", "is", null);
+      }
+
+      const { data: customersData, error: customersError } = await query;
 
       if (customersError) throw customersError;
 
@@ -171,8 +222,17 @@ export function BulkMessageDialog({
     }
   };
 
-  const applyTemplate = (template: (typeof MESSAGE_TEMPLATES)[0]) => {
+  const applyTemplate = (template: (typeof templates)[0]) => {
     setMessage(template.message);
+    if (messageType === "email") {
+      // Set a default subject based on template
+      const subjectMap: Record<string, string> = {
+        "slots-available": "We have availability this week!",
+        "special-offer": "Exclusive offer just for you!",
+        "reminder": "We miss you! Book your next appointment",
+      };
+      setEmailSubject(subjectMap[template.id] || "Message from " + businessName);
+    }
   };
 
   const getPreviewMessage = (customerName: string) => {
@@ -192,6 +252,11 @@ export function BulkMessageDialog({
       return;
     }
 
+    if (messageType === "email" && !emailSubject.trim()) {
+      toast.error("Please enter an email subject");
+      return;
+    }
+
     setSending(true);
 
     try {
@@ -203,8 +268,10 @@ export function BulkMessageDialog({
             id: c.id,
             name: c.name,
             phone: c.phone,
+            email: c.email,
           })),
           messageTemplate: message,
+          emailSubject: messageType === "email" ? emailSubject : undefined,
           businessName,
           messageType,
         },
@@ -234,18 +301,27 @@ export function BulkMessageDialog({
 
   const selectedCount = selectedIds.size;
   const isWhatsApp = messageType === "whatsapp";
+  const isEmail = messageType === "email";
+
+  const getIcon = () => {
+    if (isEmail) return <Mail className="h-5 w-5 text-blue-500" />;
+    if (isWhatsApp) return <MessageSquare className="h-5 w-5 text-emerald-500" />;
+    return <Phone className="h-5 w-5 text-primary" />;
+  };
+
+  const getTitle = () => {
+    if (isEmail) return "Email";
+    if (isWhatsApp) return "WhatsApp";
+    return "SMS";
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {isWhatsApp ? (
-              <MessageSquare className="h-5 w-5 text-emerald-500" />
-            ) : (
-              <Phone className="h-5 w-5 text-primary" />
-            )}
-            Send {isWhatsApp ? "WhatsApp" : "SMS"} Campaign
+            {getIcon()}
+            Send {getTitle()} Campaign
           </DialogTitle>
           <DialogDescription>
             Select customers and compose your message to fill available slots
@@ -293,7 +369,7 @@ export function BulkMessageDialog({
             ) : filteredCustomers.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
                 <Users className="h-8 w-8 mb-2 opacity-50" />
-                <p>No customers with phone numbers found</p>
+                <p>No customers with {isEmail ? "email addresses" : "phone numbers"} found</p>
               </div>
             ) : (
               <>
@@ -324,9 +400,9 @@ export function BulkMessageDialog({
                         />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{customer.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {customer.phone}
-                          </p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {isEmail ? customer.email : customer.phone}
+                        </p>
                         </div>
                         {customer.lastBooking && (
                           <Badge variant="outline" className="text-xs shrink-0">
@@ -346,7 +422,7 @@ export function BulkMessageDialog({
             <div>
               <p className="text-sm font-medium mb-2">Quick Templates</p>
               <div className="flex gap-2 flex-wrap">
-                {MESSAGE_TEMPLATES.map((template) => (
+                {templates.map((template) => (
                   <Button
                     key={template.id}
                     variant="outline"
@@ -358,6 +434,18 @@ export function BulkMessageDialog({
                 ))}
               </div>
             </div>
+
+            {/* Email Subject (only for email) */}
+            {isEmail && (
+              <div>
+                <p className="text-sm font-medium mb-2">Subject Line</p>
+                <Input
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Enter email subject..."
+                />
+              </div>
+            )}
 
             {/* Message Input */}
             <div className="flex-1 flex flex-col min-h-0">
