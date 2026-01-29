@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight } from "lucide-react";
+import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight, UserPlus, Scissors, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
@@ -260,7 +260,31 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Upcoming Bookings - Scrollable on mobile */}
+        {/* Quick Add Tiles */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <Link
+            to="/customers?action=add"
+            className="bg-foreground text-background rounded-xl p-3 sm:p-4 hover:scale-[1.02] transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center"
+          >
+            <UserPlus className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium">Add Customer</span>
+          </Link>
+          <Link
+            to="/services?action=add"
+            className="bg-foreground text-background rounded-xl p-3 sm:p-4 hover:scale-[1.02] transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center"
+          >
+            <Scissors className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium">Add Service</span>
+          </Link>
+          <Link
+            to="/staff?action=add"
+            className="bg-foreground text-background rounded-xl p-3 sm:p-4 hover:scale-[1.02] transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center"
+          >
+            <UserCog className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-xs sm:text-sm font-medium">Add Staff</span>
+          </Link>
+        </div>
+
         <Card className="border-0 shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
             <div>
