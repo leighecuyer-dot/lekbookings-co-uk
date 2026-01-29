@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, CalendarDays, Sparkles, MessageSquare, Send } from "lucide-react";
+import { Loader2, CalendarDays, Sparkles, MessageSquare, Send, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   startOfWeek, 
@@ -31,6 +31,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { AiSuggestionsHistory } from "./AiSuggestionsHistory";
 
 interface AvailableSlotsTileProps {
   businessId: string;
@@ -65,6 +66,8 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [currentSuggestionId, setCurrentSuggestionId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const handleDayClick = (date: Date) => {
     const dateParam = format(date, "yyyy-MM-dd");
@@ -75,6 +78,7 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
     setAiDialogOpen(true);
     setAiLoading(true);
     setAiSuggestion(null);
+    setCurrentSuggestionId(null);
 
     try {
       const availabilityData = daySlots.map(day => ({
@@ -103,7 +107,25 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
         return;
       }
 
-      setAiSuggestion(data?.suggestion || "No suggestions available.");
+      const suggestionText = data?.suggestion || "No suggestions available.";
+      setAiSuggestion(suggestionText);
+
+      // Save suggestion to database
+      const { data: savedSuggestion, error: saveError } = await supabase
+        .from("ai_suggestions")
+        .insert({
+          business_id: businessId,
+          suggestion_text: suggestionText,
+          availability_snapshot: { availabilityData },
+        })
+        .select("id")
+        .single();
+
+      if (saveError) {
+        console.error("Error saving suggestion:", saveError);
+      } else {
+        setCurrentSuggestionId(savedSuggestion.id);
+      }
     } catch (error) {
       console.error("Error getting AI suggestions:", error);
       toast.error("Failed to get AI suggestions. Please try again.");
@@ -111,6 +133,20 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const handleCampaignSent = async (type: "sms" | "whatsapp") => {
+    if (currentSuggestionId) {
+      await supabase
+        .from("ai_suggestions")
+        .update({ 
+          campaign_sent: true,
+          campaign_type: type 
+        })
+        .eq("id", currentSuggestionId);
+    }
+    setAiDialogOpen(false);
+    onSendCampaign?.(type);
   };
 
   useEffect(() => {
@@ -279,6 +315,21 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
               Week Availability
             </span>
             <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setHistoryOpen(true)}
+                  >
+                    <History className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  View past AI suggestions
+                </TooltipContent>
+              </Tooltip>
               {showAiButton && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -417,10 +468,7 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
                       size="sm"
                       variant="outline"
                       className="flex-1 gap-2"
-                      onClick={() => {
-                        setAiDialogOpen(false);
-                        onSendCampaign("sms");
-                      }}
+                      onClick={() => handleCampaignSent("sms")}
                     >
                       <MessageSquare className="h-4 w-4" />
                       Send SMS
@@ -428,10 +476,7 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
                     <Button
                       size="sm"
                       className="flex-1 gap-2"
-                      onClick={() => {
-                        setAiDialogOpen(false);
-                        onSendCampaign("whatsapp");
-                      }}
+                      onClick={() => handleCampaignSent("whatsapp")}
                     >
                       <Send className="h-4 w-4" />
                       Send WhatsApp
@@ -443,6 +488,12 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
           )}
         </DialogContent>
       </Dialog>
+
+      <AiSuggestionsHistory 
+        businessId={businessId}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+      />
     </>
   );
 }
