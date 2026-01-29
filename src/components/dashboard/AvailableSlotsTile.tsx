@@ -10,16 +10,25 @@ import {
   eachDayOfInterval, 
   format, 
   parseISO, 
-  isWithinInterval,
   addMinutes,
   isSameDay,
   isToday,
   isBefore
 } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AvailableSlotsTileProps {
   businessId: string;
+}
+
+interface TimeSlot {
+  time: string;
+  available: boolean;
 }
 
 interface DaySlots {
@@ -28,13 +37,14 @@ interface DaySlots {
   totalSlots: number;
   bookedSlots: number;
   availableSlots: number;
+  timeSlots: TimeSlot[];
 }
 
 interface WorkingHours {
   [key: string]: { start: string; end: string } | undefined;
 }
 
-const SLOT_DURATION_MINUTES = 30; // Default slot duration
+const SLOT_DURATION_MINUTES = 30;
 
 export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
   const navigate = useNavigate();
@@ -57,7 +67,6 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
         const weekStart = startOfWeek(now, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
         
-        // Fetch staff with working hours and bookings in parallel
         const [staffResult, bookingsResult] = await Promise.all([
           supabase
             .from("staff")
@@ -79,7 +88,6 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
         const staff = staffResult.data || [];
         const bookings = bookingsResult.data || [];
         
-        // Calculate slots for each day of the week
         const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
         
         const slotsPerDay: DaySlots[] = days.map(date => {
@@ -88,14 +96,14 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
           
           let totalSlots = 0;
           let bookedSlots = 0;
+          const allTimeSlots: Map<string, { time: Date; available: boolean }> = new Map();
           
-          // Calculate total available slots based on all staff working hours
+          // Calculate slots based on staff working hours
           staff.forEach(member => {
             const workingHours = member.working_hours as WorkingHours | null;
             const dayHours = workingHours?.[dayName];
             
             if (dayHours?.start && dayHours?.end) {
-              // Parse working hours
               const [startHour, startMin] = dayHours.start.split(":").map(Number);
               const [endHour, endMin] = dayHours.end.split(":").map(Number);
               
@@ -105,11 +113,15 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
               const dayEnd = new Date(date);
               dayEnd.setHours(endHour, endMin, 0, 0);
               
-              // Count slots in this time range
               let currentSlot = dayStart;
               while (isBefore(currentSlot, dayEnd)) {
-                // Skip past slots for today
-                if (!isToday(date) || !isBefore(currentSlot, now)) {
+                const slotKey = format(currentSlot, "HH:mm");
+                const isPast = isToday(date) && isBefore(currentSlot, now);
+                
+                if (!isPast) {
+                  if (!allTimeSlots.has(slotKey)) {
+                    allTimeSlots.set(slotKey, { time: new Date(currentSlot), available: true });
+                  }
                   totalSlots++;
                 }
                 currentSlot = addMinutes(currentSlot, SLOT_DURATION_MINUTES);
@@ -117,16 +129,31 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
             }
           });
           
-          // Count booked slots for this day
+          // Mark booked slots
           bookings.forEach(booking => {
             const bookingStart = parseISO(booking.start_time);
             if (isSameDay(bookingStart, date)) {
-              // Each booking takes up slots based on its duration
               const bookingEnd = parseISO(booking.end_time);
-              const durationMinutes = (bookingEnd.getTime() - bookingStart.getTime()) / (1000 * 60);
-              bookedSlots += Math.ceil(durationMinutes / SLOT_DURATION_MINUTES);
+              let slotTime = new Date(bookingStart);
+              
+              while (isBefore(slotTime, bookingEnd)) {
+                const slotKey = format(slotTime, "HH:mm");
+                if (allTimeSlots.has(slotKey)) {
+                  allTimeSlots.set(slotKey, { time: slotTime, available: false });
+                }
+                slotTime = addMinutes(slotTime, SLOT_DURATION_MINUTES);
+                bookedSlots++;
+              }
             }
           });
+          
+          // Convert to sorted array
+          const timeSlots: TimeSlot[] = Array.from(allTimeSlots.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([time, data]) => ({
+              time,
+              available: data.available,
+            }));
           
           return {
             date,
@@ -134,6 +161,7 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
             totalSlots,
             bookedSlots: Math.min(bookedSlots, totalSlots),
             availableSlots: Math.max(0, totalSlots - bookedSlots),
+            timeSlots,
           };
         });
         
@@ -198,38 +226,68 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Daily breakdown */}
         <div className="grid grid-cols-7 gap-1">
           {daySlots.map((day) => {
             const status = getSlotStatus(day);
             const isPast = isBefore(day.date, new Date()) && !isToday(day.date);
+            const availableTimeSlots = day.timeSlots.filter(s => s.available);
             
             return (
-              <button
-                key={day.dayName}
-                onClick={() => handleDayClick(day.date)}
-                className={cn(
-                  "flex flex-col items-center p-1.5 rounded-lg border text-center transition-all hover:scale-105 hover:shadow-md cursor-pointer",
-                  isPast ? "opacity-40" : "",
-                  isToday(day.date) ? "ring-1 ring-primary" : "",
-                  getStatusStyles(status)
-                )}
-              >
-                <span className="text-[10px] font-medium uppercase">
-                  {day.dayName}
-                </span>
-                <span className="text-lg font-bold leading-tight">
-                  {day.availableSlots}
-                </span>
-                <span className="text-[9px] opacity-70">
-                  {status === "closed" ? "off" : "slots"}
-                </span>
-              </button>
+              <Tooltip key={day.dayName}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleDayClick(day.date)}
+                    className={cn(
+                      "flex flex-col items-center p-1.5 rounded-lg border text-center transition-all hover:scale-105 hover:shadow-md cursor-pointer",
+                      isPast ? "opacity-40" : "",
+                      isToday(day.date) ? "ring-1 ring-primary" : "",
+                      getStatusStyles(status)
+                    )}
+                  >
+                    <span className="text-[10px] font-medium uppercase">
+                      {day.dayName}
+                    </span>
+                    <span className="text-lg font-bold leading-tight">
+                      {day.availableSlots}
+                    </span>
+                    <span className="text-[9px] opacity-70">
+                      {status === "closed" ? "off" : "slots"}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[200px]">
+                  <div className="space-y-1">
+                    <p className="font-medium text-xs">
+                      {format(day.date, "EEEE, MMM d")}
+                    </p>
+                    {status === "closed" ? (
+                      <p className="text-xs text-muted-foreground">Closed</p>
+                    ) : availableTimeSlots.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Fully booked</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {availableTimeSlots.slice(0, 8).map((slot) => (
+                          <span
+                            key={slot.time}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary"
+                          >
+                            {slot.time}
+                          </span>
+                        ))}
+                        {availableTimeSlots.length > 8 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            +{availableTimeSlots.length - 8} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
             );
           })}
         </div>
 
-        {/* Legend */}
         <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
