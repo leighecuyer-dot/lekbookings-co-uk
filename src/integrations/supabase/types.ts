@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_suggestions: {
+        Row: {
+          availability_snapshot: Json
+          business_id: string
+          campaign_sent: boolean | null
+          campaign_type: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          rated_at: string | null
+          success_rating: number | null
+          suggestion_text: string
+        }
+        Insert: {
+          availability_snapshot?: Json
+          business_id: string
+          campaign_sent?: boolean | null
+          campaign_type?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rated_at?: string | null
+          success_rating?: number | null
+          suggestion_text: string
+        }
+        Update: {
+          availability_snapshot?: Json
+          business_id?: string
+          campaign_sent?: boolean | null
+          campaign_type?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rated_at?: string | null
+          success_rating?: number | null
+          suggestion_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           amount_paid: number | null
