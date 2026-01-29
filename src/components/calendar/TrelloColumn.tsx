@@ -23,6 +23,7 @@ interface Booking {
 interface Service {
   id: string;
   name: string;
+  color?: string | null;
 }
 
 interface Staff {
