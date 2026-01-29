@@ -1,0 +1,435 @@
+import { useState, useEffect, useMemo } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Phone,
+  MessageSquare,
+  Users,
+  Search,
+  Send,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { subDays, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
+
+interface Customer {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  lastBooking?: string | null;
+}
+
+interface BulkMessageDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  businessId: string;
+  businessName: string;
+  messageType: "sms" | "whatsapp";
+}
+
+const MESSAGE_TEMPLATES = [
+  {
+    id: "slots-available",
+    name: "Available Slots",
+    message: "Hi {name}! We have availability this week at {business}. Book your appointment now and secure your preferred time! Reply to book.",
+  },
+  {
+    id: "special-offer",
+    name: "Special Offer",
+    message: "Hi {name}! As a valued customer of {business}, we're offering you priority booking this week. Limited slots available - book now!",
+  },
+  {
+    id: "reminder",
+    name: "We Miss You",
+    message: "Hi {name}! It's been a while since your last visit to {business}. We'd love to see you again! Book your next appointment today.",
+  },
+];
+
+export function BulkMessageDialog({
+  open,
+  onOpenChange,
+  businessId,
+  businessName,
+  messageType,
+}: BulkMessageDialogProps) {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [message, setMessage] = useState(MESSAGE_TEMPLATES[0].message);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [filterType, setFilterType] = useState<"all" | "inactive">("inactive");
+
+  useEffect(() => {
+    if (open && businessId) {
+      fetchCustomers();
+    }
+  }, [open, businessId]);
+
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      // Fetch customers with their last booking
+      const { data: customersData, error: customersError } = await supabase
+        .from("customers")
+        .select("id, name, phone, email")
+        .eq("business_id", businessId)
+        .not("phone", "is", null);
+
+      if (customersError) throw customersError;
+
+      // Fetch last booking for each customer
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from("bookings")
+        .select("customer_id, start_time")
+        .eq("business_id", businessId)
+        .order("start_time", { ascending: false });
+
+      if (bookingsError) throw bookingsError;
+
+      // Map last booking to customers
+      const lastBookingMap = new Map<string, string>();
+      bookingsData?.forEach((booking) => {
+        if (booking.customer_id && !lastBookingMap.has(booking.customer_id)) {
+          lastBookingMap.set(booking.customer_id, booking.start_time);
+        }
+      });
+
+      const customersWithBookings: Customer[] = (customersData || []).map((c) => ({
+        ...c,
+        lastBooking: lastBookingMap.get(c.id) || null,
+      }));
+
+      setCustomers(customersWithBookings);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      toast.error("Failed to load customers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredCustomers = useMemo(() => {
+    let filtered = customers;
+
+    // Filter by inactive (no booking in last 30 days)
+    if (filterType === "inactive") {
+      const thirtyDaysAgo = subDays(new Date(), 30);
+      filtered = filtered.filter((c) => {
+        if (!c.lastBooking) return true;
+        return parseISO(c.lastBooking) < thirtyDaysAgo;
+      });
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (c) =>
+          c.name.toLowerCase().includes(query) ||
+          c.phone?.includes(query) ||
+          c.email?.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [customers, filterType, searchQuery]);
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredCustomers.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredCustomers.map((c) => c.id)));
+    }
+  };
+
+  const applyTemplate = (template: (typeof MESSAGE_TEMPLATES)[0]) => {
+    setMessage(template.message);
+  };
+
+  const getPreviewMessage = (customerName: string) => {
+    return message
+      .replace(/{name}/g, customerName)
+      .replace(/{business}/g, businessName);
+  };
+
+  const handleSend = async () => {
+    if (selectedIds.size === 0) {
+      toast.error("Please select at least one customer");
+      return;
+    }
+
+    if (!message.trim()) {
+      toast.error("Please enter a message");
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const selectedCustomers = customers.filter((c) => selectedIds.has(c.id));
+
+      const { data, error } = await supabase.functions.invoke("send-bulk-messages", {
+        body: {
+          customers: selectedCustomers.map((c) => ({
+            id: c.id,
+            name: c.name,
+            phone: c.phone,
+          })),
+          messageTemplate: message,
+          businessName,
+          messageType,
+        },
+      });
+
+      if (error) throw error;
+
+      const result = data as { sent: number; failed: number };
+      
+      if (result.sent > 0) {
+        toast.success(`Successfully sent ${result.sent} messages`);
+        if (result.failed > 0) {
+          toast.warning(`${result.failed} messages failed to send`);
+        }
+        onOpenChange(false);
+        setSelectedIds(new Set());
+      } else {
+        toast.error("Failed to send messages. Please check your messaging configuration.");
+      }
+    } catch (error: any) {
+      console.error("Error sending messages:", error);
+      toast.error(error.message || "Failed to send messages");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const selectedCount = selectedIds.size;
+  const isWhatsApp = messageType === "whatsapp";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {isWhatsApp ? (
+              <MessageSquare className="h-5 w-5 text-emerald-500" />
+            ) : (
+              <Phone className="h-5 w-5 text-primary" />
+            )}
+            Send {isWhatsApp ? "WhatsApp" : "SMS"} Campaign
+          </DialogTitle>
+          <DialogDescription>
+            Select customers and compose your message to fill available slots
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs defaultValue="select" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="select" className="gap-2">
+              <Users className="h-4 w-4" />
+              Select ({selectedCount})
+            </TabsTrigger>
+            <TabsTrigger value="compose" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Compose
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="select" className="flex-1 flex flex-col min-h-0 mt-4">
+            {/* Filters */}
+            <div className="flex gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search customers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                variant={filterType === "inactive" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterType(filterType === "inactive" ? "all" : "inactive")}
+              >
+                Inactive 30d+
+              </Button>
+            </div>
+
+            {/* Customer List */}
+            {loading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredCustomers.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                <Users className="h-8 w-8 mb-2 opacity-50" />
+                <p>No customers with phone numbers found</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <Button variant="ghost" size="sm" onClick={toggleSelectAll}>
+                    {selectedIds.size === filteredCustomers.length ? "Deselect All" : "Select All"}
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {filteredCustomers.length} customers
+                  </span>
+                </div>
+                <ScrollArea className="flex-1 border rounded-lg">
+                  <div className="p-2 space-y-1">
+                    {filteredCustomers.map((customer) => (
+                      <div
+                        key={customer.id}
+                        className={cn(
+                          "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
+                          selectedIds.has(customer.id)
+                            ? "bg-primary/10 border border-primary/20"
+                            : "hover:bg-muted"
+                        )}
+                        onClick={() => toggleSelect(customer.id)}
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(customer.id)}
+                          onCheckedChange={() => toggleSelect(customer.id)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{customer.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {customer.phone}
+                          </p>
+                        </div>
+                        {customer.lastBooking && (
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {new Date(customer.lastBooking).toLocaleDateString()}
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="compose" className="flex-1 flex flex-col min-h-0 mt-4 space-y-4">
+            {/* Templates */}
+            <div>
+              <p className="text-sm font-medium mb-2">Quick Templates</p>
+              <div className="flex gap-2 flex-wrap">
+                {MESSAGE_TEMPLATES.map((template) => (
+                  <Button
+                    key={template.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyTemplate(template)}
+                  >
+                    {template.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Message Input */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium">Message</p>
+                <span className="text-xs text-muted-foreground">
+                  {message.length} characters
+                </span>
+              </div>
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 min-h-[120px] resize-none"
+              />
+              <div className="flex items-start gap-2 mt-2 p-2 bg-muted rounded-lg">
+                <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Use <code className="bg-background px-1 rounded">{"{name}"}</code> for customer name and{" "}
+                  <code className="bg-background px-1 rounded">{"{business}"}</code> for your business name.
+                </p>
+              </div>
+            </div>
+
+            {/* Preview */}
+            {selectedCount > 0 && (
+              <div className="border rounded-lg p-3 bg-muted/50">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Preview</p>
+                <p className="text-sm">
+                  {getPreviewMessage(
+                    customers.find((c) => selectedIds.has(c.id))?.name || "Customer"
+                  )}
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t mt-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {selectedCount > 0 ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                {selectedCount} customer{selectedCount !== 1 ? "s" : ""} selected
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-4 w-4" />
+                Select customers to send
+              </>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSend}
+              disabled={selectedCount === 0 || !message.trim() || sending}
+              className="gap-2"
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Send {selectedCount > 0 ? `to ${selectedCount}` : ""}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

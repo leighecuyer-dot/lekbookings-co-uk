@@ -16,6 +16,7 @@ import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 import { WeeklyPerformanceTile } from "@/components/dashboard/WeeklyPerformanceTile";
 import { AvailableSlotsTile } from "@/components/dashboard/AvailableSlotsTile";
 import { WeeklyTrendsChart } from "@/components/dashboard/WeeklyTrendsChart";
+import { BulkMessageDialog } from "@/components/messaging/BulkMessageDialog";
 interface Booking {
   id: string;
   start_time: string;
@@ -56,15 +57,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [messageType, setMessageType] = useState<"sms" | "whatsapp">("sms");
 
   const handleSendSMS = () => {
-    toast.info("SMS campaign coming soon! Select customers from the Customers page.");
-    navigate("/customers");
+    setMessageType("sms");
+    setMessageDialogOpen(true);
   };
 
   const handleSendEmail = () => {
-    toast.info("Email campaign coming soon! Select customers from the Customers page.");
-    navigate("/customers");
+    toast.info("Email campaign coming soon!");
+  };
+
+  const handleSendWhatsApp = () => {
+    setMessageType("whatsapp");
+    setMessageDialogOpen(true);
   };
   useEffect(() => {
     const fetchData = async () => {
@@ -367,6 +374,16 @@ export default function DashboardPage() {
         staffList={staffList}
         onUpdate={refetchData}
       />
+
+      {currentBusiness && (
+        <BulkMessageDialog
+          open={messageDialogOpen}
+          onOpenChange={setMessageDialogOpen}
+          businessId={currentBusiness.id}
+          businessName={currentBusiness.name}
+          messageType={messageType}
+        />
+      )}
     </DashboardLayout>
   );
 }
