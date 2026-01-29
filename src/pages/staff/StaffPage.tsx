@@ -16,15 +16,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown } from "lucide-react";
+import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { StaffAvailabilityModal } from "@/components/staff/StaffAvailabilityModal";
+import { StaffLeaveModal } from "@/components/staff/StaffLeaveModal";
 import { useSubscriptionTier } from "@/hooks/subscription/useSubscriptionTier";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -54,7 +56,9 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState<Staff | null>(null);
+  const [selectedStaffForLeave, setSelectedStaffForLeave] = useState<Staff | null>(null);
   
   const [newStaff, setNewStaff] = useState({
     name: "",
@@ -290,6 +294,16 @@ export default function StaffPage() {
                             Set Hours
                           </DropdownMenuItem>
                           <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedStaffForLeave(staff);
+                              setLeaveModalOpen(true);
+                            }}
+                          >
+                            <CalendarDays className="w-4 h-4 mr-2" />
+                            Manage Leave
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
                             onClick={() =>
                               handleToggleActive(staff.id, staff.is_active)
                             }
@@ -334,6 +348,17 @@ export default function StaffPage() {
           staffName={selectedStaffForAvailability.name}
           currentHours={selectedStaffForAvailability.working_hours}
           onSave={fetchStaff}
+        />
+      )}
+
+      {/* Leave Modal */}
+      {selectedStaffForLeave && currentBusiness && (
+        <StaffLeaveModal
+          open={leaveModalOpen}
+          onOpenChange={setLeaveModalOpen}
+          staffId={selectedStaffForLeave.id}
+          staffName={selectedStaffForLeave.name}
+          businessId={currentBusiness.id}
         />
       )}
     </DashboardLayout>
