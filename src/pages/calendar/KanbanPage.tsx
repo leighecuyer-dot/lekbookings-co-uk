@@ -420,7 +420,7 @@ export default function KanbanPage() {
         </div>
       }
     >
-      <div className="h-[calc(100vh-180px)]">
+      <div className="h-[calc(100vh-120px)] sm:h-[calc(100vh-140px)]">
         <KanbanView
           bookings={filteredBookings}
           services={services}

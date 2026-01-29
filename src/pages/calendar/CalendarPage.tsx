@@ -457,36 +457,36 @@ export default function CalendarPage() {
         </Dialog>
       }
     >
-      <div className="space-y-4">
-        {/* View Mode Tabs & Status Filter */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+      <div className="h-full flex flex-col">
+        {/* View Mode Tabs & Status Filter - Compact on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               variant={viewMode === "day" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("day")}
-              className={viewMode === "day" ? "bg-foreground text-background" : ""}
+              className={`h-8 px-2 sm:px-3 text-xs sm:text-sm ${viewMode === "day" ? "bg-foreground text-background" : ""}`}
             >
-              <List className="w-4 h-4 mr-2" />
-              Day
+              <List className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Day</span>
             </Button>
             <Button
               variant={viewMode === "week" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("week")}
-              className={viewMode === "week" ? "bg-foreground text-background" : ""}
+              className={`h-8 px-2 sm:px-3 text-xs sm:text-sm ${viewMode === "week" ? "bg-foreground text-background" : ""}`}
             >
-              <CalendarDays className="w-4 h-4 mr-2" />
-              Week
+              <CalendarDays className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Week</span>
             </Button>
             <Button
               variant={viewMode === "kanban" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("kanban")}
-              className={viewMode === "kanban" ? "bg-foreground text-background" : ""}
+              className={`h-8 px-2 sm:px-3 text-xs sm:text-sm ${viewMode === "kanban" ? "bg-foreground text-background" : ""}`}
             >
-              <Columns3 className="w-4 h-4 mr-2" />
-              Kanban
+              <Columns3 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Kanban</span>
             </Button>
           </div>
           <StatusFilter
@@ -495,10 +495,10 @@ export default function CalendarPage() {
           />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-          {/* Calendar Sidebar */}
-          <Card className="border-0 shadow-soft h-fit">
-            <CardContent className="p-4">
+        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[280px_1fr] gap-3 sm:gap-6 min-h-0">
+          {/* Calendar Sidebar - Hidden on mobile in day view */}
+          <Card className="border-0 shadow-soft h-fit hidden lg:block shrink-0">
+            <CardContent className="p-3 sm:p-4">
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -509,123 +509,130 @@ export default function CalendarPage() {
           </Card>
 
           {/* Main Content Area */}
-          <Card className="border-0 shadow-soft">
-            <CardContent className="p-6">
+          <Card className="border-0 shadow-soft flex-1 flex flex-col min-h-0">
+            <CardContent className="p-3 sm:p-6 flex-1 flex flex-col min-h-0 overflow-hidden">
               {viewMode === "day" && (
-                <>
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-3 sm:mb-6 shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-2">
                       <Button
                         variant="outline"
                         size="icon"
+                        className="h-7 w-7 sm:h-9 sm:w-9"
                         onClick={() => setSelectedDate(addDays(selectedDate, -1))}
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
-                      <h2 className="text-xl font-display font-semibold">
-                        {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                      <h2 className="text-sm sm:text-xl font-display font-semibold">
+                        {format(selectedDate, "EEE, MMM d")}
                       </h2>
                       <Button
                         variant="outline"
                         size="icon"
+                        className="h-7 w-7 sm:h-9 sm:w-9"
                         onClick={() => setSelectedDate(addDays(selectedDate, 1))}
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs sm:h-9 sm:text-sm"
                       onClick={() => setSelectedDate(new Date())}
                     >
                       Today
                     </Button>
                   </div>
 
-                  {loading ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      Loading...
-                    </div>
-                  ) : dayBookings.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      No bookings for this day
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {dayBookings.map((booking) => {
-                        const service = services.find(
-                          (s) => s.id === booking.service_id
-                        );
-                        const staff = staffList.find(
-                          (s) => s.id === booking.staff_id
-                        );
+                  <div className="flex-1 overflow-auto">
+                    {loading ? (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        Loading...
+                      </div>
+                    ) : dayBookings.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        No bookings for this day
+                      </div>
+                    ) : (
+                      <div className="space-y-2 sm:space-y-3">
+                        {dayBookings.map((booking) => {
+                          const service = services.find(
+                            (s) => s.id === booking.service_id
+                          );
+                          const staff = staffList.find(
+                            (s) => s.id === booking.staff_id
+                          );
 
-                        return (
-                          <div
-                            key={booking.id}
-                            onClick={() => handleBookingClick(booking)}
-                            className="flex items-center gap-4 p-4 rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.01] transition-transform"
-                            style={{
-                              borderLeft: service?.color
-                                ? `4px solid ${service.color}`
-                                : undefined,
-                            }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-full bg-background/10 flex items-center justify-center">
-                                <Clock className="w-5 h-5 text-background" />
+                          return (
+                            <div
+                              key={booking.id}
+                              onClick={() => handleBookingClick(booking)}
+                              className="flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.01] transition-transform"
+                              style={{
+                                borderLeft: service?.color
+                                  ? `3px solid ${service.color}`
+                                  : undefined,
+                              }}
+                            >
+                              <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
+                                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-background text-sm sm:text-base">
+                                    {format(parseISO(booking.start_time), "HH:mm")}
+                                  </p>
+                                  <p className="text-[10px] sm:text-xs text-background/60">
+                                    {format(parseISO(booking.end_time), "HH:mm")}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-semibold text-background">
-                                  {format(parseISO(booking.start_time), "HH:mm")}
+
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-background truncate text-sm sm:text-base">
+                                  {booking.customer_name}
                                 </p>
-                                <p className="text-xs text-background/60">
-                                  {format(parseISO(booking.end_time), "HH:mm")}
+                                <p className="text-xs sm:text-sm text-background/70 truncate">
+                                  {service?.name || "No service"}
+                                  {staff && ` • ${staff.name}`}
                                 </p>
                               </div>
-                            </div>
 
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-background truncate">
-                                {booking.customer_name}
-                              </p>
-                              <p className="text-sm text-background/70 truncate">
-                                {service?.name || "No service"}
-                                {staff && ` • ${staff.name}`}
-                              </p>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <Badge className={getStatusColor(booking.status)}>
+                              <Badge className={`${getStatusColor(booking.status)} text-[10px] sm:text-xs`}>
                                 {booking.status}
                               </Badge>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {viewMode === "week" && (
-                <WeekView
-                  bookings={filteredBookings}
-                  services={services}
-                  selectedDate={selectedDate}
-                  onBookingClick={handleBookingClick}
-                />
+                <div className="h-full overflow-auto">
+                  <WeekView
+                    bookings={filteredBookings}
+                    services={services}
+                    selectedDate={selectedDate}
+                    onBookingClick={handleBookingClick}
+                  />
+                </div>
               )}
 
               {viewMode === "kanban" && (
-                <KanbanView
-                  bookings={filteredBookings}
-                  services={services}
-                  staffList={staffList}
-                  onStatusChange={handleStatusChange}
-                  onBookingClick={handleBookingClick}
-                  loading={loading}
-                />
+                <div className="h-full">
+                  <KanbanView
+                    bookings={filteredBookings}
+                    services={services}
+                    staffList={staffList}
+                    onStatusChange={handleStatusChange}
+                    onBookingClick={handleBookingClick}
+                    loading={loading}
+                  />
+                </div>
               )}
             </CardContent>
           </Card>

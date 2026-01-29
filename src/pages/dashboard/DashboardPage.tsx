@@ -204,28 +204,28 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout
-      title={`Welcome back${currentBusiness ? `, ${currentBusiness.name}` : ""}`}
-      description="Here's what's happening with your business today"
+      title={`Welcome${currentBusiness ? `, ${currentBusiness.name}` : ""}`}
+      description="Here's what's happening today"
     >
-      <div className="space-y-6 animate-fade-in">
-        {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-3 sm:space-y-6 animate-fade-in h-full">
+        {/* Stats Grid - Compact on mobile */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
           {statCards.map((stat) => (
             <Link key={stat.title} to={stat.href}>
-              <Card className="border-0 shadow-soft bg-foreground text-background rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-background/70">
+              <Card className="border-0 shadow-soft bg-foreground text-background rounded-xl sm:rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform">
+                <CardHeader className="flex flex-row items-center justify-between p-2 sm:p-4 pb-1 sm:pb-2">
+                  <CardTitle className="text-[10px] sm:text-sm font-medium text-background/70 truncate">
                     {stat.title}
                   </CardTitle>
-                  <div className="p-2 rounded-lg bg-background/10">
-                    <stat.icon className="w-4 h-4 text-background" />
+                  <div className="p-1 sm:p-2 rounded-lg bg-background/10">
+                    <stat.icon className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-display font-bold text-background">
+                <CardContent className="p-2 sm:p-4 pt-0 sm:pt-0">
+                  <div className="text-xl sm:text-3xl font-display font-bold text-background">
                     {stat.value}
                   </div>
-                  <p className="text-xs text-background/60 mt-1">
+                  <p className="text-[9px] sm:text-xs text-background/60 mt-0.5 sm:mt-1 truncate hidden sm:block">
                     {stat.description}
                   </p>
                 </CardContent>
@@ -234,31 +234,26 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Upcoming Bookings */}
+        {/* Upcoming Bookings - Scrollable on mobile */}
         <Card className="border-0 shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
             <div>
-              <CardTitle className="text-lg font-display">Today's Appointments</CardTitle>
-              <CardDescription>Click to view or edit</CardDescription>
+              <CardTitle className="text-sm sm:text-lg font-display">Today's Appointments</CardTitle>
+              <CardDescription className="text-xs sm:text-sm hidden sm:block">Click to view or edit</CardDescription>
             </div>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" asChild className="h-7 sm:h-9 text-xs sm:text-sm">
               <Link to="/calendar">View All</Link>
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {upcomingBookings.length === 0 ? (
-              <EmptyState
-                icon={Calendar}
-                title="No appointments today"
-                description="Your schedule is clear. Add a new booking to get started."
-                action={{
-                  label: "Add Booking",
-                  href: "/calendar",
-                }}
-              />
+              <div className="text-center py-4 sm:py-8 text-muted-foreground text-xs sm:text-sm">
+                <Calendar className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
+                <p>No appointments today</p>
+              </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {upcomingBookings.map((booking) => {
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
+                {upcomingBookings.slice(0, 3).map((booking) => {
                   const service = services.find((s) => s.id === booking.service_id);
                   return (
                     <div
@@ -267,23 +262,20 @@ export default function DashboardPage() {
                         setEditingBooking(booking);
                         setEditDialogOpen(true);
                       }}
-                      className="p-4 rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.02] transition-transform"
+                      className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.02] transition-transform min-w-[140px] sm:min-w-0 shrink-0 sm:shrink"
                     >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center">
-                          <Clock className="w-5 h-5 text-background" />
+                      <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/10 flex items-center justify-center">
+                          <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
                         </div>
                         <div>
-                          <p className="font-semibold text-background">
+                          <p className="font-semibold text-background text-sm sm:text-base">
                             {format(parseISO(booking.start_time), "HH:mm")}
-                          </p>
-                          <p className="text-xs text-background/60">
-                            {format(parseISO(booking.end_time), "HH:mm")}
                           </p>
                         </div>
                       </div>
-                      <p className="font-medium text-background truncate">{booking.customer_name}</p>
-                      <p className="text-sm text-background/70 truncate">{service?.name || "No service"}</p>
+                      <p className="font-medium text-background truncate text-xs sm:text-base">{booking.customer_name}</p>
+                      <p className="text-[10px] sm:text-sm text-background/70 truncate">{service?.name || "No service"}</p>
                     </div>
                   );
                 })}
@@ -292,8 +284,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions & Getting Started */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        {/* Quick Actions - Hidden on mobile, show booking link instead */}
+        <div className="hidden sm:grid gap-6 lg:grid-cols-2">
           {/* Quick Actions */}
           <Card className="border-0 shadow-soft">
             <CardHeader>
@@ -328,38 +320,38 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Public Booking Link */}
+        {/* Public Booking Link - Compact on mobile */}
         {currentBusiness && (
           <Card className="border-0 shadow-soft">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-display flex items-center gap-2">
-                <Link2 className="w-5 h-5" />
+            <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-lg font-display flex items-center gap-2">
+                <Link2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 Your Booking Page
               </CardTitle>
-              <CardDescription>Share this link with customers to let them book online</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-6 pt-0">
               <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 rounded-lg bg-muted text-sm font-mono truncate">
+                <code className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-muted text-xs sm:text-sm font-mono truncate">
                   {window.location.origin}/book/{currentBusiness.slug}
                 </code>
                 <Button
                   variant="outline"
                   size="icon"
+                  className="h-8 w-8 sm:h-10 sm:w-10 shrink-0"
                   onClick={() => {
                     navigator.clipboard.writeText(`${window.location.origin}/book/${currentBusiness.slug}`);
                     toast.success("Link copied!");
                   }}
                 >
-                  <Copy className="w-4 h-4" />
+                  <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
-                <Button variant="outline" size="icon" asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 shrink-0" asChild>
                   <a
                     href={`${window.location.origin}/book/${currentBusiness.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
                   </a>
                 </Button>
               </div>
