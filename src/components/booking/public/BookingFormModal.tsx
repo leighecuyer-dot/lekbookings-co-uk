@@ -30,6 +30,13 @@ interface Staff {
   working_hours: Record<string, { enabled: boolean; start: string; end: string }> | null;
 }
 
+interface StaffLeave {
+  id: string;
+  staff_id: string;
+  start_date: string;
+  end_date: string;
+}
+
 interface BookingFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -88,6 +95,7 @@ export function BookingFormModal({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [staffLeave, setStaffLeave] = useState<StaffLeave[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [rememberDetails, setRememberDetails] = useState(false);
@@ -108,6 +116,7 @@ export function BookingFormModal({
   useEffect(() => {
     if (open && businessId) {
       fetchStaff();
+      fetchStaffLeave();
       fetchPaymentConfig();
       // Load saved customer details
       const saved = getSavedDetails();
@@ -154,6 +163,27 @@ export function BookingFormModal({
     }
   };
 
+  const fetchStaffLeave = async () => {
+    const { data } = await supabase
+      .from("staff_leave")
+      .select("id, staff_id, start_date, end_date")
+      .eq("business_id", businessId);
+    
+    if (data) {
+      setStaffLeave(data);
+    }
+  };
+
+  const isStaffOnLeave = (staffId: string, date: Date): boolean => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return staffLeave.some(
+      (leave) =>
+        leave.staff_id === staffId &&
+        leave.start_date <= dateStr &&
+        leave.end_date >= dateStr
+    );
+  };
+
   const fetchPaymentConfig = async () => {
     const { data } = await supabase
       .from("businesses")
@@ -177,6 +207,11 @@ export function BookingFormModal({
   const getAvailableSlots = () => {
     if (!selectedDate || !selectedStaff) return TIME_SLOTS;
     
+    // Check if selected staff is on leave for this date
+    if (isStaffOnLeave(selectedStaff, selectedDate)) {
+      return [];
+    }
+    
     const dayName = format(selectedDate, "EEEE").toLowerCase();
     const staffMember = staff.find(s => s.id === selectedStaff);
     
@@ -188,6 +223,12 @@ export function BookingFormModal({
     return TIME_SLOTS.filter(slot => {
       return slot >= dayHours.start && slot < dayHours.end;
     });
+  };
+
+  // Get available staff for a given date (not on leave)
+  const getAvailableStaff = () => {
+    if (!selectedDate) return staff;
+    return staff.filter(s => !isStaffOnLeave(s.id, selectedDate));
   };
 
   const handleSubmit = async () => {
@@ -289,7 +330,30 @@ export function BookingFormModal({
               selected={selectedDate}
               onSelect={(date) => {
                 setSelectedDate(date);
-                if (date) setStep("time");
+                if (date) {
+                  // Auto-select first available staff member (not on leave)
+                  const availableStaff = staff.filter(s => {
+                    const dateStr = format(date, "yyyy-MM-dd");
+                    return !staffLeave.some(
+                      leave =>
+                        leave.staff_id === s.id &&
+                        leave.start_date <= dateStr &&
+                        leave.end_date >= dateStr
+                    );
+                  });
+                  if (availableStaff.length > 0 && selectedStaff) {
+                    const currentStaffOnLeave = staffLeave.some(
+                      leave =>
+                        leave.staff_id === selectedStaff &&
+                        leave.start_date <= format(date, "yyyy-MM-dd") &&
+                        leave.end_date >= format(date, "yyyy-MM-dd")
+                    );
+                    if (currentStaffOnLeave) {
+                      setSelectedStaff(availableStaff[0].id);
+                    }
+                  }
+                  setStep("time");
+                }
               }}
               disabled={(date) => isBefore(date, startOfDay(new Date())) || isBefore(date, addDays(new Date(), -1))}
               className="rounded-md border mx-auto"
@@ -307,17 +371,23 @@ export function BookingFormModal({
               <div className="space-y-2">
                 <Label>Select Staff</Label>
                 <div className="flex flex-wrap gap-2">
-                  {staff.map((s) => (
-                    <Button
-                      key={s.id}
-                      variant={selectedStaff === s.id ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedStaff(s.id)}
-                      style={selectedStaff === s.id ? { backgroundColor: primaryColor } : {}}
-                    >
-                      {s.name}
-                    </Button>
-                  ))}
+                  {staff.map((s) => {
+                    const onLeave = selectedDate ? isStaffOnLeave(s.id, selectedDate) : false;
+                    return (
+                      <Button
+                        key={s.id}
+                        variant={selectedStaff === s.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => !onLeave && setSelectedStaff(s.id)}
+                        disabled={onLeave}
+                        style={selectedStaff === s.id ? { backgroundColor: primaryColor } : {}}
+                        className={onLeave ? "opacity-50" : ""}
+                      >
+                        {s.name}
+                        {onLeave && " (On Leave)"}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}
