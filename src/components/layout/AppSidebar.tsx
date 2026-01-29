@@ -36,6 +36,8 @@ import {
   Columns3,
   CalendarDays,
   ExternalLink,
+  Plus,
+  UserPlus,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -105,6 +107,39 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Quick Actions */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/60">
+            Quick Actions
+          </SidebarGroupLabel>
+          <SidebarGroupContent className="px-2">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1"
+                asChild
+              >
+                <Link to="/customers?action=add">
+                  <UserPlus className="w-3 h-3" />
+                  Customer
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1"
+                asChild
+              >
+                <Link to="/services?action=add">
+                  <Plus className="w-3 h-3" />
+                  Service
+                </Link>
+              </Button>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/60">
             Main

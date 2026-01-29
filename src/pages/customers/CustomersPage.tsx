@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useResellerOperations } from "@/hooks/reseller";
@@ -40,6 +41,7 @@ interface Customer {
 export default function CustomersPage() {
   const { currentBusiness, isResellerMode } = useBusiness();
   const { createCustomer: resellerCreateCustomer } = useResellerOperations();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +53,15 @@ export default function CustomersPage() {
     phone: "",
     notes: "",
   });
+
+  // Handle ?action=add query param to auto-open dialog
+  useEffect(() => {
+    if (searchParams.get("action") === "add") {
+      setDialogOpen(true);
+      searchParams.delete("action");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (currentBusiness) {

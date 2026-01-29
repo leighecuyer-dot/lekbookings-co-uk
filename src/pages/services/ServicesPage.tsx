@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +49,7 @@ const COLORS = [
 
 export default function ServicesPage() {
   const { currentBusiness } = useBusiness();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,6 +61,15 @@ export default function ServicesPage() {
     price: "",
     color: COLORS[0],
   });
+
+  // Handle ?action=add query param to auto-open dialog
+  useEffect(() => {
+    if (searchParams.get("action") === "add") {
+      setDialogOpen(true);
+      searchParams.delete("action");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (currentBusiness) {
