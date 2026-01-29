@@ -25,6 +25,7 @@ import { format, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, isSameDa
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { WeekView } from "@/components/calendar/WeekView";
 import { KanbanView } from "@/components/calendar/KanbanView";
+import { DayTimelineView } from "@/components/calendar/DayTimelineView";
 import { StatusFilter } from "@/components/calendar/StatusFilter";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 
@@ -317,6 +318,11 @@ export default function CalendarPage() {
     setEditDialogOpen(true);
   };
 
+  const handleSlotClick = (time: string) => {
+    setNewBooking((prev) => ({ ...prev, time }));
+    setDialogOpen(true);
+  };
+
   return (
     <DashboardLayout
       title="Calendar"
@@ -559,67 +565,15 @@ export default function CalendarPage() {
                   </div>
 
                   <div className="flex-1 overflow-auto">
-                    {loading ? (
-                      <div className="text-center py-8 text-muted-foreground text-sm">
-                        Loading...
-                      </div>
-                    ) : dayBookings.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground text-sm">
-                        No bookings for this day
-                      </div>
-                    ) : (
-                      <div className="space-y-2 sm:space-y-3">
-                        {dayBookings.map((booking) => {
-                          const service = services.find(
-                            (s) => s.id === booking.service_id
-                          );
-                          const staff = staffList.find(
-                            (s) => s.id === booking.staff_id
-                          );
-
-                          return (
-                            <div
-                              key={booking.id}
-                              onClick={() => handleBookingClick(booking)}
-                              className="flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background cursor-pointer hover:scale-[1.01] transition-transform"
-                              style={{
-                                borderLeft: service?.color
-                                  ? `3px solid ${service.color}`
-                                  : undefined,
-                              }}
-                            >
-                              <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
-                                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-background text-sm sm:text-base">
-                                    {format(parseISO(booking.start_time), "HH:mm")}
-                                  </p>
-                                  <p className="text-[10px] sm:text-xs text-background/60">
-                                    {format(parseISO(booking.end_time), "HH:mm")}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-background truncate text-sm sm:text-base">
-                                  {booking.customer_name}
-                                </p>
-                                <p className="text-xs sm:text-sm text-background/70 truncate">
-                                  {service?.name || "No service"}
-                                  {staff && ` • ${staff.name}`}
-                                </p>
-                              </div>
-
-                              <Badge className={`${getStatusColor(booking.status)} text-[10px] sm:text-xs`}>
-                                {booking.status}
-                              </Badge>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    <DayTimelineView
+                      selectedDate={selectedDate}
+                      bookings={dayBookings}
+                      services={services}
+                      staffList={staffList}
+                      onBookingClick={handleBookingClick}
+                      onSlotClick={handleSlotClick}
+                      loading={loading}
+                    />
                   </div>
                 </div>
               )}
