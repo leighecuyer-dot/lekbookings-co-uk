@@ -15,6 +15,8 @@ import AcceptInvitePage from "./pages/invite/AcceptInvitePage";
 import OnboardingPage from "./pages/onboarding/OnboardingPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import CalendarPage from "./pages/calendar/CalendarPage";
+import KanbanPage from "./pages/calendar/KanbanPage";
+import WeekPage from "./pages/calendar/WeekPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import ServicesPage from "./pages/services/ServicesPage";
 import StaffPage from "./pages/staff/StaffPage";
@@ -75,6 +77,22 @@ const AppRoutes = () => (
       element={
         <RouteGuard requireAuth requireBusiness>
           <CalendarPage />
+        </RouteGuard>
+      } 
+    />
+    <Route 
+      path="/kanban" 
+      element={
+        <RouteGuard requireAuth requireBusiness>
+          <KanbanPage />
+        </RouteGuard>
+      } 
+    />
+    <Route 
+      path="/week" 
+      element={
+        <RouteGuard requireAuth requireBusiness>
+          <WeekPage />
         </RouteGuard>
       } 
     />
