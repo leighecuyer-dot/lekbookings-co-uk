@@ -496,8 +496,8 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
       </Card>
 
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
               AI Suggestions
@@ -509,15 +509,15 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
               <p className="text-sm text-muted-foreground">Analyzing your availability...</p>
             </div>
           ) : (
-            <>
-              <ScrollArea className="max-h-[350px]">
+            <div className="flex flex-col min-h-0 flex-1">
+              <ScrollArea className="flex-1 max-h-[350px] pr-4">
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   <ReactMarkdown>{aiSuggestion || ""}</ReactMarkdown>
                 </div>
               </ScrollArea>
               
               {onSendCampaign && (
-                <div className="pt-4 border-t mt-4">
+                <div className="pt-4 border-t mt-4 shrink-0">
                   <p className="text-xs text-muted-foreground mb-3">
                     Ready to act on these suggestions?
                   </p>
@@ -551,7 +551,7 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
