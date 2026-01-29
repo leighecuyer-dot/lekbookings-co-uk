@@ -18,6 +18,7 @@ import { AvailableSlotsTile } from "@/components/dashboard/AvailableSlotsTile";
 import { WeeklyTrendsChart } from "@/components/dashboard/WeeklyTrendsChart";
 import { RevenueGrowthTile } from "@/components/dashboard/RevenueGrowthTile";
 import { BulkMessageDialog, type AvailabilityContext } from "@/components/messaging/BulkMessageDialog";
+import { StaffAvailabilityWidget } from "@/components/dashboard/StaffAvailabilityWidget";
 interface Booking {
   id: string;
   start_time: string;
@@ -343,6 +344,11 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Staff Availability Widget */}
+        {currentBusiness && (
+          <StaffAvailabilityWidget businessId={currentBusiness.id} />
+        )}
 
         {/* Availability + Performance + Revenue Grid */}
         <div className="grid gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
