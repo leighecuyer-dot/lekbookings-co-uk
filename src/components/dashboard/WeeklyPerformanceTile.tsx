@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, Minus, MessageSquare, Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TrendingUp, TrendingDown, Minus, MessageSquare, Mail, Phone, Loader2, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, subWeeks, format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -9,7 +15,8 @@ import { cn } from "@/lib/utils";
 interface WeeklyPerformanceTileProps {
   businessId: string;
   currentWeekBookings: number;
-  onSendMessages?: () => void;
+  onSendSMS?: () => void;
+  onSendEmail?: () => void;
 }
 
 type PerformanceLevel = "higher" | "lower" | "normal";
@@ -24,7 +31,8 @@ interface PerformanceData {
 export function WeeklyPerformanceTile({ 
   businessId, 
   currentWeekBookings,
-  onSendMessages 
+  onSendSMS,
+  onSendEmail 
 }: WeeklyPerformanceTileProps) {
   const [performance, setPerformance] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -192,16 +200,34 @@ export function WeeklyPerformanceTile({
         
         <p className="text-xs text-muted-foreground">{config.description}</p>
         
-        {performance.level === "lower" && onSendMessages && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full gap-2 mt-2"
-            onClick={onSendMessages}
-          >
-            <MessageSquare className="h-4 w-4" />
-            Send Messages to Fill Slots
-          </Button>
+        {performance.level === "lower" && (onSendSMS || onSendEmail) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full gap-2 mt-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Send Campaign
+                <ChevronDown className="h-3 w-3 ml-auto" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-[200px]">
+              {onSendSMS && (
+                <DropdownMenuItem onClick={onSendSMS} className="gap-2 cursor-pointer">
+                  <Phone className="h-4 w-4" />
+                  SMS Campaign
+                </DropdownMenuItem>
+              )}
+              {onSendEmail && (
+                <DropdownMenuItem onClick={onSendEmail} className="gap-2 cursor-pointer">
+                  <Mail className="h-4 w-4" />
+                  Email Campaign
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </CardContent>
     </Card>
