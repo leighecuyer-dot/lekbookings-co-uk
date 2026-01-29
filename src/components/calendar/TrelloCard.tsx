@@ -1,5 +1,5 @@
 import { format, parseISO } from "date-fns";
-import { Clock, User, GripVertical } from "lucide-react";
+import { Clock, GripVertical, DollarSign, User } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -9,6 +9,7 @@ interface Booking {
   customer_name: string | null;
   service_id: string | null;
   staff_id: string | null;
+  payment_status?: string | null;
 }
 
 interface Service {
@@ -42,6 +43,13 @@ const defaultLabelColors = [
   { bg: "bg-cyan-500", text: "text-white" },
 ];
 
+// Payment status badge config
+const paymentStatusConfig: Record<string, { bg: string; text: string; label: string }> = {
+  unpaid: { bg: "bg-red-100", text: "text-red-700", label: "Unpaid" },
+  deposit_paid: { bg: "bg-amber-100", text: "text-amber-700", label: "Deposit" },
+  paid: { bg: "bg-emerald-100", text: "text-emerald-700", label: "Paid" },
+};
+
 // Simple hash function to get consistent color for service
 function getColorIndex(str: string): number {
   let hash = 0;
@@ -50,6 +58,16 @@ function getColorIndex(str: string): number {
   }
   return Math.abs(hash) % defaultLabelColors.length;
 }
+
+// Staff badge colors - rotate through these
+const staffColors = [
+  { bg: "bg-indigo-100", text: "text-indigo-700" },
+  { bg: "bg-violet-100", text: "text-violet-700" },
+  { bg: "bg-fuchsia-100", text: "text-fuchsia-700" },
+  { bg: "bg-rose-100", text: "text-rose-700" },
+  { bg: "bg-teal-100", text: "text-teal-700" },
+  { bg: "bg-sky-100", text: "text-sky-700" },
+];
 
 export function TrelloCard({
   booking,
@@ -60,9 +78,11 @@ export function TrelloCard({
 }: TrelloCardProps) {
   const service = services.find((s) => s.id === booking.service_id);
   const staff = staffList.find((s) => s.id === booking.staff_id);
+  const paymentStatus = booking.payment_status || "unpaid";
+  const paymentConfig = paymentStatusConfig[paymentStatus] || paymentStatusConfig.unpaid;
   
-  // Get label color - use service color if available, otherwise hash-based default
-  const getLabelStyle = () => {
+  // Get service label style
+  const getServiceLabelStyle = () => {
     if (service?.color) {
       return {
         backgroundColor: service.color,
@@ -72,8 +92,9 @@ export function TrelloCard({
     return null;
   };
 
-  const labelStyle = getLabelStyle();
-  const defaultColor = service ? defaultLabelColors[getColorIndex(service.id)] : null;
+  const serviceLabelStyle = getServiceLabelStyle();
+  const defaultServiceColor = service ? defaultLabelColors[getColorIndex(service.id)] : null;
+  const staffColor = staff ? staffColors[getColorIndex(staff.id) % staffColors.length] : null;
 
   return (
     <div
@@ -87,20 +108,41 @@ export function TrelloCard({
         isDragging ? "opacity-50 rotate-2 scale-105" : ""
       }`}
     >
-      {/* Service Label - Trello style colored bar at top */}
-      {service && (
-        <div className="px-2 pt-2">
+      {/* Labels Row - Trello style colored badges at top */}
+      <div className="px-2 pt-2 flex flex-wrap gap-1">
+        {/* Service Label */}
+        {service && (
           <div 
-            className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide truncate max-w-full ${
-              !labelStyle ? `${defaultColor?.bg} ${defaultColor?.text}` : ""
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide truncate max-w-[120px] ${
+              !serviceLabelStyle ? `${defaultServiceColor?.bg} ${defaultServiceColor?.text}` : ""
             }`}
-            style={labelStyle || undefined}
+            style={serviceLabelStyle || undefined}
             title={service.name}
           >
             {service.name}
           </div>
+        )}
+        
+        {/* Staff Label */}
+        {staff && staffColor && (
+          <div 
+            className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium truncate max-w-[80px] ${staffColor.bg} ${staffColor.text}`}
+            title={staff.name}
+          >
+            <User className="w-2.5 h-2.5" />
+            {staff.name.split(' ')[0]}
+          </div>
+        )}
+        
+        {/* Payment Status Label */}
+        <div 
+          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${paymentConfig.bg} ${paymentConfig.text}`}
+          title={`Payment: ${paymentConfig.label}`}
+        >
+          <DollarSign className="w-2.5 h-2.5" />
+          {paymentConfig.label}
         </div>
-      )}
+      </div>
       
       <div className="p-2 pt-1.5">
         {/* Drag Handle + Content */}
@@ -113,18 +155,10 @@ export function TrelloCard({
               {booking.customer_name || "Walk-in"}
             </p>
             
-            {/* Time & Staff */}
-            <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {format(parseISO(booking.start_time), "MMM d, HH:mm")}
-              </span>
-              {staff && (
-                <span className="flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  {staff.name}
-                </span>
-              )}
+            {/* Time */}
+            <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              {format(parseISO(booking.start_time), "MMM d, HH:mm")}
             </div>
           </div>
         </div>
