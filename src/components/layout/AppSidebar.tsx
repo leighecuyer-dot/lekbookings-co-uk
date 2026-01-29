@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -114,28 +115,42 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 h-8 text-xs gap-1"
-                asChild
-              >
-                <Link to="/customers?action=add">
-                  <UserPlus className="w-3 h-3" />
-                  Customer
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 h-8 text-xs gap-1"
-                asChild
-              >
-                <Link to="/services?action=add">
-                  <Plus className="w-3 h-3" />
-                  Service
-                </Link>
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 text-xs gap-1"
+                    asChild
+                  >
+                    <Link to="/customers?action=add">
+                      <UserPlus className="w-3 h-3" />
+                      Customer
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Add a new customer</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 text-xs gap-1"
+                    asChild
+                  >
+                    <Link to="/services?action=add">
+                      <Plus className="w-3 h-3" />
+                      Service
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Add a new service</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
