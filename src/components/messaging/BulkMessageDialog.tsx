@@ -371,6 +371,25 @@ export function BulkMessageDialog({
 
       const result = data as { sent: number; failed: number };
       
+      // Save campaign to database for tracking
+      try {
+        const campaignName = `${messageType.charAt(0).toUpperCase() + messageType.slice(1)} Campaign - ${new Date().toLocaleDateString()}`;
+        await supabase.from("campaigns").insert({
+          business_id: businessId,
+          name: campaignName,
+          campaign_type: messageType,
+          message_template: message,
+          target_audience: filterType,
+          recipient_count: selectedCustomers.length,
+          sent_count: result.sent,
+          failed_count: result.failed,
+          recipient_customer_ids: selectedCustomers.map((c) => c.id),
+        });
+      } catch (campaignError) {
+        console.error("Failed to save campaign:", campaignError);
+        // Don't block on campaign tracking failure
+      }
+      
       if (result.sent > 0) {
         toast.success(`Successfully sent ${result.sent} messages`);
         if (result.failed > 0) {

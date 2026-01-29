@@ -26,6 +26,7 @@ import ImportPage from "./pages/import/ImportPage";
 import PublicBookingPage from "./pages/booking/PublicBookingPage";
 import NotFound from "./pages/NotFound";
 import DiagnosticsPage from "./pages/admin/DiagnosticsPage";
+import CampaignsReportPage from "./pages/reports/CampaignsReportPage";
 
 // Reseller Pages
 import ResellerDashboard from "./pages/reseller/ResellerDashboard";
@@ -135,6 +136,16 @@ const AppRoutes = () => (
           <SettingsPage />
         </RouteGuard>
       } 
+      />
+      
+      {/* Reports routes */}
+      <Route 
+        path="/reports/campaigns" 
+        element={
+          <RouteGuard requireAuth requireBusiness>
+            <CampaignsReportPage />
+          </RouteGuard>
+        } 
       />
       
       {/* Admin routes */}

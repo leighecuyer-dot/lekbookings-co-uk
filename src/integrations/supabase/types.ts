@@ -251,6 +251,108 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_conversions: {
+        Row: {
+          booking_id: string
+          booking_value: number | null
+          campaign_id: string
+          converted_at: string
+          customer_id: string
+          id: string
+        }
+        Insert: {
+          booking_id: string
+          booking_value?: number | null
+          campaign_id: string
+          converted_at?: string
+          customer_id: string
+          id?: string
+        }
+        Update: {
+          booking_id?: string
+          booking_value?: number | null
+          campaign_id?: string
+          converted_at?: string
+          customer_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_conversions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_conversions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_conversions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          business_id: string
+          campaign_type: string
+          created_at: string
+          failed_count: number
+          id: string
+          message_template: string
+          name: string
+          recipient_count: number
+          recipient_customer_ids: string[] | null
+          sent_at: string
+          sent_count: number
+          target_audience: string | null
+        }
+        Insert: {
+          business_id: string
+          campaign_type?: string
+          created_at?: string
+          failed_count?: number
+          id?: string
+          message_template: string
+          name: string
+          recipient_count?: number
+          recipient_customer_ids?: string[] | null
+          sent_at?: string
+          sent_count?: number
+          target_audience?: string | null
+        }
+        Update: {
+          business_id?: string
+          campaign_type?: string
+          created_at?: string
+          failed_count?: number
+          id?: string
+          message_template?: string
+          name?: string
+          recipient_count?: number
+          recipient_customer_ids?: string[] | null
+          sent_at?: string
+          sent_count?: number
+          target_audience?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           business_id: string
