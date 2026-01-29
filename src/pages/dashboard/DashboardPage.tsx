@@ -4,7 +4,7 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -13,7 +13,7 @@ import { DashboardSkeleton } from "@/components/common/Skeletons";
 import { EmptyState } from "@/components/common/EmptyState";
 import { recordDashboardRpcCall } from "@/hooks/dashboard/useDashboardDiagnostics";
 import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
-
+import { WeeklyPerformanceTile } from "@/components/dashboard/WeeklyPerformanceTile";
 interface Booking {
   id: string;
   start_time: string;
@@ -41,6 +41,7 @@ interface Staff {
 
 export default function DashboardPage() {
   const { currentBusiness } = useBusiness();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     todayBookings: 0,
     weekBookings: 0,
@@ -54,6 +55,11 @@ export default function DashboardPage() {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
+  const handleSendMessages = () => {
+    // Navigate to customers page for now - messaging feature can be added later
+    toast.info("Select customers to message from the Customers page");
+    navigate("/customers");
+  };
   useEffect(() => {
     const fetchData = async () => {
       if (!currentBusiness) return;
@@ -284,20 +290,29 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions - Hidden on mobile, show booking link instead */}
-        <div className="hidden sm:grid gap-6 lg:grid-cols-2">
-          {/* Quick Actions */}
-          <Card className="border-0 shadow-soft">
-            <CardHeader>
-              <CardTitle className="text-lg font-display">Quick Actions</CardTitle>
-              <CardDescription>Common tasks to get you started</CardDescription>
+        {/* Performance + Quick Actions Grid */}
+        <div className="grid gap-3 sm:gap-6 lg:grid-cols-3">
+          {/* Weekly Performance Tile */}
+          {currentBusiness && (
+            <WeeklyPerformanceTile
+              businessId={currentBusiness.id}
+              currentWeekBookings={stats.weekBookings}
+              onSendMessages={handleSendMessages}
+            />
+          )}
+
+          {/* Quick Actions - Hidden on mobile */}
+          <Card className="border-0 shadow-soft hidden sm:block">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {quickActions.map((action) => (
                 <Button
                   key={action.title}
                   variant="outline"
-                  className="w-full justify-between h-12"
+                  className="w-full justify-between h-10"
+                  size="sm"
                   asChild
                 >
                   <Link to={action.href}>
@@ -312,12 +327,14 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Getting Started Checklist */}
-          <SetupChecklist 
-            hasServices={services.length > 0}
-            hasStaff={staffList.length > 0}
-            onRefresh={refetchData}
-          />
+          {/* Getting Started Checklist - Hidden on mobile */}
+          <div className="hidden sm:block">
+            <SetupChecklist 
+              hasServices={services.length > 0}
+              hasStaff={staffList.length > 0}
+              onRefresh={refetchData}
+            />
+          </div>
         </div>
       </div>
 
