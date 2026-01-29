@@ -164,7 +164,8 @@ export default function DashboardPage() {
 
   const quickActions = [
     { title: "New Booking", href: "/calendar", icon: Plus },
-    { title: "Add Customer", href: "/customers", icon: Users },
+    { title: "Add Customer", href: "/customers?action=add", icon: Users },
+    { title: "Add Service", href: "/services?action=add", icon: Clock },
     { title: "View Calendar", href: "/calendar", icon: Calendar },
   ];
 
