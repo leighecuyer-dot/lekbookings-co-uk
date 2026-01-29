@@ -11,6 +11,7 @@ interface Booking {
   customer_name: string | null;
   service_id: string | null;
   staff_id: string | null;
+  payment_status?: string | null;
 }
 
 interface Service {
