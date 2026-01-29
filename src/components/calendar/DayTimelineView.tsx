@@ -1,5 +1,5 @@
 import { format, parseISO, setHours, setMinutes } from "date-fns";
-import { Clock, Plus, Users, Palmtree } from "lucide-react";
+import { Clock, Plus, Users, Palmtree, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -51,6 +51,12 @@ interface DayTimelineViewProps {
   onSlotClick: (time: string, staffId?: string) => void;
   loading?: boolean;
   isOnLeave?: (staffId: string, date: Date) => boolean;
+  // Drag and drop props
+  onDragStart?: (e: React.DragEvent, booking: Booking) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent, targetDate: Date, targetTime: string) => void;
+  draggingBookingId?: string | null;
 }
 
 // Generate time slots from 8:00 to 18:00 (30-min intervals)
@@ -152,6 +158,11 @@ export function DayTimelineView({
   onSlotClick,
   loading,
   isOnLeave,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  draggingBookingId,
 }: DayTimelineViewProps) {
   // Check if a time slot has a booking
   const getBookingForSlot = (slotTime: string) => {
@@ -197,6 +208,7 @@ export function DayTimelineView({
           const isStart = booking ? isBookingStart(slot, booking) : false;
           const service = booking ? services.find((s) => s.id === booking.service_id) : null;
           const staff = booking ? staffList.find((s) => s.id === booking.staff_id) : null;
+          const isDragging = booking && draggingBookingId === booking.id;
 
           // If this slot is occupied by a booking but isn't the start, skip rendering
           if (booking && !isStart) {
@@ -212,8 +224,14 @@ export function DayTimelineView({
             return (
               <div
                 key={slot}
+                draggable
+                onDragStart={(e) => onDragStart?.(e, booking)}
+                onDragEnd={onDragEnd}
                 onClick={() => onBookingClick(booking)}
-                className="flex items-stretch gap-2 sm:gap-3 cursor-pointer hover:scale-[1.01] transition-transform"
+                className={cn(
+                  "flex items-stretch gap-2 sm:gap-3 cursor-grab active:cursor-grabbing hover:scale-[1.01] transition-all",
+                  isDragging && "opacity-50"
+                )}
                 style={{ minHeight: `${height}px` }}
               >
                 {/* Time label */}
@@ -228,6 +246,7 @@ export function DayTimelineView({
                     borderLeft: service?.color ? `4px solid ${service.color}` : undefined,
                   }}
                 >
+                  <GripVertical className="w-4 h-4 text-background/40 shrink-0 hidden sm:block" />
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
                       <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
@@ -279,9 +298,12 @@ export function DayTimelineView({
             <div
               key={slot}
               onClick={() => hasAvailableStaff && onSlotClick(slot, preSelectedStaffId)}
+              onDragOver={onDragOver}
+              onDrop={(e) => onDrop?.(e, selectedDate, slot)}
               className={cn(
-                "flex items-center gap-2 sm:gap-3 min-h-[52px] group",
-                hasAvailableStaff ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                "flex items-center gap-2 sm:gap-3 min-h-[52px] group transition-all",
+                hasAvailableStaff ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+                draggingBookingId && "hover:bg-primary/10 hover:border-primary"
               )}
             >
               {/* Time label */}
@@ -294,7 +316,8 @@ export function DayTimelineView({
                 "flex-1 flex items-center justify-between gap-2 p-2 sm:p-3 rounded-xl border-2 border-dashed transition-all",
                 hasAvailableStaff
                   ? "border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5"
-                  : "border-muted-foreground/10 bg-muted/30"
+                  : "border-muted-foreground/10 bg-muted/30",
+                draggingBookingId && hasAvailableStaff && "border-primary/30 bg-primary/5"
               )}>
                 <div className="flex items-center gap-2">
                   <Plus className={cn(
@@ -309,7 +332,7 @@ export function DayTimelineView({
                       ? "text-muted-foreground/40 group-hover:text-primary"
                       : "text-muted-foreground/30"
                   )}>
-                    {hasAvailableStaff ? "Available" : "No staff available"}
+                    {draggingBookingId ? "Drop here to reschedule" : hasAvailableStaff ? "Available" : "No staff available"}
                   </span>
                 </div>
 

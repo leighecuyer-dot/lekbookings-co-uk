@@ -1,6 +1,7 @@
 import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Clock, GripVertical } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Booking {
   id: string;
@@ -9,6 +10,7 @@ interface Booking {
   status: string;
   customer_name: string | null;
   service_id: string | null;
+  staff_id: string | null;
 }
 
 interface Service {
@@ -21,9 +23,25 @@ interface WeekViewProps {
   bookings: Booking[];
   services: Service[];
   onBookingClick: (booking: Booking) => void;
+  // Drag and drop props
+  onDragStart?: (e: React.DragEvent, booking: Booking) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent, targetDate: Date, targetTime: string) => void;
+  draggingBookingId?: string | null;
 }
 
-export function WeekView({ selectedDate, bookings, services, onBookingClick }: WeekViewProps) {
+export function WeekView({ 
+  selectedDate, 
+  bookings, 
+  services, 
+  onBookingClick,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  draggingBookingId,
+}: WeekViewProps) {
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   
@@ -86,24 +104,40 @@ export function WeekView({ selectedDate, bookings, services, onBookingClick }: W
                   return bookingHour === hour;
                 });
 
+                const timeSlot = `${hour.toString().padStart(2, "0")}:00`;
+
                 return (
                   <div
                     key={day.toISOString()}
-                    className="border-r p-1 min-h-[80px]"
+                    className={cn(
+                      "border-r p-1 min-h-[80px] transition-colors",
+                      draggingBookingId && "hover:bg-primary/10"
+                    )}
+                    onDragOver={onDragOver}
+                    onDrop={(e) => onDrop?.(e, day, timeSlot)}
                   >
                     {dayBookings.map((booking) => {
                       const service = services.find(
                         (s) => s.id === booking.service_id
                       );
+                      const isDragging = draggingBookingId === booking.id;
+                      
                       return (
                         <div
                           key={booking.id}
+                          draggable
+                          onDragStart={(e) => onDragStart?.(e, booking)}
+                          onDragEnd={onDragEnd}
                           onClick={() => onBookingClick(booking)}
-                          className={`p-2 rounded-lg cursor-pointer text-xs mb-1 ${getStatusColor(
-                            booking.status
-                          )} hover:scale-[1.02] transition-transform`}
+                          className={cn(
+                            `p-2 rounded-lg cursor-grab active:cursor-grabbing text-xs mb-1 ${getStatusColor(
+                              booking.status
+                            )} hover:scale-[1.02] transition-all`,
+                            isDragging && "opacity-50"
+                          )}
                         >
                           <div className="flex items-center gap-1 mb-0.5">
+                            <GripVertical className="w-3 h-3 opacity-40" />
                             <Clock className="w-3 h-3" />
                             <span className="font-medium">
                               {format(parseISO(booking.start_time), "HH:mm")}
@@ -118,6 +152,12 @@ export function WeekView({ selectedDate, bookings, services, onBookingClick }: W
                         </div>
                       );
                     })}
+                    {/* Drop zone indicator when dragging */}
+                    {draggingBookingId && dayBookings.length === 0 && (
+                      <div className="h-full min-h-[60px] border-2 border-dashed border-primary/30 rounded-lg flex items-center justify-center">
+                        <span className="text-[10px] text-primary/50">Drop here</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}

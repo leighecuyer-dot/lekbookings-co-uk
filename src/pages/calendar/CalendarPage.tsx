@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useResellerOperations } from "@/hooks/reseller";
+import { useBookingDragDrop } from "@/hooks/bookings";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -116,11 +117,23 @@ export default function CalendarPage() {
     notes: "",
   });
 
+  // Track if we need to refetch after drag-drop
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
+  
+  // Drag and drop for rescheduling appointments
+  const {
+    draggingBookingId,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop,
+  } = useBookingDragDrop({ onUpdate: () => setRefetchTrigger((t) => t + 1) });
+
   useEffect(() => {
     if (currentBusiness) {
       fetchData();
     }
-  }, [currentBusiness, selectedDate, viewMode]);
+  }, [currentBusiness, selectedDate, viewMode, refetchTrigger]);
 
   const fetchData = async () => {
     if (!currentBusiness) return;
@@ -591,6 +604,11 @@ export default function CalendarPage() {
                       onSlotClick={handleSlotClick}
                       loading={loading}
                       isOnLeave={isOnLeave}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      draggingBookingId={draggingBookingId}
                     />
                   </div>
                 </div>
@@ -603,6 +621,11 @@ export default function CalendarPage() {
                     services={services}
                     selectedDate={selectedDate}
                     onBookingClick={handleBookingClick}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    draggingBookingId={draggingBookingId}
                   />
                 </div>
               )}
