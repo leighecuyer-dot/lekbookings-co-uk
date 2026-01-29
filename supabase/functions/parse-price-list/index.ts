@@ -87,18 +87,23 @@ serve(async (req) => {
 
 Your task is to extract ALL services with their prices from the provided content (image or text from a website).
 
-Return a JSON array of services with this structure:
+Return a JSON object with this structure:
 {
+  "currency": "string (the currency code detected, e.g. GBP, USD, EUR, AUD, CAD, etc. Default to GBP if unclear)",
   "services": [
     {
       "name": "string (required - the service name)",
       "description": "string or null (brief description if available)",
-      "price": number or null (price in the currency shown, as a decimal number e.g. 25.00)
+      "price": number or null (price as a decimal number e.g. 25.00)
     }
   ]
 }
 
 Important guidelines:
+- Detect the currency from symbols (£, $, €, etc.) or text (GBP, USD, EUR, dollars, pounds, euros)
+- If you see £ or "pounds", use GBP
+- If you see $ without country context, assume USD
+- If you see € or "euros", use EUR
 - Extract EVERY service you can find, even if the price is not listed
 - For prices, convert to decimal numbers (e.g., "£25" becomes 25, "$49.99" becomes 49.99)
 - If a service has variants (e.g., "Haircut - Short £15, Long £20"), create separate entries for each
@@ -151,10 +156,14 @@ Important guidelines:
             type: "function",
             function: {
               name: "extract_services",
-              description: "Extract services and prices from a price list",
+              description: "Extract services, prices, and currency from a price list",
               parameters: {
                 type: "object",
                 properties: {
+                  currency: { 
+                    type: "string",
+                    description: "The currency code (GBP, USD, EUR, AUD, CAD, etc.)"
+                  },
                   services: {
                     type: "array",
                     items: {
@@ -168,7 +177,7 @@ Important guidelines:
                     }
                   }
                 },
-                required: ["services"]
+                required: ["currency", "services"]
               }
             }
           }
@@ -206,9 +215,12 @@ Important guidelines:
     }
 
     const parsedData = JSON.parse(toolCall.function.arguments);
-    console.log("Extracted services:", parsedData.services?.length || 0);
+    console.log("Extracted services:", parsedData.services?.length || 0, "Currency:", parsedData.currency);
 
-    return jsonResponse(parsedData, 200);
+    return jsonResponse({
+      currency: parsedData.currency || "GBP",
+      services: parsedData.services || []
+    }, 200);
   } catch (error) {
     console.error("parse-price-list error:", error);
     return jsonResponse(

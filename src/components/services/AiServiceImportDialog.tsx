@@ -42,12 +42,34 @@ export function AiServiceImportDialog({
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [extractedServices, setExtractedServices] = useState<ExtractedService[]>([]);
+  const [detectedCurrency, setDetectedCurrency] = useState<string>("GBP");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getCurrencySymbol = (code: string): string => {
+    const symbols: Record<string, string> = {
+      GBP: "£",
+      USD: "$",
+      EUR: "€",
+      AUD: "A$",
+      CAD: "C$",
+      NZD: "NZ$",
+      CHF: "CHF",
+      JPY: "¥",
+      CNY: "¥",
+      INR: "₹",
+      ZAR: "R",
+      AED: "د.إ",
+      SGD: "S$",
+      HKD: "HK$",
+    };
+    return symbols[code] || code;
+  };
+
   const resetState = () => {
     setExtractedServices([]);
+    setDetectedCurrency("GBP");
     setImagePreview(null);
     setWebsiteUrl("");
     setLoading(false);
@@ -109,6 +131,7 @@ export function AiServiceImportDialog({
         return;
       }
 
+      setDetectedCurrency(data.currency || "GBP");
       setExtractedServices(services);
       toast.success(`Found ${services.length} services!`);
     } catch (error) {
@@ -156,6 +179,7 @@ export function AiServiceImportDialog({
         return;
       }
 
+      setDetectedCurrency(data.currency || "GBP");
       setExtractedServices(services);
       toast.success(`Found ${services.length} services!`);
     } catch (error) {
@@ -388,7 +412,7 @@ export function AiServiceImportDialog({
                           placeholder="Service name"
                         />
                         <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-sm text-muted-foreground">£</span>
+                          <span className="text-sm text-muted-foreground">{getCurrencySymbol(detectedCurrency)}</span>
                           <Input
                             type="number"
                             step="0.01"
