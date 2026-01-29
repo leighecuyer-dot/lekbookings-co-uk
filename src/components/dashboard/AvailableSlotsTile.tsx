@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CalendarDays } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, CalendarDays, Sparkles, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   startOfWeek, 
@@ -21,9 +22,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface AvailableSlotsTileProps {
   businessId: string;
+  businessName?: string;
 }
 
 interface TimeSlot {
@@ -46,14 +57,59 @@ interface WorkingHours {
 
 const SLOT_DURATION_MINUTES = 30;
 
-export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
+export function AvailableSlotsTile({ businessId, businessName }: AvailableSlotsTileProps) {
   const navigate = useNavigate();
   const [daySlots, setDaySlots] = useState<DaySlots[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
 
   const handleDayClick = (date: Date) => {
     const dateParam = format(date, "yyyy-MM-dd");
     navigate(`/calendar?date=${dateParam}`);
+  };
+
+  const handleAiSuggestions = async () => {
+    setAiDialogOpen(true);
+    setAiLoading(true);
+    setAiSuggestion(null);
+
+    try {
+      const availabilityData = daySlots.map(day => ({
+        dayName: format(day.date, "EEEE"),
+        date: format(day.date, "MMM d"),
+        totalSlots: day.totalSlots,
+        bookedSlots: day.bookedSlots,
+        availableSlots: day.availableSlots,
+      }));
+
+      const { data, error } = await supabase.functions.invoke("suggest-slot-filling", {
+        body: { availabilityData, businessName },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        if (data.error.includes("Rate limit")) {
+          toast.error("Too many requests. Please try again in a moment.");
+        } else if (data.error.includes("credits")) {
+          toast.error("AI credits exhausted. Please add credits to continue.");
+        } else {
+          toast.error(data.error);
+        }
+        setAiDialogOpen(false);
+        return;
+      }
+
+      setAiSuggestion(data?.suggestion || "No suggestions available.");
+    } catch (error) {
+      console.error("Error getting AI suggestions:", error);
+      toast.error("Failed to get AI suggestions. Please try again.");
+      setAiDialogOpen(false);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -98,7 +154,6 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
           let bookedSlots = 0;
           const allTimeSlots: Map<string, { time: Date; available: boolean }> = new Map();
           
-          // Calculate slots based on staff working hours
           staff.forEach(member => {
             const workingHours = member.working_hours as WorkingHours | null;
             const dayHours = workingHours?.[dayName];
@@ -129,7 +184,6 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
             }
           });
           
-          // Mark booked slots
           bookings.forEach(booking => {
             const bookingStart = parseISO(booking.start_time);
             if (isSameDay(bookingStart, date)) {
@@ -147,7 +201,6 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
             }
           });
           
-          // Convert to sorted array
           const timeSlots: TimeSlot[] = Array.from(allTimeSlots.entries())
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([time, data]) => ({
@@ -211,101 +264,149 @@ export function AvailableSlotsTile({ businessId }: AvailableSlotsTileProps) {
 
   const totalAvailable = daySlots.reduce((sum, day) => sum + day.availableSlots, 0);
   const totalBooked = daySlots.reduce((sum, day) => sum + day.bookedSlots, 0);
+  const totalSlots = totalAvailable + totalBooked;
+  const fillRate = totalSlots > 0 ? (totalBooked / totalSlots) * 100 : 0;
+  const showAiButton = fillRate < 70; // Show AI button when less than 70% filled
 
   return (
-    <Card className="border-0 shadow-soft">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            Week Availability
-          </span>
-          <Badge variant="outline" className="font-normal">
-            {totalAvailable} open
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-7 gap-1">
-          {daySlots.map((day) => {
-            const status = getSlotStatus(day);
-            const isPast = isBefore(day.date, new Date()) && !isToday(day.date);
-            const availableTimeSlots = day.timeSlots.filter(s => s.available);
-            
-            return (
-              <Tooltip key={day.dayName}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => handleDayClick(day.date)}
-                    className={cn(
-                      "flex flex-col items-center p-1.5 rounded-lg border text-center transition-all hover:scale-105 hover:shadow-md cursor-pointer",
-                      isPast ? "opacity-40" : "",
-                      isToday(day.date) ? "ring-1 ring-primary" : "",
-                      getStatusStyles(status)
-                    )}
-                  >
-                    <span className="text-[10px] font-medium uppercase">
-                      {day.dayName}
-                    </span>
-                    <span className="text-lg font-bold leading-tight">
-                      {day.availableSlots}
-                    </span>
-                    <span className="text-[9px] opacity-70">
-                      {status === "closed" ? "off" : "slots"}
-                    </span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[200px]">
-                  <div className="space-y-1">
-                    <p className="font-medium text-xs">
-                      {format(day.date, "EEEE, MMM d")}
-                    </p>
-                    {status === "closed" ? (
-                      <p className="text-xs text-muted-foreground">Closed</p>
-                    ) : availableTimeSlots.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Fully booked</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {availableTimeSlots.slice(0, 8).map((slot) => (
-                          <span
-                            key={slot.time}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary"
-                          >
-                            {slot.time}
-                          </span>
-                        ))}
-                        {availableTimeSlots.length > 8 && (
-                          <span className="text-[10px] text-muted-foreground">
-                            +{availableTimeSlots.length - 8} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
-              Needs filling
+    <>
+      <Card className="border-0 shadow-soft">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              Week Availability
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              Moderate
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Busy
-            </span>
+            <div className="flex items-center gap-2">
+              {showAiButton && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
+                      onClick={handleAiSuggestions}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Ideas
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Get AI suggestions to fill empty slots
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <Badge variant="outline" className="font-normal">
+                {totalAvailable} open
+              </Badge>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-7 gap-1">
+            {daySlots.map((day) => {
+              const status = getSlotStatus(day);
+              const isPast = isBefore(day.date, new Date()) && !isToday(day.date);
+              const availableTimeSlots = day.timeSlots.filter(s => s.available);
+              
+              return (
+                <Tooltip key={day.dayName}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => handleDayClick(day.date)}
+                      className={cn(
+                        "flex flex-col items-center p-1.5 rounded-lg border text-center transition-all hover:scale-105 hover:shadow-md cursor-pointer",
+                        isPast ? "opacity-40" : "",
+                        isToday(day.date) ? "ring-1 ring-primary" : "",
+                        getStatusStyles(status)
+                      )}
+                    >
+                      <span className="text-[10px] font-medium uppercase">
+                        {day.dayName}
+                      </span>
+                      <span className="text-lg font-bold leading-tight">
+                        {day.availableSlots}
+                      </span>
+                      <span className="text-[9px] opacity-70">
+                        {status === "closed" ? "off" : "slots"}
+                      </span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <div className="space-y-1">
+                      <p className="font-medium text-xs">
+                        {format(day.date, "EEEE, MMM d")}
+                      </p>
+                      {status === "closed" ? (
+                        <p className="text-xs text-muted-foreground">Closed</p>
+                      ) : availableTimeSlots.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Fully booked</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {availableTimeSlots.slice(0, 8).map((slot) => (
+                            <span
+                              key={slot.time}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary"
+                            >
+                              {slot.time}
+                            </span>
+                          ))}
+                          {availableTimeSlots.length > 8 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              +{availableTimeSlots.length - 8} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
-          <span>{totalBooked} booked</span>
-        </div>
-      </CardContent>
-    </Card>
+
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                Needs filling
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                Moderate
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Busy
+              </span>
+            </div>
+            <span>{totalBooked} booked</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Suggestions
+            </DialogTitle>
+          </DialogHeader>
+          {aiLoading ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Analyzing your availability...</p>
+            </div>
+          ) : (
+            <ScrollArea className="max-h-[400px]">
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>{aiSuggestion || ""}</ReactMarkdown>
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
