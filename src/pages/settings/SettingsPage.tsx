@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Clock, Copy, ExternalLink, Eye, Mail } from "lucide-react";
+import { Bell, Clock, Copy, ExternalLink, Eye, Mail, Send } from "lucide-react";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { GalleryManagement } from "@/components/settings/GalleryManagement";
 import { EmbedWidget } from "@/components/settings/EmbedWidget";
@@ -43,6 +43,15 @@ const DIGEST_TIMES = [
   { value: "10:00", label: "10:00 AM" },
 ];
 
+// Reminder time options (hours before appointment)
+const REMINDER_TIMES = [
+  { value: "1", label: "1 hour before" },
+  { value: "2", label: "2 hours before" },
+  { value: "4", label: "4 hours before" },
+  { value: "24", label: "1 day before" },
+  { value: "48", label: "2 days before" },
+];
+
 export default function SettingsPage() {
   const { currentBusiness, refreshBusinesses } = useBusiness();
   const [loading, setLoading] = useState(false);
@@ -57,6 +66,9 @@ export default function SettingsPage() {
   
   const [dailyDigestEnabled, setDailyDigestEnabled] = useState(false);
   const [dailyDigestTime, setDailyDigestTime] = useState("07:00");
+  const [bookingConfirmationEnabled, setBookingConfirmationEnabled] = useState(true);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState("24");
 
   useEffect(() => {
     if (currentBusiness) {
@@ -67,10 +79,13 @@ export default function SettingsPage() {
         address: currentBusiness.address || "",
         timezone: currentBusiness.timezone,
       });
-      // Load daily digest settings from business settings
+      // Load email notification settings from business settings
       const settings = currentBusiness.settings as Record<string, unknown> | null;
       setDailyDigestEnabled(settings?.dailyDigestEnabled === true);
       setDailyDigestTime((settings?.dailyDigestTime as string) || "07:00");
+      setBookingConfirmationEnabled(settings?.bookingConfirmationEnabled !== false); // Default true
+      setReminderEnabled(settings?.reminderEnabled === true);
+      setReminderTime((settings?.reminderTime as string) || "24");
     }
   }, [currentBusiness]);
 
@@ -107,19 +122,15 @@ export default function SettingsPage() {
     toast.success("Booking link copied!");
   };
 
-  const updateDigestSettings = async (enabled: boolean, time: string) => {
+  const updateEmailSettings = async (updates: Record<string, unknown>) => {
     if (!currentBusiness) return false;
     
     const currentSettings = (currentBusiness.settings as Record<string, unknown>) || {};
-    const newSettings = { 
-      ...currentSettings, 
-      dailyDigestEnabled: enabled,
-      dailyDigestTime: time,
-    };
+    const newSettings = { ...currentSettings, ...updates } as Record<string, unknown>;
     
     const { error } = await supabase
       .from("businesses")
-      .update({ settings: newSettings })
+      .update({ settings: newSettings as unknown as import("@/integrations/supabase/types").Json })
       .eq("id", currentBusiness.id);
 
     if (error) {
@@ -132,28 +143,65 @@ export default function SettingsPage() {
   };
 
   const handleDailyDigestToggle = async (enabled: boolean) => {
-    const previousEnabled = dailyDigestEnabled;
+    const previous = dailyDigestEnabled;
     setDailyDigestEnabled(enabled);
     
-    const success = await updateDigestSettings(enabled, dailyDigestTime);
+    const success = await updateEmailSettings({ dailyDigestEnabled: enabled });
     if (!success) {
-      setDailyDigestEnabled(previousEnabled);
+      setDailyDigestEnabled(previous);
     } else {
       toast.success(enabled ? "Daily digest enabled" : "Daily digest disabled");
     }
   };
 
   const handleDigestTimeChange = async (time: string) => {
-    const previousTime = dailyDigestTime;
+    const previous = dailyDigestTime;
     setDailyDigestTime(time);
     
-    const success = await updateDigestSettings(dailyDigestEnabled, time);
+    const success = await updateEmailSettings({ dailyDigestTime: time });
     if (!success) {
-      setDailyDigestTime(previousTime);
+      setDailyDigestTime(previous);
     } else {
       toast.success(`Digest time updated to ${DIGEST_TIMES.find(t => t.value === time)?.label}`);
     }
   };
+
+  const handleBookingConfirmationToggle = async (enabled: boolean) => {
+    const previous = bookingConfirmationEnabled;
+    setBookingConfirmationEnabled(enabled);
+    
+    const success = await updateEmailSettings({ bookingConfirmationEnabled: enabled });
+    if (!success) {
+      setBookingConfirmationEnabled(previous);
+    } else {
+      toast.success(enabled ? "Booking confirmations enabled" : "Booking confirmations disabled");
+    }
+  };
+
+  const handleReminderToggle = async (enabled: boolean) => {
+    const previous = reminderEnabled;
+    setReminderEnabled(enabled);
+    
+    const success = await updateEmailSettings({ reminderEnabled: enabled });
+    if (!success) {
+      setReminderEnabled(previous);
+    } else {
+      toast.success(enabled ? "Appointment reminders enabled" : "Appointment reminders disabled");
+    }
+  };
+
+  const handleReminderTimeChange = async (time: string) => {
+    const previous = reminderTime;
+    setReminderTime(time);
+    
+    const success = await updateEmailSettings({ reminderTime: time });
+    if (!success) {
+      setReminderTime(previous);
+    } else {
+      toast.success(`Reminder time updated to ${REMINDER_TIMES.find(t => t.value === time)?.label}`);
+    }
+  };
+
 
   return (
     <DashboardLayout
@@ -251,33 +299,55 @@ export default function SettingsPage() {
               Configure automated email notifications
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            {/* Booking Confirmations */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="daily-digest">Daily Digest</Label>
+                <Label htmlFor="booking-confirmation" className="flex items-center gap-2">
+                  <Send className="w-4 h-4" />
+                  Booking Confirmations
+                </Label>
                 <p className="text-sm text-muted-foreground">
-                  Receive a morning email with your day's scheduled bookings
+                  Send customers an email when they book an appointment
                 </p>
               </div>
               <Switch
-                id="daily-digest"
-                checked={dailyDigestEnabled}
-                onCheckedChange={handleDailyDigestToggle}
+                id="booking-confirmation"
+                checked={bookingConfirmationEnabled}
+                onCheckedChange={handleBookingConfirmationToggle}
               />
             </div>
-            {dailyDigestEnabled && (
-              <div className="space-y-3 pt-2 border-t">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <Label htmlFor="digest-time" className="text-sm font-normal">
-                    Delivery time
+
+            {/* Appointment Reminders */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="reminder" className="flex items-center gap-2">
+                    <Bell className="w-4 h-4" />
+                    Appointment Reminders
                   </Label>
-                  <Select value={dailyDigestTime} onValueChange={handleDigestTimeChange}>
-                    <SelectTrigger id="digest-time" className="w-[130px]">
+                  <p className="text-sm text-muted-foreground">
+                    Send customers a reminder before their appointment
+                  </p>
+                </div>
+                <Switch
+                  id="reminder"
+                  checked={reminderEnabled}
+                  onCheckedChange={handleReminderToggle}
+                />
+              </div>
+              {reminderEnabled && (
+                <div className="mt-3 flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <Label htmlFor="reminder-time" className="text-sm font-normal">
+                    Send reminder
+                  </Label>
+                  <Select value={reminderTime} onValueChange={handleReminderTimeChange}>
+                    <SelectTrigger id="reminder-time" className="w-[160px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {DIGEST_TIMES.map((time) => (
+                      {REMINDER_TIMES.map((time) => (
                         <SelectItem key={time.value} value={time.value}>
                           {time.label}
                         </SelectItem>
@@ -285,11 +355,53 @@ export default function SettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                  You'll receive your daily summary at {DIGEST_TIMES.find(t => t.value === dailyDigestTime)?.label} in your timezone ({formData.timezone})
-                </p>
+              )}
+            </div>
+
+            {/* Daily Digest */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="daily-digest" className="flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    Daily Digest
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receive a morning email with your day's scheduled bookings
+                  </p>
+                </div>
+                <Switch
+                  id="daily-digest"
+                  checked={dailyDigestEnabled}
+                  onCheckedChange={handleDailyDigestToggle}
+                />
               </div>
-            )}
+              {dailyDigestEnabled && (
+                <div className="space-y-3 mt-3">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <Label htmlFor="digest-time" className="text-sm font-normal">
+                      Delivery time
+                    </Label>
+                    <Select value={dailyDigestTime} onValueChange={handleDigestTimeChange}>
+                      <SelectTrigger id="digest-time" className="w-[130px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DIGEST_TIMES.map((time) => (
+                          <SelectItem key={time.value} value={time.value}>
+                            {time.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                    You'll receive your daily summary at {DIGEST_TIMES.find(t => t.value === dailyDigestTime)?.label} in your timezone ({formData.timezone})
+                  </p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
