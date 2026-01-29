@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { recordDashboardRpcCall } from "@/hooks/dashboard/useDashboardDiagnostics";
 import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 import { WeeklyPerformanceTile } from "@/components/dashboard/WeeklyPerformanceTile";
+import { AvailableSlotsTile } from "@/components/dashboard/AvailableSlotsTile";
 interface Booking {
   id: string;
   start_time: string;
@@ -294,8 +295,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Performance + Quick Actions Grid */}
-        <div className="grid gap-3 sm:gap-6 lg:grid-cols-3">
+        {/* Performance + Availability Grid */}
+        <div className="grid gap-3 sm:gap-6 lg:grid-cols-2">
           {/* Weekly Performance Tile */}
           {currentBusiness && (
             <WeeklyPerformanceTile
@@ -306,8 +307,16 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* Quick Actions - Hidden on mobile */}
-          <Card className="border-0 shadow-soft hidden sm:block">
+          {/* Available Slots Tile */}
+          {currentBusiness && (
+            <AvailableSlotsTile businessId={currentBusiness.id} />
+          )}
+        </div>
+
+        {/* Quick Actions + Setup Grid - Hidden on mobile */}
+        <div className="hidden sm:grid gap-6 lg:grid-cols-2">
+          {/* Quick Actions */}
+          <Card className="border-0 shadow-soft">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
             </CardHeader>
@@ -332,14 +341,12 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Getting Started Checklist - Hidden on mobile */}
-          <div className="hidden sm:block">
-            <SetupChecklist 
-              hasServices={services.length > 0}
-              hasStaff={staffList.length > 0}
-              onRefresh={refetchData}
-            />
-          </div>
+          {/* Getting Started Checklist */}
+          <SetupChecklist 
+            hasServices={services.length > 0}
+            hasStaff={staffList.length > 0}
+            onRefresh={refetchData}
+          />
         </div>
       </div>
 
