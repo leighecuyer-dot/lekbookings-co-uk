@@ -72,7 +72,7 @@ export function KanbanView({
 
   // Desktop: 4-column grid layout
   const DesktopView = () => (
-    <div className="hidden md:grid md:grid-cols-4 gap-4 min-h-[500px]">
+    <div className="hidden md:grid md:grid-cols-4 gap-3 h-full overflow-hidden">
       {statusConfig.map((column) => (
         <KanbanColumn
           key={column.id}
@@ -92,16 +92,16 @@ export function KanbanView({
     </div>
   );
 
-  // Mobile: Tab-based layout with swipe actions
+  // Mobile: Tab-based layout - compact for single screen
   const MobileView = () => {
     const activeConfig = getStatusConfig(activeTab);
     const activeBookings = getBookingsByStatus(activeTab);
     const StatusIcon = activeConfig.icon;
 
     return (
-      <div className="md:hidden">
-        {/* Status Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-hide">
+      <div className="md:hidden h-full flex flex-col">
+        {/* Status Tabs - Compact */}
+        <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide shrink-0">
           {statusConfig.map((status) => {
             const count = getBookingsByStatus(status.id).length;
             const Icon = status.icon;
@@ -111,15 +111,15 @@ export function KanbanView({
               <button
                 key={status.id}
                 onClick={() => setActiveTab(status.id)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-full whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-full whitespace-nowrap transition-all text-xs ${
                   isActive
-                    ? `${status.bgColor} ${status.textColor} border-2 ${status.borderColor} font-bold`
-                    : "bg-muted text-muted-foreground border-2 border-transparent"
+                    ? `${status.bgColor} ${status.textColor} border ${status.borderColor} font-bold`
+                    : "bg-muted text-muted-foreground border border-transparent"
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3 h-3" />
                 <span>{status.label}</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px]">
                   {count}
                 </Badge>
               </button>
@@ -127,36 +127,12 @@ export function KanbanView({
           })}
         </div>
 
-        {/* Active Tab Header */}
-        <div className={`p-4 rounded-xl ${activeConfig.bgColor} border-2 ${activeConfig.borderColor} mb-4`}>
-          <div className="flex items-center gap-3">
-            <StatusIcon className={`w-6 h-6 ${activeConfig.textColor}`} />
-            <div>
-              <h2 className={`font-bold text-lg ${activeConfig.textColor}`}>
-                {activeConfig.label}
-              </h2>
-              <p className={`text-sm ${activeConfig.textColor} opacity-80`}>
-                {activeConfig.description}
-              </p>
-            </div>
-            <Badge variant="outline" className="ml-auto bg-background text-lg px-3 py-1">
-              {activeBookings.length}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Booking List */}
-        <div className="space-y-3">
+        {/* Booking List - Scrollable */}
+        <div className="flex-1 overflow-auto space-y-2 mt-2">
           {activeBookings.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="font-medium">No bookings here</p>
-              <p className="text-sm mt-1">
-                {activeTab === "pending" && "New bookings will appear here"}
-                {activeTab === "confirmed" && "Confirmed appointments show here"}
-                {activeTab === "completed" && "Finished appointments go here"}
-                {activeTab === "cancelled" && "Cancelled bookings appear here"}
-              </p>
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <p className="font-medium text-sm">No bookings</p>
             </div>
           ) : (
             activeBookings.map((booking) => (
@@ -171,6 +147,7 @@ export function KanbanView({
                 effectiveStatus={getEffectiveStatus(booking)}
                 isUpdating={isUpdating(booking.id)}
                 showActions
+                compact
               />
             ))
           )}

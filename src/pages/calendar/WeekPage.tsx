@@ -139,7 +139,7 @@ export default function WeekPage() {
         </div>
       }
     >
-      <div className="h-[calc(100vh-140px)] overflow-auto bg-card rounded-xl border">
+      <div className="h-[calc(100vh-100px)] sm:h-[calc(100vh-120px)] overflow-auto bg-card rounded-xl border">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground" />

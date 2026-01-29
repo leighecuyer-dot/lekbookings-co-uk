@@ -48,23 +48,23 @@ export function DashboardLayout({ children, title, description, actions }: Dashb
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex h-screen w-full overflow-hidden">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 flex flex-col overflow-hidden">
           {isResellerMode && <ResellerModeBanner />}
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-            <SidebarTrigger className="-ml-2" />
+          <header className="sticky top-0 z-10 flex h-12 sm:h-14 items-center gap-2 sm:gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-6 shrink-0">
+            <SidebarTrigger className="-ml-1 sm:-ml-2" />
             {title && (
-              <div className="flex-1">
-                <h1 className="text-xl font-display font-semibold">{title}</h1>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base sm:text-xl font-display font-semibold truncate">{title}</h1>
                 {description && (
-                  <p className="text-sm text-muted-foreground">{description}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate hidden sm:block">{description}</p>
                 )}
               </div>
             )}
-            {actions && <div className="flex items-center gap-2">{actions}</div>}
+            {actions && <div className="flex items-center gap-1 sm:gap-2 shrink-0">{actions}</div>}
           </header>
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 p-3 sm:p-6 overflow-auto">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>
