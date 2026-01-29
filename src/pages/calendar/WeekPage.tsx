@@ -4,11 +4,11 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO, addDays } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 
 interface Booking {
   id: string;
@@ -55,6 +55,13 @@ export default function WeekPage() {
   const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM to 8 PM
+
+  // Swipe gestures for mobile week navigation
+  const swipeHandlers = useSwipeGesture({
+    onSwipeLeft: () => setSelectedDate(addWeeks(selectedDate, 1)),
+    onSwipeRight: () => setSelectedDate(subWeeks(selectedDate, 1)),
+    threshold: 50,
+  });
 
   useEffect(() => {
     if (currentBusiness) {
@@ -139,7 +146,12 @@ export default function WeekPage() {
         </div>
       }
     >
-      <div className="h-[calc(100vh-100px)] sm:h-[calc(100vh-120px)] overflow-auto bg-card rounded-xl border">
+      <div 
+        className="h-[calc(100vh-100px)] sm:h-[calc(100vh-120px)] overflow-auto bg-card rounded-xl border"
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}
+      >
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground" />
