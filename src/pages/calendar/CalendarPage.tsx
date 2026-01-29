@@ -331,8 +331,12 @@ export default function CalendarPage() {
     setEditDialogOpen(true);
   };
 
-  const handleSlotClick = (time: string) => {
-    setNewBooking((prev) => ({ ...prev, time }));
+  const handleSlotClick = (time: string, staffId?: string) => {
+    setNewBooking((prev) => ({ 
+      ...prev, 
+      time,
+      staffId: staffId || "",
+    }));
     setDialogOpen(true);
   };
 
