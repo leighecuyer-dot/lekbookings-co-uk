@@ -373,9 +373,30 @@ export function AiServiceImportDialog({
         ) : (
           <div className="flex-1 overflow-hidden flex flex-col py-4">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-muted-foreground">
-                {selectedCount} of {extractedServices.length} services selected
-              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    const allSelected = extractedServices.every(s => s.selected);
+                    setExtractedServices(prev => prev.map(s => ({ ...s, selected: !allSelected })));
+                  }}
+                  className={cn(
+                    "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                    selectedCount === extractedServices.length
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : selectedCount > 0
+                        ? "bg-primary/50 border-primary text-primary-foreground"
+                        : "border-muted-foreground/30"
+                  )}
+                >
+                  {selectedCount === extractedServices.length && <Check className="w-3 h-3" />}
+                  {selectedCount > 0 && selectedCount < extractedServices.length && (
+                    <div className="w-2 h-0.5 bg-primary-foreground" />
+                  )}
+                </button>
+                <p className="text-sm text-muted-foreground">
+                  {selectedCount} of {extractedServices.length} selected
+                </p>
+              </div>
               <Button variant="ghost" size="sm" onClick={resetState}>
                 Start Over
               </Button>
