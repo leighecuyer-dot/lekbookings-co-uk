@@ -327,6 +327,10 @@ export default function DashboardPage() {
             <AvailableSlotsTile 
               businessId={currentBusiness.id} 
               businessName={currentBusiness.name}
+              onSendCampaign={(type) => {
+                setMessageType(type);
+                setMessageDialogOpen(true);
+              }}
             />
           )}
         </div>
