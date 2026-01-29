@@ -40,6 +40,7 @@ import {
   Plus,
   UserPlus,
   UserCog,
+  BarChart3,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -51,6 +52,10 @@ const mainNavItems = [
   { title: "Staff", href: "/staff", icon: UserCircle },
   { title: "Services", href: "/services", icon: Briefcase },
   { title: "Import", href: "/import", icon: Upload },
+];
+
+const reportNavItems = [
+  { title: "Campaign Reports", href: "/reports/campaigns", icon: BarChart3 },
 ];
 
 
@@ -181,6 +186,30 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.href}
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Reports Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/60">
+            Reports
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {reportNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
