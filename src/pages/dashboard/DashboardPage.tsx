@@ -335,8 +335,21 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Performance + Availability + Revenue Grid */}
+        {/* Availability + Performance + Revenue Grid */}
         <div className="grid gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Available Slots Tile */}
+          {currentBusiness && (
+            <AvailableSlotsTile 
+              businessId={currentBusiness.id} 
+              businessName={currentBusiness.name}
+              onSendCampaign={(type, context) => {
+                setMessageType(type);
+                setAvailabilityContext(context);
+                setMessageDialogOpen(true);
+              }}
+            />
+          )}
+
           {/* Weekly Performance Tile */}
           {currentBusiness && (
             <WeeklyPerformanceTile
@@ -350,19 +363,6 @@ export default function DashboardPage() {
           {/* Revenue Growth Tile */}
           {currentBusiness && (
             <RevenueGrowthTile businessId={currentBusiness.id} />
-          )}
-
-          {/* Available Slots Tile */}
-          {currentBusiness && (
-            <AvailableSlotsTile 
-              businessId={currentBusiness.id} 
-              businessName={currentBusiness.name}
-              onSendCampaign={(type, context) => {
-                setMessageType(type);
-                setAvailabilityContext(context);
-                setMessageDialogOpen(true);
-              }}
-            />
           )}
         </div>
 
