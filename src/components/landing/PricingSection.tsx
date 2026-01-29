@@ -1,10 +1,34 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Check, Minus } from "lucide-react";
+import { Check, Minus, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const plans = [
+interface Feature {
+  name: string;
+  included: boolean;
+  description?: string;
+}
+
+interface Plan {
+  name: string;
+  description: string;
+  price: number;
+  period: string;
+  features: Feature[];
+  pageBuilder: string;
+  cta: string;
+  popular: boolean;
+}
+
+const CAMPAIGN_REPORTS_DESCRIPTION = "Track delivery rates, measure conversions, and calculate ROI from your SMS, email, and WhatsApp campaigns.";
+
+const plans: Plan[] = [
   {
     name: "Essential",
     description: "For solo practitioners",
@@ -18,7 +42,7 @@ const plans = [
       { name: "50 SMS reminders/month", included: true },
       { name: "Email support", included: true },
       { name: "Branding customization", included: true },
-      { name: "Campaign reports", included: false },
+      { name: "Campaign reports", included: false, description: CAMPAIGN_REPORTS_DESCRIPTION },
       { name: "Full content editing", included: false },
     ],
     pageBuilder: "Branding Only",
@@ -35,7 +59,7 @@ const plans = [
       { name: "Unlimited bookings", included: true },
       { name: "200 SMS reminders/month", included: true },
       { name: "Analytics dashboard", included: true },
-      { name: "Campaign reports", included: true },
+      { name: "Campaign reports", included: true, description: CAMPAIGN_REPORTS_DESCRIPTION },
       { name: "Priority support", included: true },
       { name: "Branding customization", included: true },
       { name: "Full content editing", included: true },
@@ -54,7 +78,7 @@ const plans = [
       { name: "Unlimited bookings", included: true },
       { name: "Unlimited SMS reminders", included: true },
       { name: "Advanced analytics", included: true },
-      { name: "Campaign reports", included: true },
+      { name: "Campaign reports", included: true, description: CAMPAIGN_REPORTS_DESCRIPTION },
       { name: "API access", included: true },
       { name: "Dedicated account manager", included: true },
       { name: "Complete page builder", included: true },
@@ -149,9 +173,29 @@ export function PricingSection() {
                       )} />
                     )}
                     <span className={cn(
-                      "text-sm",
+                      "text-sm flex items-center gap-1.5",
                       !feature.included && (plan.popular ? "text-background/40" : "text-muted-foreground/50")
-                    )}>{feature.name}</span>
+                    )}>
+                      {feature.name}
+                      {feature.description && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className={cn(
+                              "w-3.5 h-3.5 cursor-help",
+                              plan.popular 
+                                ? feature.included ? "text-background/60" : "text-background/30"
+                                : feature.included ? "text-muted-foreground" : "text-muted-foreground/40"
+                            )} />
+                          </TooltipTrigger>
+                          <TooltipContent 
+                            side="top" 
+                            className="max-w-[220px] text-xs"
+                          >
+                            {feature.description}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>
