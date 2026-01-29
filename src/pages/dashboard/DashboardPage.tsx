@@ -317,7 +317,10 @@ export default function DashboardPage() {
 
           {/* Available Slots Tile */}
           {currentBusiness && (
-            <AvailableSlotsTile businessId={currentBusiness.id} />
+            <AvailableSlotsTile 
+              businessId={currentBusiness.id} 
+              businessName={currentBusiness.name}
+            />
           )}
         </div>
 
