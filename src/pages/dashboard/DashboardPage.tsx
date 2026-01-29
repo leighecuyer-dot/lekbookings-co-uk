@@ -261,6 +261,15 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* New Booking Button - Full Width */}
+        <Link
+          to="/calendar?action=add"
+          className="bg-primary text-primary-foreground rounded-xl p-3 sm:p-4 hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 sm:gap-3 w-full"
+        >
+          <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+          <span className="text-sm sm:text-base font-semibold">New Booking</span>
+        </Link>
+
         {/* Quick Add Tiles */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <Link
