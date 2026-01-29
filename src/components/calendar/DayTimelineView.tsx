@@ -1,5 +1,5 @@
 import { format, parseISO, setHours, setMinutes } from "date-fns";
-import { Clock, Plus, Users } from "lucide-react";
+import { Clock, Plus, Users, Palmtree } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -133,6 +133,16 @@ function getAvailableStaffForSlot(
   });
 }
 
+// Get staff on leave for a specific date
+function getStaffOnLeave(
+  staffList: Staff[],
+  date: Date,
+  isOnLeave?: (staffId: string, date: Date) => boolean
+): Staff[] {
+  if (!isOnLeave) return [];
+  return staffList.filter((staff) => isOnLeave(staff.id, date));
+}
+
 export function DayTimelineView({
   selectedDate,
   bookings,
@@ -259,6 +269,8 @@ export function DayTimelineView({
             isOnLeave
           );
           const hasAvailableStaff = availableStaff.length > 0;
+          const staffOnLeave = getStaffOnLeave(staffList, selectedDate, isOnLeave);
+          const hasStaffOnLeave = staffOnLeave.length > 0;
 
           // Pre-select the first available staff member when clicking a slot
           const preSelectedStaffId = availableStaff.length > 0 ? availableStaff[0].id : undefined;
@@ -301,36 +313,60 @@ export function DayTimelineView({
                   </span>
                 </div>
 
-                {/* Staff availability indicator */}
-                {staffList.length > 0 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className={cn(
-                        "flex items-center gap-1 px-2 py-1 rounded-full text-xs",
-                        hasAvailableStaff
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      )}>
-                        <Users className="w-3 h-3" />
-                        <span>{availableStaff.length}/{staffList.length}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-[200px]">
-                      {hasAvailableStaff ? (
+                <div className="flex items-center gap-2">
+                  {/* Leave indicator */}
+                  {hasStaffOnLeave && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-warning/10 text-warning-foreground">
+                          <Palmtree className="w-3 h-3" />
+                          <span>{staffOnLeave.length}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-[200px]">
                         <div>
-                          <p className="font-medium mb-1">Available staff:</p>
+                          <p className="font-medium mb-1">On leave today:</p>
                           <ul className="text-xs space-y-0.5">
-                            {availableStaff.map((s) => (
+                            {staffOnLeave.map((s) => (
                               <li key={s.id}>• {s.name}</li>
                             ))}
                           </ul>
                         </div>
-                      ) : (
-                        <p>No staff available at this time</p>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+
+                  {/* Staff availability indicator */}
+                  {staffList.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded-full text-xs",
+                          hasAvailableStaff
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          <Users className="w-3 h-3" />
+                          <span>{availableStaff.length}/{staffList.length}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-[200px]">
+                        {hasAvailableStaff ? (
+                          <div>
+                            <p className="font-medium mb-1">Available staff:</p>
+                            <ul className="text-xs space-y-0.5">
+                              {availableStaff.map((s) => (
+                                <li key={s.id}>• {s.name}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <p>No staff available at this time</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
               </div>
             </div>
           );
