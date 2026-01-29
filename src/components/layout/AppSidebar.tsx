@@ -119,12 +119,12 @@ export function AppSidebar() {
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="flex-1 h-8 text-xs gap-1"
+                    size="default"
+                    className="flex-1 h-10 md:h-11 text-sm gap-2"
                     asChild
                   >
                     <Link to="/customers?action=add">
-                      <UserPlus className="w-3 h-3" />
+                      <UserPlus className="w-4 h-4" />
                       Customer
                     </Link>
                   </Button>
@@ -137,12 +137,12 @@ export function AppSidebar() {
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="flex-1 h-8 text-xs gap-1"
+                    size="default"
+                    className="flex-1 h-10 md:h-11 text-sm gap-2"
                     asChild
                   >
                     <Link to="/services?action=add">
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-4 h-4" />
                       Service
                     </Link>
                   </Button>
