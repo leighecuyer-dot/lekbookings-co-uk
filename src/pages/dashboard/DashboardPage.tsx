@@ -16,6 +16,7 @@ import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 import { WeeklyPerformanceTile } from "@/components/dashboard/WeeklyPerformanceTile";
 import { AvailableSlotsTile } from "@/components/dashboard/AvailableSlotsTile";
 import { WeeklyTrendsChart } from "@/components/dashboard/WeeklyTrendsChart";
+import { RevenueGrowthTile } from "@/components/dashboard/RevenueGrowthTile";
 import { BulkMessageDialog } from "@/components/messaging/BulkMessageDialog";
 interface Booking {
   id: string;
@@ -303,8 +304,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Performance + Availability Grid */}
-        <div className="grid gap-3 sm:gap-6 lg:grid-cols-2">
+        {/* Performance + Availability + Revenue Grid */}
+        <div className="grid gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Weekly Performance Tile */}
           {currentBusiness && (
             <WeeklyPerformanceTile
@@ -313,6 +314,11 @@ export default function DashboardPage() {
               onSendSMS={handleSendSMS}
               onSendEmail={handleSendEmail}
             />
+          )}
+
+          {/* Revenue Growth Tile */}
+          {currentBusiness && (
+            <RevenueGrowthTile businessId={currentBusiness.id} />
           )}
 
           {/* Available Slots Tile */}
