@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Copy, ExternalLink, Eye, Mail } from "lucide-react";
+import { Clock, Copy, ExternalLink, Eye, Mail } from "lucide-react";
 import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { GalleryManagement } from "@/components/settings/GalleryManagement";
 import { EmbedWidget } from "@/components/settings/EmbedWidget";
@@ -28,6 +28,21 @@ const TIMEZONES = [
   { value: "UTC", label: "UTC" },
 ];
 
+// Time options for daily digest (every 30 minutes from 5am to 10am)
+const DIGEST_TIMES = [
+  { value: "05:00", label: "5:00 AM" },
+  { value: "05:30", label: "5:30 AM" },
+  { value: "06:00", label: "6:00 AM" },
+  { value: "06:30", label: "6:30 AM" },
+  { value: "07:00", label: "7:00 AM" },
+  { value: "07:30", label: "7:30 AM" },
+  { value: "08:00", label: "8:00 AM" },
+  { value: "08:30", label: "8:30 AM" },
+  { value: "09:00", label: "9:00 AM" },
+  { value: "09:30", label: "9:30 AM" },
+  { value: "10:00", label: "10:00 AM" },
+];
+
 export default function SettingsPage() {
   const { currentBusiness, refreshBusinesses } = useBusiness();
   const [loading, setLoading] = useState(false);
@@ -41,6 +56,7 @@ export default function SettingsPage() {
   });
   
   const [dailyDigestEnabled, setDailyDigestEnabled] = useState(false);
+  const [dailyDigestTime, setDailyDigestTime] = useState("07:00");
 
   useEffect(() => {
     if (currentBusiness) {
@@ -51,9 +67,10 @@ export default function SettingsPage() {
         address: currentBusiness.address || "",
         timezone: currentBusiness.timezone,
       });
-      // Load daily digest setting from business settings
+      // Load daily digest settings from business settings
       const settings = currentBusiness.settings as Record<string, unknown> | null;
       setDailyDigestEnabled(settings?.dailyDigestEnabled === true);
+      setDailyDigestTime((settings?.dailyDigestTime as string) || "07:00");
     }
   }, [currentBusiness]);
 
@@ -90,13 +107,15 @@ export default function SettingsPage() {
     toast.success("Booking link copied!");
   };
 
-  const handleDailyDigestToggle = async (enabled: boolean) => {
-    if (!currentBusiness) return;
-    
-    setDailyDigestEnabled(enabled);
+  const updateDigestSettings = async (enabled: boolean, time: string) => {
+    if (!currentBusiness) return false;
     
     const currentSettings = (currentBusiness.settings as Record<string, unknown>) || {};
-    const newSettings = { ...currentSettings, dailyDigestEnabled: enabled };
+    const newSettings = { 
+      ...currentSettings, 
+      dailyDigestEnabled: enabled,
+      dailyDigestTime: time,
+    };
     
     const { error } = await supabase
       .from("businesses")
@@ -105,10 +124,34 @@ export default function SettingsPage() {
 
     if (error) {
       toast.error("Failed to update notification settings");
-      setDailyDigestEnabled(!enabled); // Revert on error
+      return false;
+    }
+    
+    refreshBusinesses();
+    return true;
+  };
+
+  const handleDailyDigestToggle = async (enabled: boolean) => {
+    const previousEnabled = dailyDigestEnabled;
+    setDailyDigestEnabled(enabled);
+    
+    const success = await updateDigestSettings(enabled, dailyDigestTime);
+    if (!success) {
+      setDailyDigestEnabled(previousEnabled);
     } else {
       toast.success(enabled ? "Daily digest enabled" : "Daily digest disabled");
-      refreshBusinesses();
+    }
+  };
+
+  const handleDigestTimeChange = async (time: string) => {
+    const previousTime = dailyDigestTime;
+    setDailyDigestTime(time);
+    
+    const success = await updateDigestSettings(dailyDigestEnabled, time);
+    if (!success) {
+      setDailyDigestTime(previousTime);
+    } else {
+      toast.success(`Digest time updated to ${DIGEST_TIMES.find(t => t.value === time)?.label}`);
     }
   };
 
@@ -223,9 +266,29 @@ export default function SettingsPage() {
               />
             </div>
             {dailyDigestEnabled && (
-              <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                You'll receive a daily summary at 7:00 AM in your timezone ({formData.timezone})
-              </p>
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <Label htmlFor="digest-time" className="text-sm font-normal">
+                    Delivery time
+                  </Label>
+                  <Select value={dailyDigestTime} onValueChange={handleDigestTimeChange}>
+                    <SelectTrigger id="digest-time" className="w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIGEST_TIMES.map((time) => (
+                        <SelectItem key={time.value} value={time.value}>
+                          {time.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                  You'll receive your daily summary at {DIGEST_TIMES.find(t => t.value === dailyDigestTime)?.label} in your timezone ({formData.timezone})
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
