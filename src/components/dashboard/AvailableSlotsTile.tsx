@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, CalendarDays, Sparkles, X } from "lucide-react";
+import { Loader2, CalendarDays, Sparkles, MessageSquare, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   startOfWeek, 
@@ -35,6 +35,7 @@ import ReactMarkdown from "react-markdown";
 interface AvailableSlotsTileProps {
   businessId: string;
   businessName?: string;
+  onSendCampaign?: (type: "sms" | "whatsapp") => void;
 }
 
 interface TimeSlot {
@@ -57,7 +58,7 @@ interface WorkingHours {
 
 const SLOT_DURATION_MINUTES = 30;
 
-export function AvailableSlotsTile({ businessId, businessName }: AvailableSlotsTileProps) {
+export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }: AvailableSlotsTileProps) {
   const navigate = useNavigate();
   const [daySlots, setDaySlots] = useState<DaySlots[]>([]);
   const [loading, setLoading] = useState(true);
@@ -399,11 +400,46 @@ export function AvailableSlotsTile({ businessId, businessName }: AvailableSlotsT
               <p className="text-sm text-muted-foreground">Analyzing your availability...</p>
             </div>
           ) : (
-            <ScrollArea className="max-h-[400px]">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown>{aiSuggestion || ""}</ReactMarkdown>
-              </div>
-            </ScrollArea>
+            <>
+              <ScrollArea className="max-h-[350px]">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{aiSuggestion || ""}</ReactMarkdown>
+                </div>
+              </ScrollArea>
+              
+              {onSendCampaign && (
+                <div className="pt-4 border-t mt-4">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Ready to act on these suggestions?
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={() => {
+                        setAiDialogOpen(false);
+                        onSendCampaign("sms");
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Send SMS
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 gap-2"
+                      onClick={() => {
+                        setAiDialogOpen(false);
+                        onSendCampaign("whatsapp");
+                      }}
+                    >
+                      <Send className="h-4 w-4" />
+                      Send WhatsApp
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </DialogContent>
       </Dialog>
