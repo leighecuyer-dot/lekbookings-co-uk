@@ -18,13 +18,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Clock, DollarSign, MoreHorizontal, Briefcase } from "lucide-react";
+import { Plus, Clock, DollarSign, MoreHorizontal, Briefcase, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AiServiceImportDialog } from "@/components/services/AiServiceImportDialog";
 
 interface Service {
   id: string;
@@ -53,6 +54,7 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [aiImportOpen, setAiImportOpen] = useState(false);
   
   const [newService, setNewService] = useState({
     name: "",
@@ -149,13 +151,22 @@ export default function ServicesPage() {
       title="Services"
       description="Manage the services you offer"
       actions={
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gradient-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Service
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setAiImportOpen(true)}
+            className="gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">AI Import</span>
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gradient-primary">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Service
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Service</DialogTitle>
@@ -234,6 +245,7 @@ export default function ServicesPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       }
     >
       {loading ? (
@@ -311,6 +323,15 @@ export default function ServicesPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {currentBusiness && (
+        <AiServiceImportDialog
+          open={aiImportOpen}
+          onOpenChange={setAiImportOpen}
+          businessId={currentBusiness.id}
+          onImportComplete={fetchServices}
+        />
       )}
     </DashboardLayout>
   );
