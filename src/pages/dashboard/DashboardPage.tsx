@@ -15,6 +15,7 @@ import { recordDashboardRpcCall } from "@/hooks/dashboard/useDashboardDiagnostic
 import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 import { WeeklyPerformanceTile } from "@/components/dashboard/WeeklyPerformanceTile";
 import { AvailableSlotsTile } from "@/components/dashboard/AvailableSlotsTile";
+import { WeeklyTrendsChart } from "@/components/dashboard/WeeklyTrendsChart";
 interface Booking {
   id: string;
   start_time: string;
@@ -312,6 +313,14 @@ export default function DashboardPage() {
             <AvailableSlotsTile businessId={currentBusiness.id} />
           )}
         </div>
+
+        {/* Weekly Trends Chart */}
+        {currentBusiness && (
+          <WeeklyTrendsChart 
+            businessId={currentBusiness.id} 
+            currentWeekBookings={stats.weekBookings}
+          />
+        )}
 
         {/* Quick Actions + Setup Grid - Hidden on mobile */}
         <div className="hidden sm:grid gap-6 lg:grid-cols-2">
