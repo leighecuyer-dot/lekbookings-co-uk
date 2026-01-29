@@ -196,7 +196,7 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
         const weekStart = startOfWeek(now, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
         
-        const [staffResult, bookingsResult] = await Promise.all([
+        const [staffResult, bookingsResult, leaveResult] = await Promise.all([
           supabase
             .from("staff")
             .select("id, working_hours")
@@ -209,13 +209,30 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
             .gte("start_time", weekStart.toISOString())
             .lte("start_time", weekEnd.toISOString())
             .neq("status", "cancelled"),
+          supabase
+            .from("staff_leave")
+            .select("staff_id, start_date, end_date")
+            .eq("business_id", businessId),
         ]);
 
         if (staffResult.error) throw staffResult.error;
         if (bookingsResult.error) throw bookingsResult.error;
+        if (leaveResult.error) throw leaveResult.error;
 
         const staff = staffResult.data || [];
         const bookings = bookingsResult.data || [];
+        const leaves = leaveResult.data || [];
+        
+        // Helper to check if staff is on leave for a date
+        const isOnLeave = (staffId: string, date: Date): boolean => {
+          const dateStr = format(date, "yyyy-MM-dd");
+          return leaves.some(
+            (leave) =>
+              leave.staff_id === staffId &&
+              leave.start_date <= dateStr &&
+              leave.end_date >= dateStr
+          );
+        };
         
         const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
         
@@ -228,6 +245,11 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
           const allTimeSlots: Map<string, { time: Date; available: boolean }> = new Map();
           
           staff.forEach(member => {
+            // Skip staff members on leave for this date
+            if (isOnLeave(member.id, date)) {
+              return;
+            }
+            
             const workingHours = member.working_hours as WorkingHours | null;
             const dayHours = workingHours?.[dayName];
             
