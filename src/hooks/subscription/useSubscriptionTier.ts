@@ -14,7 +14,7 @@ export interface TierLimits {
 
 const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
   essential: {
-    maxStaff: 1,
+    maxStaff: 2,
     maxBookingsPerMonth: 100,
     maxSmsPerMonth: 50,
     hasAdvancedAnalytics: false,
@@ -38,7 +38,7 @@ const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     hasFullPageBuilder: true,
   },
   unknown: {
-    maxStaff: 1,
+    maxStaff: 2,
     maxBookingsPerMonth: 100,
     maxSmsPerMonth: 50,
     hasAdvancedAnalytics: false,

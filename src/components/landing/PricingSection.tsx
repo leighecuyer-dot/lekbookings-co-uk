@@ -11,7 +11,7 @@ const plans = [
     price: 20,
     period: "month",
     features: [
-      { name: "1 staff member", included: true },
+      { name: "Up to 2 staff members", included: true },
       { name: "Up to 100 bookings/month", included: true },
       { name: "Customer management", included: true },
       { name: "Calendar & scheduling", included: true },
