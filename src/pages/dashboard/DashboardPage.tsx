@@ -169,7 +169,8 @@ export default function DashboardPage() {
 
   const quickActions = [
     { title: "New Booking", description: "Create a new appointment", href: "/calendar", icon: Plus },
-    { title: "Add Customer", description: "Register a new client", href: "/customers?action=add", icon: Users },
+    { title: "Add Customer", description: "Register a new client", href: "/customers?action=add", icon: UserPlus },
+    { title: "View Customers", description: "See all your clients", href: "/customers", icon: Users },
     { title: "Add Service", description: "Define a new service offering", href: "/services?action=add", icon: Clock },
     { title: "View Calendar", description: "See all appointments", href: "/calendar", icon: Calendar },
   ];
