@@ -19,8 +19,10 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { usePaymentStatus } from "@/hooks/bookings";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import { format, parseISO } from "date-fns";
-import { Trash2, Clock, User, Calendar, CreditCard, CheckCircle, CircleDollarSign } from "lucide-react";
+import { Trash2, Clock, User, Calendar, CreditCard, CheckCircle, CircleDollarSign, CheckCheck } from "lucide-react";
 import { BookingImageUpload } from "./BookingImageUpload";
+import { BookingCompleteDialog } from "./BookingCompleteDialog";
+import { getWorkflowConfig } from "@/components/settings/WorkflowAutomationSettings";
 
 interface Booking {
   id: string;
@@ -95,6 +97,7 @@ export function BookingEditDialog({
   });
   const [loading, setLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (booking) {
@@ -268,6 +271,39 @@ export function BookingEditDialog({
     }
   };
 
+  const handleCompleteBooking = async (revenueAmount: number) => {
+    setLoading(true);
+    
+    const workflowConfig = getWorkflowConfig(currentBusiness?.settings as Record<string, unknown> | null);
+    
+    const updateData: Record<string, unknown> = {
+      status: "completed",
+    };
+
+    // Add revenue if configured
+    if (workflowConfig.autoAddRevenueOnComplete) {
+      updateData.total_price = revenueAmount;
+      updateData.amount_paid = revenueAmount;
+      updateData.payment_status = "paid";
+    }
+
+    const { error } = await supabase
+      .from("bookings")
+      .update(updateData)
+      .eq("id", booking.id);
+
+    setLoading(false);
+
+    if (error) {
+      toast.error("Failed to complete booking");
+      return;
+    }
+
+    toast.success(`Booking completed! $${revenueAmount.toFixed(2)} added to revenue`);
+    onOpenChange(false);
+    onUpdate();
+  };
+
   const getPaymentStatusBadge = () => {
     switch (paymentStatus) {
       case "paid":
@@ -278,6 +314,9 @@ export function BookingEditDialog({
         return <Badge variant="outline" className="text-muted-foreground">Unpaid</Badge>;
     }
   };
+
+  // Can show complete button if status is confirmed or pending
+  const canComplete = booking.status === "confirmed" || booking.status === "pending";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -490,6 +529,17 @@ export function BookingEditDialog({
             Delete
           </Button>
           <div className="flex gap-2">
+            {canComplete && (
+              <Button 
+                variant="outline" 
+                onClick={() => setCompleteDialogOpen(true)} 
+                disabled={loading}
+                className="border-primary/50 text-primary hover:bg-primary/10"
+              >
+                <CheckCheck className="w-4 h-4 mr-1" />
+                Complete
+              </Button>
+            )}
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
@@ -499,6 +549,17 @@ export function BookingEditDialog({
           </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* Complete Booking Dialog */}
+      <BookingCompleteDialog
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
+        bookingId={booking.id}
+        customerName={booking.customer_name || "Customer"}
+        serviceName={service?.name || "Service"}
+        defaultPrice={totalPrice}
+        onConfirm={handleCompleteBooking}
+      />
     </Dialog>
   );
 }

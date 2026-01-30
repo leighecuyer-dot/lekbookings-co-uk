@@ -1,7 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { toast } from "sonner";
+import { getWorkflowConfig } from "@/components/settings/WorkflowAutomationSettings";
 
 interface PaymentConfig {
   requireDeposit: boolean;
@@ -23,6 +24,7 @@ interface BookingPaymentInfo {
 
 export function usePaymentStatus() {
   const { currentBusiness } = useBusiness();
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const getPaymentConfig = useCallback((): PaymentConfig => {
     if (!currentBusiness?.settings) {
@@ -46,6 +48,10 @@ export function usePaymentStatus() {
     };
   }, [currentBusiness]);
 
+  const getWorkflowSettings = useCallback(() => {
+    return getWorkflowConfig(currentBusiness?.settings as Record<string, unknown> | null);
+  }, [currentBusiness]);
+
   const calculateDepositAmount = useCallback((totalPrice: number): number => {
     const config = getPaymentConfig();
     if (!config.requireDeposit) return 0;
@@ -61,7 +67,7 @@ export function usePaymentStatus() {
     newPaymentStatus: string,
     currentBookingStatus: string
   ): string | null => {
-    const config = getPaymentConfig();
+    const workflow = getWorkflowSettings();
     
     // If already completed or cancelled, don't change status
     if (currentBookingStatus === "completed" || currentBookingStatus === "cancelled") {
@@ -69,28 +75,97 @@ export function usePaymentStatus() {
     }
 
     // Deposit paid → confirm if configured
-    if (newPaymentStatus === "deposit_paid" && config.autoConfirmOnDeposit) {
+    if (newPaymentStatus === "deposit_paid" && workflow.confirmOnDepositPaid) {
       if (currentBookingStatus === "pending") {
         return "confirmed";
       }
     }
 
     // Full payment → confirm if configured
-    if (newPaymentStatus === "paid" && config.autoConfirmOnFullPayment) {
+    if (newPaymentStatus === "paid" && workflow.confirmOnFullPayment) {
       if (currentBookingStatus === "pending") {
         return "confirmed";
       }
     }
 
     return null;
-  }, [getPaymentConfig]);
+  }, [getWorkflowSettings]);
+
+  const applyStatusChange = useCallback(async (
+    bookingId: string,
+    updateData: Record<string, unknown>,
+    previousData: Record<string, unknown>,
+    newStatus: string | null
+  ): Promise<boolean> => {
+    const workflow = getWorkflowSettings();
+
+    // Clear any pending undo timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
+    }
+
+    const performUpdate = async () => {
+      const { error } = await supabase
+        .from("bookings")
+        .update(updateData)
+        .eq("id", bookingId);
+
+      if (error) {
+        console.error("Failed to update booking:", error);
+        toast.error("Failed to update booking");
+        return false;
+      }
+      return true;
+    };
+
+    const undoUpdate = async () => {
+      await supabase
+        .from("bookings")
+        .update(previousData)
+        .eq("id", bookingId);
+      toast.success("Change undone");
+    };
+
+    // If showing undo notification and there's a status change
+    if (workflow.showUndoNotification && newStatus) {
+      toast(`Status will change to "${newStatus}"`, {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (undoTimeoutRef.current) {
+              clearTimeout(undoTimeoutRef.current);
+              undoTimeoutRef.current = null;
+            }
+            undoUpdate();
+          },
+        },
+      });
+
+      // Apply immediately but allow undo
+      const success = await performUpdate();
+      if (!success) return false;
+
+      // The undo action handler above will revert if clicked
+      return true;
+    }
+
+    // No undo notification, just apply directly
+    const success = await performUpdate();
+    if (success && newStatus) {
+      toast.success(`Booking ${newStatus}!`);
+    } else if (success) {
+      toast.success("Payment recorded!");
+    }
+    return success;
+  }, [getWorkflowSettings]);
 
   const recordPayment = useCallback(async (
     bookingId: string,
     amount: number,
     bookingInfo: BookingPaymentInfo
   ): Promise<boolean> => {
-    const config = getPaymentConfig();
     const currentAmountPaid = bookingInfo.amount_paid || 0;
     const newAmountPaid = currentAmountPaid + amount;
     const totalPrice = bookingInfo.total_price || 0;
@@ -116,29 +191,18 @@ export function usePaymentStatus() {
       payment_status: newPaymentStatus,
     };
 
+    const previousData: Record<string, unknown> = {
+      amount_paid: currentAmountPaid,
+      payment_status: bookingInfo.payment_status,
+    };
+
     if (newBookingStatus) {
       updateData.status = newBookingStatus;
+      previousData.status = bookingInfo.status;
     }
 
-    const { error } = await supabase
-      .from("bookings")
-      .update(updateData)
-      .eq("id", bookingId);
-
-    if (error) {
-      console.error("Failed to record payment:", error);
-      toast.error("Failed to record payment");
-      return false;
-    }
-
-    if (newBookingStatus) {
-      toast.success(`Payment recorded! Booking ${newBookingStatus}`);
-    } else {
-      toast.success("Payment recorded!");
-    }
-    
-    return true;
-  }, [getPaymentConfig, getNewStatusAfterPayment]);
+    return applyStatusChange(bookingId, updateData, previousData, newBookingStatus);
+  }, [getNewStatusAfterPayment, applyStatusChange]);
 
   const markDepositPaid = useCallback(async (
     bookingId: string,
@@ -169,10 +233,12 @@ export function usePaymentStatus() {
 
   return {
     getPaymentConfig,
+    getWorkflowSettings,
     calculateDepositAmount,
     getNewStatusAfterPayment,
     recordPayment,
     markDepositPaid,
     markPaidInFull,
+    applyStatusChange,
   };
 }
