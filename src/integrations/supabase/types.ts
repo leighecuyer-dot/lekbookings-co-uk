@@ -675,6 +675,66 @@ export type Database = {
           },
         ]
       }
+      reseller_data_requests: {
+        Row: {
+          business_id: string
+          created_at: string
+          data_type: string
+          id: string
+          request_message: string | null
+          requested_at: string
+          reseller_id: string
+          responded_at: string | null
+          responded_by: string | null
+          response_message: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          data_type: string
+          id?: string
+          request_message?: string | null
+          requested_at?: string
+          reseller_id: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_message?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          data_type?: string
+          id?: string
+          request_message?: string | null
+          requested_at?: string
+          reseller_id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_message?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_data_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_data_requests_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resellers: {
         Row: {
           company_name: string
