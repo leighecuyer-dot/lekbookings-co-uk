@@ -17,6 +17,7 @@ import { PaymentSettings } from "@/components/settings/PaymentSettings";
 import { SocialLinksSettings } from "@/components/settings/SocialLinksSettings";
 import { AiContextSettings } from "@/components/settings/AiContextSettings";
 import { PrivacySettings } from "@/components/settings/PrivacySettings";
+import { WorkflowAutomationSettings } from "@/components/settings/WorkflowAutomationSettings";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -280,6 +281,9 @@ export default function SettingsPage() {
 
         {/* Payment Settings */}
         <PaymentSettings />
+
+        {/* Workflow Automation */}
+        <WorkflowAutomationSettings />
 
         {/* AI Personalization */}
         <AiContextSettings />
