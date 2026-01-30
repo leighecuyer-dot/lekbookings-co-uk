@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Briefcase, Sparkles } from "lucide-react";
+import { Plus, Briefcase, Sparkles, Search } from "lucide-react";
 import { AiServiceImportDialog } from "@/components/services/AiServiceImportDialog";
 import { SortableServiceCard } from "@/components/services/SortableServiceCard";
 import { ServiceCardOverlay } from "@/components/services/ServiceCardOverlay";
@@ -71,6 +71,7 @@ export default function ServicesPage() {
   const [aiImportOpen, setAiImportOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const [newService, setNewService] = useState({
     name: "",
@@ -279,6 +280,11 @@ export default function ServicesPage() {
 
   const activeService = activeId ? services.find((s) => s.id === activeId) : null;
 
+  const filteredServices = services.filter((service) =>
+    service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (service.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+  );
+
   return (
     <DashboardLayout
       title="Services"
@@ -395,30 +401,49 @@ export default function ServicesPage() {
           </CardContent>
         </Card>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={services.map((s) => s.id)} strategy={rectSortingStrategy}>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {services.map((service) => (
-                <SortableServiceCard
-                  key={service.id}
-                  service={service}
-                  onEdit={handleEditClick}
-                  onDuplicate={handleDuplicateService}
-                  onToggleActive={handleToggleActive}
-                  onDelete={handleDeleteService}
-                />
-              ))}
+        <div className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search services..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {filteredServices.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No services found matching "{searchQuery}"
             </div>
-          </SortableContext>
-          <DragOverlay>
-            {activeService ? <ServiceCardOverlay service={activeService} /> : null}
-          </DragOverlay>
-        </DndContext>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={filteredServices.map((s) => s.id)} strategy={rectSortingStrategy}>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredServices.map((service) => (
+                    <SortableServiceCard
+                      key={service.id}
+                      service={service}
+                      onEdit={handleEditClick}
+                      onDuplicate={handleDuplicateService}
+                      onToggleActive={handleToggleActive}
+                      onDelete={handleDeleteService}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+              <DragOverlay>
+                {activeService ? <ServiceCardOverlay service={activeService} /> : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </div>
       )}
 
       {currentBusiness && (
