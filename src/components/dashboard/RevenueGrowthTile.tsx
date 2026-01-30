@@ -145,7 +145,13 @@ export function RevenueGrowthTile({ businessId, locked = false }: RevenueGrowthT
 
   return (
     <Card className={cn("border-0 shadow-soft overflow-hidden relative", config.bgClass)}>
-      {locked && <PrivacyLockOverlay label="Revenue Hidden" />}
+      {locked && (
+        <PrivacyLockOverlay 
+          label="Revenue Hidden" 
+          dataType="revenue"
+          showRequestAccess={locked}
+        />
+      )}
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <span className="flex items-center gap-2">

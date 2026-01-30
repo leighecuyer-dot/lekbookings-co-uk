@@ -18,6 +18,7 @@ import { SocialLinksSettings } from "@/components/settings/SocialLinksSettings";
 import { AiContextSettings } from "@/components/settings/AiContextSettings";
 import { PrivacySettings } from "@/components/settings/PrivacySettings";
 import { WorkflowAutomationSettings } from "@/components/settings/WorkflowAutomationSettings";
+import { DataAccessRequests } from "@/components/settings/DataAccessRequests";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -299,6 +300,9 @@ export default function SettingsPage() {
 
         {/* Privacy Settings */}
         <PrivacySettings />
+
+        {/* Data Access Requests from Resellers */}
+        <DataAccessRequests />
 
         {/* Email Notifications */}
         <Card className="border-0 shadow-soft">
