@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, TrendingUp } from "lucide-react";
+import { Loader2, TrendingUp, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfWeek, subWeeks, subDays, format, parseISO, startOfDay, isSameDay } from "date-fns";
+import { startOfWeek, subWeeks, subDays, subMonths, format, parseISO, startOfDay } from "date-fns";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface WeeklyTrendsChartProps {
   businessId: string;
@@ -21,13 +28,47 @@ interface DataPoint {
 }
 
 type MetricType = "bookings" | "revenue";
-type ViewType = "weekly" | "daily";
+
+type DateRangeType = "7days" | "30days" | "8weeks" | "3months" | "6months";
+
+interface DateRangeOption {
+  value: DateRangeType;
+  label: string;
+  shortLabel: string;
+}
+
+const DATE_RANGE_OPTIONS: DateRangeOption[] = [
+  { value: "7days", label: "Last 7 Days", shortLabel: "7D" },
+  { value: "30days", label: "Last 30 Days", shortLabel: "30D" },
+  { value: "8weeks", label: "Last 8 Weeks", shortLabel: "8W" },
+  { value: "3months", label: "Last 3 Months", shortLabel: "3M" },
+  { value: "6months", label: "Last 6 Months", shortLabel: "6M" },
+];
+
+const TRENDS_RANGE_KEY = "dashboard-trends-range";
+
+function getStoredRange(): DateRangeType {
+  try {
+    const stored = localStorage.getItem(TRENDS_RANGE_KEY);
+    if (stored && DATE_RANGE_OPTIONS.some(o => o.value === stored)) {
+      return stored as DateRangeType;
+    }
+  } catch {
+    // Ignore
+  }
+  return "8weeks";
+}
 
 export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue = false }: WeeklyTrendsChartProps) {
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricType>("bookings");
-  const [view, setView] = useState<ViewType>("weekly");
+  const [dateRange, setDateRange] = useState<DateRangeType>(getStoredRange);
+
+  // Persist date range selection
+  useEffect(() => {
+    localStorage.setItem(TRENDS_RANGE_KEY, dateRange);
+  }, [dateRange]);
 
   // Reset to bookings if revenue is hidden while viewing revenue
   useEffect(() => {
@@ -35,6 +76,9 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
       setMetric("bookings");
     }
   }, [hideRevenue, metric]);
+
+  // Determine if using daily or weekly grouping based on range
+  const useDailyGrouping = dateRange === "7days" || dateRange === "30days";
 
   useEffect(() => {
     const fetchTrends = async () => {
@@ -47,10 +91,36 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
         const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
         const today = startOfDay(now);
         
-        // Fetch range depends on view
-        const startDate = view === "weekly" 
-          ? subWeeks(currentWeekStart, 7)
-          : subDays(today, 29); // Last 30 days
+        // Calculate start date based on range
+        let startDate: Date;
+        let numDays = 7;
+        let numWeeks = 8;
+        
+        switch (dateRange) {
+          case "7days":
+            startDate = subDays(today, 6);
+            numDays = 7;
+            break;
+          case "30days":
+            startDate = subDays(today, 29);
+            numDays = 30;
+            break;
+          case "8weeks":
+            startDate = subWeeks(currentWeekStart, 7);
+            numWeeks = 8;
+            break;
+          case "3months":
+            startDate = subMonths(currentWeekStart, 3);
+            numWeeks = 13;
+            break;
+          case "6months":
+            startDate = subMonths(currentWeekStart, 6);
+            numWeeks = 26;
+            break;
+          default:
+            startDate = subWeeks(currentWeekStart, 7);
+            numWeeks = 8;
+        }
         
         const { data: bookings, error } = await supabase
           .from("bookings")
@@ -61,11 +131,52 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
         
         if (error) throw error;
         
-        if (view === "weekly") {
+        if (useDailyGrouping) {
+          // Group bookings by day
+          const dailyMap = new Map<string, { count: number; revenue: number }>();
+          
+          for (let i = numDays - 1; i >= 0; i--) {
+            const day = subDays(today, i);
+            const dayKey = format(day, "yyyy-MM-dd");
+            dailyMap.set(dayKey, { count: 0, revenue: 0 });
+          }
+          
+          bookings?.forEach(booking => {
+            const bookingDate = parseISO(booking.start_time);
+            const dayKey = format(startOfDay(bookingDate), "yyyy-MM-dd");
+            
+            if (dailyMap.has(dayKey)) {
+              const current = dailyMap.get(dayKey)!;
+              dailyMap.set(dayKey, {
+                count: current.count + 1,
+                revenue: current.revenue + (booking.total_price || 0),
+              });
+            }
+          });
+          
+          const result: DataPoint[] = [];
+          const todayKey = format(today, "yyyy-MM-dd");
+          
+          dailyMap.forEach((value, key) => {
+            const dayDate = parseISO(key);
+            const isCurrent = key === todayKey;
+            
+            result.push({
+              key,
+              label: format(dayDate, "d"),
+              bookings: value.count,
+              revenue: value.revenue,
+              isCurrent,
+            });
+          });
+          
+          result.sort((a, b) => a.key.localeCompare(b.key));
+          setData(result);
+        } else {
           // Group bookings by week
           const weeklyMap = new Map<string, { count: number; revenue: number }>();
           
-          for (let i = 7; i >= 0; i--) {
+          for (let i = numWeeks - 1; i >= 0; i--) {
             const weekStart = subWeeks(currentWeekStart, i);
             const weekKey = format(weekStart, "yyyy-MM-dd");
             weeklyMap.set(weekKey, { count: 0, revenue: 0 });
@@ -103,47 +214,6 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
           
           result.sort((a, b) => a.key.localeCompare(b.key));
           setData(result);
-        } else {
-          // Group bookings by day
-          const dailyMap = new Map<string, { count: number; revenue: number }>();
-          
-          for (let i = 29; i >= 0; i--) {
-            const day = subDays(today, i);
-            const dayKey = format(day, "yyyy-MM-dd");
-            dailyMap.set(dayKey, { count: 0, revenue: 0 });
-          }
-          
-          bookings?.forEach(booking => {
-            const bookingDate = parseISO(booking.start_time);
-            const dayKey = format(startOfDay(bookingDate), "yyyy-MM-dd");
-            
-            if (dailyMap.has(dayKey)) {
-              const current = dailyMap.get(dayKey)!;
-              dailyMap.set(dayKey, {
-                count: current.count + 1,
-                revenue: current.revenue + (booking.total_price || 0),
-              });
-            }
-          });
-          
-          const result: DataPoint[] = [];
-          const todayKey = format(today, "yyyy-MM-dd");
-          
-          dailyMap.forEach((value, key) => {
-            const dayDate = parseISO(key);
-            const isCurrent = key === todayKey;
-            
-            result.push({
-              key,
-              label: format(dayDate, "d"),
-              bookings: value.count,
-              revenue: value.revenue,
-              isCurrent,
-            });
-          });
-          
-          result.sort((a, b) => a.key.localeCompare(b.key));
-          setData(result);
         }
       } catch (error) {
         console.error("Error fetching trends:", error);
@@ -153,7 +223,9 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
     };
     
     fetchTrends();
-  }, [businessId, currentWeekBookings, view]);
+  }, [businessId, currentWeekBookings, dateRange, useDailyGrouping]);
+
+  const currentRangeOption = DATE_RANGE_OPTIONS.find(o => o.value === dateRange) || DATE_RANGE_OPTIONS[2];
 
   if (loading) {
     return (
@@ -177,25 +249,42 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
     return value.toFixed(1);
   };
 
+  // Determine x-axis interval based on data length
+  const getXAxisInterval = () => {
+    if (data.length <= 8) return 0;
+    if (data.length <= 15) return 1;
+    if (data.length <= 30) return 4;
+    return Math.floor(data.length / 6);
+  };
+
   return (
     <Card className="border-0 shadow-soft">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center justify-between">
+        <CardTitle className="text-sm font-medium flex items-center justify-between flex-wrap gap-2">
           <span className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            {view === "weekly" ? "8-Week" : "30-Day"} Trends
+            Trends
           </span>
           <div className="flex items-center gap-2">
-            <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
-              <TabsList className="h-7">
-                <TabsTrigger value="weekly" className="text-xs px-2 py-1 h-5">
-                  Weekly
-                </TabsTrigger>
-                <TabsTrigger value="daily" className="text-xs px-2 py-1 h-5">
-                  Daily
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 text-xs px-2 gap-1">
+                  {currentRangeOption.shortLabel}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {DATE_RANGE_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => setDateRange(option.value)}
+                    className={dateRange === option.value ? "bg-accent" : ""}
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {!hideRevenue && (
               <Tabs value={metric} onValueChange={(v) => setMetric(v as MetricType)}>
                 <TabsList className="h-7">
@@ -211,7 +300,7 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
           </div>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Avg: {formatAvg(avgValue)}/{view === "weekly" ? "week" : "day"}
+          Avg: {formatAvg(avgValue)}/{useDailyGrouping ? "day" : "week"}
         </p>
       </CardHeader>
       <CardContent>
@@ -237,7 +326,7 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
                 tickLine={false}
                 tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                 dy={10}
-                interval={view === "daily" ? 4 : 0}
+                interval={getXAxisInterval()}
               />
               <YAxis
                 axisLine={false}
@@ -251,14 +340,14 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     const point = payload[0].payload as DataPoint;
-                    const dateLabel = view === "weekly" 
-                      ? `Week of ${point.label}`
-                      : format(parseISO(point.key), "MMM d, yyyy");
+                    const dateLabel = useDailyGrouping 
+                      ? format(parseISO(point.key), "MMM d, yyyy")
+                      : `Week of ${point.label}`;
                     return (
                       <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
                         <p className="text-xs text-muted-foreground">
                           {dateLabel}
-                          {point.isCurrent && (view === "weekly" ? " (Current)" : " (Today)")}
+                          {point.isCurrent && (useDailyGrouping ? " (Today)" : " (Current)")}
                         </p>
                         <p className="text-sm font-semibold text-foreground">
                           {metric === "bookings" 
@@ -282,8 +371,9 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
                   const { cx, cy, payload, index } = props;
                   const color = metric === "bookings" ? "hsl(var(--primary))" : "hsl(var(--chart-2))";
                   
-                  // For daily view, only show dots for current and every 5th point
-                  if (view === "daily" && !payload.isCurrent && index % 5 !== 0) {
+                  // For larger datasets, only show dots for current and sampled points
+                  const showDot = data.length <= 8 || payload.isCurrent || index % Math.ceil(data.length / 8) === 0;
+                  if (!showDot) {
                     return <circle key={index} cx={cx} cy={cy} r={0} />;
                   }
                   
