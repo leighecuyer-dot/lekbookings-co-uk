@@ -20,6 +20,7 @@ import { RevenueGrowthTile } from "@/components/dashboard/RevenueGrowthTile";
 import { BulkMessageDialog, type AvailabilityContext } from "@/components/messaging/BulkMessageDialog";
 import { StaffAvailabilityWidget } from "@/components/dashboard/StaffAvailabilityWidget";
 import { DashboardWidgetToggle, useDashboardWidgetSettings } from "@/components/dashboard/DashboardWidgetToggle";
+import { DraggableWidgetGrid, useWidgetOrder, type WidgetId } from "@/components/dashboard/DraggableWidgetGrid";
 interface Booking {
   id: string;
   start_time: string;
@@ -64,6 +65,7 @@ export default function DashboardPage() {
   const [messageType, setMessageType] = useState<"sms" | "whatsapp" | "email">("sms");
   const [availabilityContext, setAvailabilityContext] = useState<AvailabilityContext | undefined>(undefined);
   const { settings: widgetSettings, updateSetting: updateWidgetSetting } = useDashboardWidgetSettings();
+  const { order: widgetOrder, reorder: reorderWidgets } = useWidgetOrder();
 
   const handleSendSMS = () => {
     setMessageType("sms");
@@ -358,47 +360,58 @@ export default function DashboardPage() {
           <StaffAvailabilityWidget businessId={currentBusiness.id} />
         )}
 
-        {/* Availability + Performance + Revenue Grid */}
-        {(widgetSettings.showAvailabilityTile || widgetSettings.showPerformanceTile || widgetSettings.showRevenueTile) && (
-          <div className="grid gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Available Slots Tile */}
-            {currentBusiness && widgetSettings.showAvailabilityTile && (
-              <AvailableSlotsTile 
-                businessId={currentBusiness.id} 
-                businessName={currentBusiness.name}
-                onSendCampaign={(type, context) => {
-                  setMessageType(type);
-                  setAvailabilityContext(context);
-                  setMessageDialogOpen(true);
-                }}
-              />
-            )}
-
-            {/* Weekly Performance Tile - Hide revenue in reseller mode unless shared */}
-            {currentBusiness && widgetSettings.showPerformanceTile && (
-              <WeeklyPerformanceTile
-                businessId={currentBusiness.id}
-                currentWeekBookings={stats.weekBookings}
-                onSendSMS={handleSendSMS}
-                onSendEmail={handleSendEmail}
-                hideRevenue={isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true)}
-              />
-            )}
-
-            {/* Revenue Growth Tile - Hide in reseller mode unless shared */}
-            {currentBusiness && widgetSettings.showRevenueTile && 
-              (!isResellerMode || (currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true) && (
-              <RevenueGrowthTile businessId={currentBusiness.id} />
-            )}
-          </div>
-        )}
-
-        {/* Weekly Trends Chart - Hide revenue data in reseller mode unless shared */}
-        {currentBusiness && widgetSettings.showTrendsChart && (
-          <WeeklyTrendsChart 
-            businessId={currentBusiness.id} 
-            currentWeekBookings={stats.weekBookings}
-            hideRevenue={isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true)}
+        {/* Draggable Widget Grid */}
+        {currentBusiness && (
+          <DraggableWidgetGrid
+            order={widgetOrder}
+            onReorder={reorderWidgets}
+            widgets={[
+              {
+                id: "availability" as WidgetId,
+                visible: widgetSettings.showAvailabilityTile,
+                render: () => (
+                  <AvailableSlotsTile 
+                    businessId={currentBusiness.id} 
+                    businessName={currentBusiness.name}
+                    onSendCampaign={(type, context) => {
+                      setMessageType(type);
+                      setAvailabilityContext(context);
+                      setMessageDialogOpen(true);
+                    }}
+                  />
+                ),
+              },
+              {
+                id: "performance" as WidgetId,
+                visible: widgetSettings.showPerformanceTile,
+                render: () => (
+                  <WeeklyPerformanceTile
+                    businessId={currentBusiness.id}
+                    currentWeekBookings={stats.weekBookings}
+                    onSendSMS={handleSendSMS}
+                    onSendEmail={handleSendEmail}
+                    hideRevenue={isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true)}
+                  />
+                ),
+              },
+              {
+                id: "revenue" as WidgetId,
+                visible: widgetSettings.showRevenueTile && 
+                  (!isResellerMode || (currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true),
+                render: () => <RevenueGrowthTile businessId={currentBusiness.id} />,
+              },
+              {
+                id: "trends" as WidgetId,
+                visible: widgetSettings.showTrendsChart,
+                render: () => (
+                  <WeeklyTrendsChart 
+                    businessId={currentBusiness.id} 
+                    currentWeekBookings={stats.weekBookings}
+                    hideRevenue={isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true)}
+                  />
+                ),
+              },
+            ]}
           />
         )}
 
