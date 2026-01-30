@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, TrendingUp, ChevronDown } from "lucide-react";
+import { Loader2, TrendingUp, ChevronDown, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, subWeeks, subDays, subMonths, format, parseISO, startOfDay } from "date-fns";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -17,6 +17,7 @@ interface WeeklyTrendsChartProps {
   businessId: string;
   currentWeekBookings: number;
   hideRevenue?: boolean;
+  revenueLocked?: boolean;
 }
 
 interface DataPoint {
@@ -59,7 +60,7 @@ function getStoredRange(): DateRangeType {
   return "8weeks";
 }
 
-export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue = false }: WeeklyTrendsChartProps) {
+export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue = false, revenueLocked = false }: WeeklyTrendsChartProps) {
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricType>("bookings");
@@ -291,7 +292,12 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue
                   <TabsTrigger value="bookings" className="text-xs px-2 py-1 h-5">
                     Bookings
                   </TabsTrigger>
-                  <TabsTrigger value="revenue" className="text-xs px-2 py-1 h-5">
+                  <TabsTrigger 
+                    value="revenue" 
+                    className="text-xs px-2 py-1 h-5 gap-1"
+                    disabled={revenueLocked}
+                  >
+                    {revenueLocked && <Lock className="w-3 h-3" />}
                     Revenue
                   </TabsTrigger>
                 </TabsList>

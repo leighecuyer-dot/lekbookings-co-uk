@@ -7,10 +7,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TrendingUp, TrendingDown, Minus, MessageSquare, Mail, Phone, Loader2, ChevronDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, MessageSquare, Mail, Phone, Loader2, ChevronDown, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, subWeeks, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { PrivacyLockOverlay } from "./PrivacyLockOverlay";
 
 interface WeeklyPerformanceTileProps {
   businessId: string;
@@ -18,6 +19,7 @@ interface WeeklyPerformanceTileProps {
   onSendSMS?: () => void;
   onSendEmail?: () => void;
   hideRevenue?: boolean;
+  revenueLocked?: boolean;
 }
 
 type PerformanceLevel = "higher" | "lower" | "normal";
@@ -35,6 +37,7 @@ export function WeeklyPerformanceTile({
   onSendSMS,
   onSendEmail,
   hideRevenue = false,
+  revenueLocked = false,
 }: WeeklyPerformanceTileProps) {
   const [performance, setPerformance] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
