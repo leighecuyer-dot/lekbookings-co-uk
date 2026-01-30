@@ -7,6 +7,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -45,9 +47,10 @@ interface SortableWidgetProps {
   size: WidgetSize;
   onResize: (size: WidgetSize) => void;
   maxSize?: WidgetSize;
+  isDragOverlay?: boolean;
 }
 
-function SortableWidget({ id, children, className, size, onResize, maxSize = 3 }: SortableWidgetProps) {
+function SortableWidget({ id, children, className, size, onResize, maxSize = 3, isDragOverlay = false }: SortableWidgetProps) {
   const {
     attributes,
     listeners,
@@ -55,6 +58,7 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3 }
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({ id });
 
   const style = {
@@ -79,13 +83,30 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3 }
     }
   };
 
+  // Drag overlay styles
+  if (isDragOverlay) {
+    return (
+      <div
+        className={cn(
+          "relative rounded-xl shadow-2xl ring-2 ring-primary/50 scale-[1.02] rotate-1",
+          size === 2 && "md:col-span-2",
+          size === 3 && "md:col-span-2 lg:col-span-3",
+          className
+        )}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative group",
-        isDragging && "z-50 opacity-90",
+        "relative group transition-all duration-200",
+        isDragging && "z-50 opacity-40 scale-[0.98] ring-2 ring-dashed ring-primary/30 rounded-xl",
+        isOver && !isDragging && "ring-2 ring-primary/50 rounded-xl",
         size === 2 && "md:col-span-2",
         size === 3 && "md:col-span-2 lg:col-span-3",
         className
@@ -95,14 +116,20 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3 }
       <button
         {...attributes}
         {...listeners}
-        className="absolute -left-1 top-1/2 -translate-y-1/2 -translate-x-full p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none z-10 hidden sm:flex"
+        className={cn(
+          "absolute -left-1 top-1/2 -translate-y-1/2 -translate-x-full p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none z-10 hidden sm:flex",
+          isDragging && "opacity-0"
+        )}
         aria-label="Drag to reorder"
       >
         <GripVertical className="w-4 h-4 text-muted-foreground" />
       </button>
 
-      {/* Resize controls */}
-      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      {/* Resize controls - hidden while dragging */}
+      <div className={cn(
+        "absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10",
+        isDragging && "hidden"
+      )}>
         <TooltipProvider delayDuration={300}>
           {canShrink && (
             <Tooltip>
@@ -220,6 +247,8 @@ export function DraggableWidgetGrid({
   onResize,
   className,
 }: DraggableWidgetGridProps) {
+  const [activeId, setActiveId] = useState<WidgetId | null>(null);
+  
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -231,8 +260,13 @@ export function DraggableWidgetGrid({
     })
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as WidgetId);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
     if (over && active.id !== over.id) {
       onReorder(active.id as WidgetId, over.id as WidgetId);
     }
@@ -251,10 +285,14 @@ export function DraggableWidgetGrid({
   );
   const trendsWidget = sortedWidgets.find((w) => w.id === "trends");
 
+  // Find the active widget for the overlay
+  const activeWidget = activeId ? sortedWidgets.find((w) => w.id === activeId) : null;
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       {gridWidgets.length > 0 && (
@@ -287,6 +325,18 @@ export function DraggableWidgetGrid({
           </SortableWidget>
         </SortableContext>
       )}
+
+      {/* Drag Overlay - floating preview of the dragged widget */}
+      <DragOverlay dropAnimation={{
+        duration: 250,
+        easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)",
+      }}>
+        {activeWidget ? (
+          <div className="rounded-xl shadow-2xl ring-2 ring-primary/50 scale-[1.02] rotate-1 bg-background">
+            {activeWidget.render()}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
