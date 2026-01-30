@@ -280,6 +280,10 @@ export function DraggableWidgetGrid({
     setActiveId(null);
     if (over && active.id !== over.id) {
       onReorder(active.id as WidgetId, over.id as WidgetId);
+      // Haptic feedback on successful reorder
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
     }
   };
 
