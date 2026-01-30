@@ -20,7 +20,7 @@ import { RevenueGrowthTile } from "@/components/dashboard/RevenueGrowthTile";
 import { BulkMessageDialog, type AvailabilityContext } from "@/components/messaging/BulkMessageDialog";
 import { StaffAvailabilityWidget } from "@/components/dashboard/StaffAvailabilityWidget";
 import { DashboardWidgetToggle, useDashboardWidgetSettings } from "@/components/dashboard/DashboardWidgetToggle";
-import { DraggableWidgetGrid, useWidgetOrder, type WidgetId } from "@/components/dashboard/DraggableWidgetGrid";
+import { DraggableWidgetGrid, useWidgetOrder, useWidgetSizes, type WidgetId } from "@/components/dashboard/DraggableWidgetGrid";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 interface Booking {
   id: string;
@@ -67,6 +67,7 @@ export default function DashboardPage() {
   const [availabilityContext, setAvailabilityContext] = useState<AvailabilityContext | undefined>(undefined);
   const { settings: widgetSettings, updateSetting: updateWidgetSetting } = useDashboardWidgetSettings();
   const { order: widgetOrder, reorder: reorderWidgets } = useWidgetOrder();
+  const { sizes: widgetSizes, setSize: setWidgetSize } = useWidgetSizes();
 
   const handleSendSMS = () => {
     setMessageType("sms");
@@ -388,6 +389,8 @@ export default function DashboardPage() {
           <DraggableWidgetGrid
             order={widgetOrder}
             onReorder={reorderWidgets}
+            sizes={widgetSizes}
+            onResize={setWidgetSize}
             widgets={[
               {
                 id: "availability" as WidgetId,
