@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Clock, DollarSign, MoreHorizontal, Pencil, GripVertical } from "lucide-react";
+import { Clock, DollarSign, MoreHorizontal, Pencil, GripVertical, Copy } from "lucide-react";
 
 interface Service {
   id: string;
@@ -24,6 +24,7 @@ interface Service {
 interface SortableServiceCardProps {
   service: Service;
   onEdit: (service: Service) => void;
+  onDuplicate: (service: Service) => void;
   onToggleActive: (id: string, isActive: boolean) => void;
   onDelete: (id: string) => void;
 }
@@ -31,6 +32,7 @@ interface SortableServiceCardProps {
 export function SortableServiceCard({
   service,
   onEdit,
+  onDuplicate,
   onToggleActive,
   onDelete,
 }: SortableServiceCardProps) {
@@ -103,6 +105,10 @@ export function SortableServiceCard({
                   <DropdownMenuItem onClick={() => onEdit(service)}>
                     <Pencil className="w-4 h-4 mr-2" />
                     Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onDuplicate(service)}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Duplicate
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => onToggleActive(service.id, service.is_active)}
