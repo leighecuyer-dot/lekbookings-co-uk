@@ -17,6 +17,7 @@ import { WeeklyPerformanceTile } from "@/components/dashboard/WeeklyPerformanceT
 import { AvailableSlotsTile } from "@/components/dashboard/AvailableSlotsTile";
 import { WeeklyTrendsChart } from "@/components/dashboard/WeeklyTrendsChart";
 import { RevenueGrowthTile } from "@/components/dashboard/RevenueGrowthTile";
+import { RevenueBreakdownTile } from "@/components/dashboard/RevenueBreakdownTile";
 import { BulkMessageDialog, type AvailabilityContext } from "@/components/messaging/BulkMessageDialog";
 import { StaffAvailabilityWidget } from "@/components/dashboard/StaffAvailabilityWidget";
 import { DashboardWidgetToggle, useDashboardWidgetSettings } from "@/components/dashboard/DashboardWidgetToggle";
@@ -417,6 +418,14 @@ export default function DashboardPage() {
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
                   return <RevenueGrowthTile businessId={currentBusiness.id} locked={revenueLocked} />;
+                },
+              },
+              {
+                id: "revenueBreakdown" as WidgetId,
+                visible: widgetSettings.showRevenueBreakdownTile,
+                render: () => {
+                  const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
+                  return <RevenueBreakdownTile businessId={currentBusiness.id} locked={revenueLocked} />;
                 },
               },
               {

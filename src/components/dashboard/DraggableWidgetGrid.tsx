@@ -31,14 +31,15 @@ import {
 const WIDGET_ORDER_KEY = "dashboard-widget-order";
 const WIDGET_SIZES_KEY = "dashboard-widget-sizes";
 
-export type WidgetId = "availability" | "performance" | "revenue" | "trends";
+export type WidgetId = "availability" | "performance" | "revenue" | "revenueBreakdown" | "trends";
 export type WidgetSize = 1 | 2 | 3; // Column spans
 
-export const DEFAULT_WIDGET_ORDER: WidgetId[] = ["availability", "performance", "revenue", "trends"];
+export const DEFAULT_WIDGET_ORDER: WidgetId[] = ["availability", "performance", "revenue", "revenueBreakdown", "trends"];
 export const DEFAULT_WIDGET_SIZES: Record<WidgetId, WidgetSize> = {
   availability: 1,
   performance: 1,
   revenue: 1,
+  revenueBreakdown: 2,
   trends: 3,
 };
 
@@ -294,9 +295,9 @@ export function DraggableWidgetGrid({
 
   if (sortedWidgets.length === 0) return null;
 
-  // Check if this is the grid (first 3 widgets) or just trends
+  // Check if this is the grid (first widgets) or just trends
   const gridWidgets = sortedWidgets.filter((w) =>
-    ["availability", "performance", "revenue"].includes(w.id)
+    ["availability", "performance", "revenue", "revenueBreakdown"].includes(w.id)
   );
   const trendsWidget = sortedWidgets.find((w) => w.id === "trends");
 
