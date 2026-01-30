@@ -221,6 +221,30 @@ export default function ServicesPage() {
     fetchServices();
   };
 
+  const handleDuplicateService = async (service: Service) => {
+    if (!currentBusiness) return;
+
+    const maxOrder = Math.max(...services.map((s) => s.display_order), 0);
+
+    const { error } = await supabase.from("services").insert({
+      business_id: currentBusiness.id,
+      name: `${service.name} (Copy)`,
+      description: service.description,
+      duration_minutes: service.duration_minutes,
+      price: service.price,
+      color: service.color,
+      display_order: maxOrder + 1,
+    });
+
+    if (error) {
+      toast.error("Failed to duplicate service");
+      return;
+    }
+
+    toast.success("Service duplicated!");
+    fetchServices();
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -384,6 +408,7 @@ export default function ServicesPage() {
                   key={service.id}
                   service={service}
                   onEdit={handleEditClick}
+                  onDuplicate={handleDuplicateService}
                   onToggleActive={handleToggleActive}
                   onDelete={handleDeleteService}
                 />
