@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface WeeklyTrendsChartProps {
   businessId: string;
   currentWeekBookings: number;
+  hideRevenue?: boolean;
 }
 
 interface DataPoint {
@@ -22,11 +23,18 @@ interface DataPoint {
 type MetricType = "bookings" | "revenue";
 type ViewType = "weekly" | "daily";
 
-export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTrendsChartProps) {
+export function WeeklyTrendsChart({ businessId, currentWeekBookings, hideRevenue = false }: WeeklyTrendsChartProps) {
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricType>("bookings");
   const [view, setView] = useState<ViewType>("weekly");
+
+  // Reset to bookings if revenue is hidden while viewing revenue
+  useEffect(() => {
+    if (hideRevenue && metric === "revenue") {
+      setMetric("bookings");
+    }
+  }, [hideRevenue, metric]);
 
   useEffect(() => {
     const fetchTrends = async () => {
@@ -188,16 +196,18 @@ export function WeeklyTrendsChart({ businessId, currentWeekBookings }: WeeklyTre
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Tabs value={metric} onValueChange={(v) => setMetric(v as MetricType)}>
-              <TabsList className="h-7">
-                <TabsTrigger value="bookings" className="text-xs px-2 py-1 h-5">
-                  Bookings
-                </TabsTrigger>
-                <TabsTrigger value="revenue" className="text-xs px-2 py-1 h-5">
-                  Revenue
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {!hideRevenue && (
+              <Tabs value={metric} onValueChange={(v) => setMetric(v as MetricType)}>
+                <TabsList className="h-7">
+                  <TabsTrigger value="bookings" className="text-xs px-2 py-1 h-5">
+                    Bookings
+                  </TabsTrigger>
+                  <TabsTrigger value="revenue" className="text-xs px-2 py-1 h-5">
+                    Revenue
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
           </div>
         </CardTitle>
         <p className="text-xs text-muted-foreground">

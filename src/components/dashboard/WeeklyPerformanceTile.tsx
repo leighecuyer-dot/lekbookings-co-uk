@@ -17,6 +17,7 @@ interface WeeklyPerformanceTileProps {
   currentWeekBookings: number;
   onSendSMS?: () => void;
   onSendEmail?: () => void;
+  hideRevenue?: boolean;
 }
 
 type PerformanceLevel = "higher" | "lower" | "normal";
@@ -32,7 +33,8 @@ export function WeeklyPerformanceTile({
   businessId, 
   currentWeekBookings,
   onSendSMS,
-  onSendEmail 
+  onSendEmail,
+  hideRevenue = false,
 }: WeeklyPerformanceTileProps) {
   const [performance, setPerformance] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);

@@ -46,7 +46,7 @@ interface Staff {
 }
 
 export default function DashboardPage() {
-  const { currentBusiness } = useBusiness();
+  const { currentBusiness, isResellerMode } = useBusiness();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     todayBookings: 0,
@@ -374,28 +374,31 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* Weekly Performance Tile */}
+            {/* Weekly Performance Tile - Hide revenue in reseller mode unless shared */}
             {currentBusiness && widgetSettings.showPerformanceTile && (
               <WeeklyPerformanceTile
                 businessId={currentBusiness.id}
                 currentWeekBookings={stats.weekBookings}
                 onSendSMS={handleSendSMS}
                 onSendEmail={handleSendEmail}
+                hideRevenue={isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true)}
               />
             )}
 
-            {/* Revenue Growth Tile */}
-            {currentBusiness && widgetSettings.showRevenueTile && (
+            {/* Revenue Growth Tile - Hide in reseller mode unless shared */}
+            {currentBusiness && widgetSettings.showRevenueTile && 
+              (!isResellerMode || (currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true) && (
               <RevenueGrowthTile businessId={currentBusiness.id} />
             )}
           </div>
         )}
 
-        {/* Weekly Trends Chart */}
+        {/* Weekly Trends Chart - Hide revenue data in reseller mode unless shared */}
         {currentBusiness && widgetSettings.showTrendsChart && (
           <WeeklyTrendsChart 
             businessId={currentBusiness.id} 
             currentWeekBookings={stats.weekBookings}
+            hideRevenue={isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true)}
           />
         )}
 
