@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight, UserPlus, Scissors, UserCog, Lock } from "lucide-react";
+import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight, UserPlus, Scissors, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
@@ -362,27 +362,7 @@ export default function DashboardPage() {
           <StaffAvailabilityWidget businessId={currentBusiness.id} />
         )}
 
-        {/* Privacy Notice for Reseller Mode */}
-        {currentBusiness && isResellerMode && (() => {
-          const privacySettings = getPrivacySettings(currentBusiness.settings as Record<string, unknown> | null);
-          const hiddenItems: string[] = [];
-          
-          if (!privacySettings.share_revenue_with_reseller) hiddenItems.push("revenue data");
-          if (!privacySettings.share_customer_contact_with_reseller) hiddenItems.push("customer contacts");
-          if (!privacySettings.share_booking_notes_with_reseller) hiddenItems.push("booking notes");
-          
-          if (hiddenItems.length === 0) return null;
-          
-          return (
-            <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground">
-              <Lock className="h-4 w-4 shrink-0" />
-              <span>
-                <span className="font-medium text-foreground">Some data is private.</span>{" "}
-                Hidden: {hiddenItems.join(", ")}.
-              </span>
-            </div>
-          );
-        })()}
+        {/* Privacy settings computed for individual widgets */}
 
         {/* Draggable Widget Grid */}
         {currentBusiness && (
@@ -410,32 +390,42 @@ export default function DashboardPage() {
               {
                 id: "performance" as WidgetId,
                 visible: widgetSettings.showPerformanceTile,
-                render: () => (
-                  <WeeklyPerformanceTile
-                    businessId={currentBusiness.id}
-                    currentWeekBookings={stats.weekBookings}
-                    onSendSMS={handleSendSMS}
-                    onSendEmail={handleSendEmail}
-                    hideRevenue={isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true)}
-                  />
-                ),
+                render: () => {
+                  const hideRevenue = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
+                  return (
+                    <WeeklyPerformanceTile
+                      businessId={currentBusiness.id}
+                      currentWeekBookings={stats.weekBookings}
+                      onSendSMS={handleSendSMS}
+                      onSendEmail={handleSendEmail}
+                      hideRevenue={hideRevenue}
+                      revenueLocked={hideRevenue}
+                    />
+                  );
+                },
               },
               {
                 id: "revenue" as WidgetId,
-                visible: widgetSettings.showRevenueTile && 
-                  (!isResellerMode || (currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true),
-                render: () => <RevenueGrowthTile businessId={currentBusiness.id} />,
+                visible: widgetSettings.showRevenueTile,
+                render: () => {
+                  const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
+                  return <RevenueGrowthTile businessId={currentBusiness.id} locked={revenueLocked} />;
+                },
               },
               {
                 id: "trends" as WidgetId,
                 visible: widgetSettings.showTrendsChart,
-                render: () => (
-                  <WeeklyTrendsChart 
-                    businessId={currentBusiness.id} 
-                    currentWeekBookings={stats.weekBookings}
-                    hideRevenue={isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true)}
-                  />
-                ),
+                render: () => {
+                  const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
+                  return (
+                    <WeeklyTrendsChart 
+                      businessId={currentBusiness.id} 
+                      currentWeekBookings={stats.weekBookings}
+                      hideRevenue={false}
+                      revenueLocked={revenueLocked}
+                    />
+                  );
+                },
               },
             ]}
           />

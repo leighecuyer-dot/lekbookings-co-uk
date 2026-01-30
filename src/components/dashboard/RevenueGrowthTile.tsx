@@ -4,9 +4,11 @@ import { TrendingUp, TrendingDown, Minus, Loader2, PoundSterling } from "lucide-
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, subWeeks, endOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
+import { PrivacyLockOverlay } from "./PrivacyLockOverlay";
 
 interface RevenueGrowthTileProps {
   businessId: string;
+  locked?: boolean;
 }
 
 interface RevenueData {
@@ -16,7 +18,7 @@ interface RevenueData {
   trend: "up" | "down" | "neutral";
 }
 
-export function RevenueGrowthTile({ businessId }: RevenueGrowthTileProps) {
+export function RevenueGrowthTile({ businessId, locked = false }: RevenueGrowthTileProps) {
   const [data, setData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -142,7 +144,8 @@ export function RevenueGrowthTile({ businessId }: RevenueGrowthTileProps) {
   };
 
   return (
-    <Card className={cn("border-0 shadow-soft overflow-hidden", config.bgClass)}>
+    <Card className={cn("border-0 shadow-soft overflow-hidden relative", config.bgClass)}>
+      {locked && <PrivacyLockOverlay label="Revenue Hidden" />}
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <span className="flex items-center gap-2">
