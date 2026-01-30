@@ -114,7 +114,7 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
       className={cn(
         "relative group transition-all duration-200",
         isDragging && "z-50 opacity-40 scale-[0.98] ring-2 ring-dashed ring-primary/30 rounded-xl",
-        isOver && !isDragging && "ring-2 ring-primary/50 rounded-xl",
+        isOver && !isDragging && "ring-2 ring-primary/50 rounded-xl animate-[pulse_1.5s_ease-in-out_infinite]",
         size === 2 && "md:col-span-2",
         size === 3 && "md:col-span-2 lg:col-span-3",
         className
