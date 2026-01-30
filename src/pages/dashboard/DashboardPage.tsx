@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight, UserPlus, Scissors, UserCog } from "lucide-react";
+import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight, UserPlus, Scissors, UserCog, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
@@ -358,6 +358,17 @@ export default function DashboardPage() {
         {/* Staff Availability Widget */}
         {currentBusiness && (
           <StaffAvailabilityWidget businessId={currentBusiness.id} />
+        )}
+
+        {/* Privacy Notice for Reseller Mode */}
+        {currentBusiness && isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true) && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>
+              <span className="font-medium text-foreground">Some data is private.</span>{" "}
+              Revenue figures are hidden because the business owner has not enabled revenue sharing.
+            </span>
+          </div>
         )}
 
         {/* Draggable Widget Grid */}
