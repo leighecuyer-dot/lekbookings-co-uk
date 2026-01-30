@@ -17,6 +17,7 @@ import DashboardPage from "./pages/dashboard/DashboardPage";
 import CalendarPage from "./pages/calendar/CalendarPage";
 import KanbanPage from "./pages/calendar/KanbanPage";
 import WeekPage from "./pages/calendar/WeekPage";
+import WaitlistPage from "./pages/calendar/WaitlistPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import ServicesPage from "./pages/services/ServicesPage";
 import StaffPage from "./pages/staff/StaffPage";
@@ -94,6 +95,14 @@ const AppRoutes = () => (
       element={
         <RouteGuard requireAuth requireBusiness>
           <WeekPage />
+        </RouteGuard>
+      } 
+    />
+    <Route 
+      path="/waitlist" 
+      element={
+        <RouteGuard requireAuth requireBusiness>
+          <WaitlistPage />
         </RouteGuard>
       } 
     />

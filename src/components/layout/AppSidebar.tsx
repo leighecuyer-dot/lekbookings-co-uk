@@ -41,6 +41,7 @@ import {
   UserPlus,
   UserCog,
   BarChart3,
+  ClipboardList,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -48,6 +49,7 @@ const mainNavItems = [
   { title: "Calendar", href: "/calendar", icon: Calendar },
   { title: "Week View", href: "/week", icon: CalendarDays },
   { title: "Kanban Board", href: "/kanban", icon: Columns3 },
+  { title: "Waitlist", href: "/waitlist", icon: ClipboardList },
   { title: "Customers", href: "/customers", icon: Users },
   { title: "Staff", href: "/staff", icon: UserCircle },
   { title: "Services", href: "/services", icon: Briefcase },

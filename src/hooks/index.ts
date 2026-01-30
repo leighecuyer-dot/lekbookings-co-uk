@@ -6,3 +6,4 @@ export { useToast, toast } from "./use-toast";
 export { useBookingActions } from "./bookings";
 export { useKanbanSettings, colorPresets, defaultStatusConfig, getColorStyles, type StatusConfigItem } from "./kanban";
 export { useIndustries } from "./business";
+export { useWaitlist } from "./waitlist";
