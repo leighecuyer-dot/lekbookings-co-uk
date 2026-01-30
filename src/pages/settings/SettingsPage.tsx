@@ -16,6 +16,7 @@ import { EmbedWidget } from "@/components/settings/EmbedWidget";
 import { PaymentSettings } from "@/components/settings/PaymentSettings";
 import { SocialLinksSettings } from "@/components/settings/SocialLinksSettings";
 import { AiContextSettings } from "@/components/settings/AiContextSettings";
+import { PrivacySettings } from "@/components/settings/PrivacySettings";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -291,6 +292,9 @@ export default function SettingsPage() {
 
         {/* Social Media Links */}
         <SocialLinksSettings />
+
+        {/* Privacy Settings */}
+        <PrivacySettings />
 
         {/* Email Notifications */}
         <Card className="border-0 shadow-soft">
