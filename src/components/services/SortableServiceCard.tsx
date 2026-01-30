@@ -41,6 +41,7 @@ export function SortableServiceCard({
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({ id: service.id });
 
   const style = {
@@ -48,13 +49,27 @@ export function SortableServiceCard({
     transition,
   };
 
+  if (isDragging) {
+    return (
+      <Card
+        ref={setNodeRef}
+        style={style}
+        className="border-2 border-dashed border-primary/50 bg-primary/5 shadow-soft"
+      >
+        <CardContent className="p-4 opacity-0">
+          <div className="min-h-[80px]" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
-      className={`border-0 shadow-soft ${!service.is_active ? "opacity-60" : ""} ${
-        isDragging ? "z-50 shadow-lg scale-105" : ""
-      }`}
+      className={`border-0 shadow-soft transition-all duration-200 ${
+        !service.is_active ? "opacity-60" : ""
+      } ${isOver ? "ring-2 ring-primary ring-offset-2" : ""}`}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">

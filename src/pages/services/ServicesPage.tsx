@@ -8,6 +8,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -35,6 +37,7 @@ import { toast } from "sonner";
 import { Plus, Briefcase, Sparkles } from "lucide-react";
 import { AiServiceImportDialog } from "@/components/services/AiServiceImportDialog";
 import { SortableServiceCard } from "@/components/services/SortableServiceCard";
+import { ServiceCardOverlay } from "@/components/services/ServiceCardOverlay";
 
 interface Service {
   id: string;
@@ -67,6 +70,7 @@ export default function ServicesPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   
   const [newService, setNewService] = useState({
     name: "",
@@ -217,8 +221,13 @@ export default function ServicesPage() {
     fetchServices();
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
 
     if (over && active.id !== over.id) {
       const oldIndex = services.findIndex((s) => s.id === active.id);
@@ -243,6 +252,8 @@ export default function ServicesPage() {
       toast.success("Service order updated!");
     }
   };
+
+  const activeService = activeId ? services.find((s) => s.id === activeId) : null;
 
   return (
     <DashboardLayout
@@ -363,6 +374,7 @@ export default function ServicesPage() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={services.map((s) => s.id)} strategy={rectSortingStrategy}>
@@ -378,6 +390,9 @@ export default function ServicesPage() {
               ))}
             </div>
           </SortableContext>
+          <DragOverlay>
+            {activeService ? <ServiceCardOverlay service={activeService} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
 
