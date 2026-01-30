@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Settings2 } from "lucide-react";
+import { Settings2, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 
 export interface DashboardWidgetSettings {
   showPerformanceTile: boolean;
@@ -18,7 +20,7 @@ export interface DashboardWidgetSettings {
 
 const STORAGE_KEY = "dashboard-widget-settings";
 
-const DEFAULT_SETTINGS: DashboardWidgetSettings = {
+export const DEFAULT_SETTINGS: DashboardWidgetSettings = {
   showPerformanceTile: true,
   showRevenueTile: true,
   showTrendsChart: true,
@@ -46,18 +48,29 @@ export function useDashboardWidgetSettings() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  return { settings, updateSetting };
+  const resetSettings = () => {
+    setSettings({ ...DEFAULT_SETTINGS });
+  };
+
+  return { settings, updateSetting, resetSettings };
 }
 
 interface DashboardWidgetToggleProps {
   settings: DashboardWidgetSettings;
   onUpdateSetting: (key: keyof DashboardWidgetSettings, value: boolean) => void;
+  onResetLayout?: () => void;
 }
 
 export function DashboardWidgetToggle({
   settings,
   onUpdateSetting,
+  onResetLayout,
 }: DashboardWidgetToggleProps) {
+  const handleReset = () => {
+    onResetLayout?.();
+    toast.success("Dashboard layout reset to defaults");
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -111,6 +124,21 @@ export function DashboardWidgetToggle({
               />
             </div>
           </div>
+
+          {onResetLayout && (
+            <>
+              <Separator />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full gap-2 text-muted-foreground hover:text-foreground"
+                onClick={handleReset}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset to Default Layout
+              </Button>
+            </>
+          )}
         </div>
       </PopoverContent>
     </Popover>

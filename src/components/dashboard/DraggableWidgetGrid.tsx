@@ -34,6 +34,14 @@ const WIDGET_SIZES_KEY = "dashboard-widget-sizes";
 export type WidgetId = "availability" | "performance" | "revenue" | "trends";
 export type WidgetSize = 1 | 2 | 3; // Column spans
 
+export const DEFAULT_WIDGET_ORDER: WidgetId[] = ["availability", "performance", "revenue", "trends"];
+export const DEFAULT_WIDGET_SIZES: Record<WidgetId, WidgetSize> = {
+  availability: 1,
+  performance: 1,
+  revenue: 1,
+  trends: 3,
+};
+
 interface Widget {
   id: WidgetId;
   render: () => ReactNode;
@@ -183,7 +191,7 @@ export function useWidgetOrder() {
     } catch {
       // Ignore parse errors
     }
-    return ["availability", "performance", "revenue", "trends"];
+    return [...DEFAULT_WIDGET_ORDER];
   });
 
   useEffect(() => {
@@ -198,7 +206,11 @@ export function useWidgetOrder() {
     });
   };
 
-  return { order, reorder };
+  const resetOrder = () => {
+    setOrder([...DEFAULT_WIDGET_ORDER]);
+  };
+
+  return { order, reorder, resetOrder };
 }
 
 export function useWidgetSizes() {
@@ -211,12 +223,7 @@ export function useWidgetSizes() {
     } catch {
       // Ignore parse errors
     }
-    return {
-      availability: 1,
-      performance: 1,
-      revenue: 1,
-      trends: 3,
-    };
+    return { ...DEFAULT_WIDGET_SIZES };
   });
 
   useEffect(() => {
@@ -227,7 +234,11 @@ export function useWidgetSizes() {
     setSizes((prev) => ({ ...prev, [id]: size }));
   };
 
-  return { sizes, setSize };
+  const resetSizes = () => {
+    setSizes({ ...DEFAULT_WIDGET_SIZES });
+  };
+
+  return { sizes, setSize, resetSizes };
 }
 
 interface DraggableWidgetGridProps {
