@@ -21,6 +21,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock } from "lucide-react";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Link } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -290,10 +298,25 @@ export default function CustomersPage() {
                         
                         if (hideContact) {
                           return (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                              <Lock className="w-3 h-3" />
-                              Contact info hidden
-                            </p>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="secondary" className="mt-1 gap-1 cursor-help">
+                                    <Lock className="w-3 h-3" />
+                                    Contact hidden
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[220px] text-center">
+                                  <p className="text-xs">This data is hidden by the business owner's privacy settings.</p>
+                                  <Link 
+                                    to="/settings" 
+                                    className="text-xs text-primary hover:underline mt-1 inline-block"
+                                  >
+                                    View privacy settings →
+                                  </Link>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           );
                         }
                         
