@@ -133,10 +133,10 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
         <GripVertical className="w-4 h-4 text-muted-foreground" />
       </button>
 
-      {/* Resize controls - hidden while dragging */}
+      {/* Resize controls - hidden on mobile and while dragging */}
       <div className={cn(
-        "absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10",
-        isDragging && "hidden"
+        "absolute top-2 right-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 hidden sm:flex",
+        isDragging && "sm:hidden"
       )}>
         <TooltipProvider delayDuration={300}>
           {canShrink && (
