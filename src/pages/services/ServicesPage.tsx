@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   DndContext,
@@ -22,22 +22,16 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { DialogTrigger, Dialog } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Briefcase, Sparkles, Search } from "lucide-react";
 import { AiServiceImportDialog } from "@/components/services/AiServiceImportDialog";
 import { SortableServiceCard } from "@/components/services/SortableServiceCard";
 import { ServiceCardOverlay } from "@/components/services/ServiceCardOverlay";
+import { CategoryManagement, ServiceCategory } from "@/components/services/CategoryManagement";
+import { CategoryFilter } from "@/components/services/CategoryFilter";
+import { ServiceFormDialog, ServiceFormData, COLORS } from "@/components/services/ServiceFormDialog";
 
 interface Service {
   id: string;
@@ -48,23 +42,23 @@ interface Service {
   color: string | null;
   is_active: boolean;
   display_order: number;
+  category_id: string | null;
 }
 
-const COLORS = [
-  "#3B82F6", // Blue
-  "#10B981", // Green
-  "#F59E0B", // Amber
-  "#EF4444", // Red
-  "#8B5CF6", // Purple
-  "#EC4899", // Pink
-  "#06B6D4", // Cyan
-  "#84CC16", // Lime
-];
+const DEFAULT_FORM: ServiceFormData = {
+  name: "",
+  description: "",
+  duration: "30",
+  price: "",
+  color: COLORS[0],
+  categoryId: "none",
+};
 
 export default function ServicesPage() {
   const { currentBusiness } = useBusiness();
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -72,22 +66,10 @@ export default function ServicesPage() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  const [newService, setNewService] = useState({
-    name: "",
-    description: "",
-    duration: "30",
-    price: "",
-    color: COLORS[0],
-  });
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  const [editForm, setEditForm] = useState({
-    name: "",
-    description: "",
-    duration: "30",
-    price: "",
-    color: COLORS[0],
-  });
+  const [newService, setNewService] = useState<ServiceFormData>(DEFAULT_FORM);
+  const [editForm, setEditForm] = useState<ServiceFormData>(DEFAULT_FORM);
 
   // Handle ?action=add query param to auto-open dialog
   useEffect(() => {
@@ -101,6 +83,7 @@ export default function ServicesPage() {
   useEffect(() => {
     if (currentBusiness) {
       fetchServices();
+      fetchCategories();
     }
   }, [currentBusiness]);
 
@@ -117,7 +100,7 @@ export default function ServicesPage() {
 
   const fetchServices = async () => {
     if (!currentBusiness) return;
-    
+
     setLoading(true);
     const { data, error } = await supabase
       .from("services")
@@ -133,6 +116,22 @@ export default function ServicesPage() {
     setLoading(false);
   };
 
+  const fetchCategories = async () => {
+    if (!currentBusiness) return;
+
+    const { data, error } = await supabase
+      .from("service_categories")
+      .select("*")
+      .eq("business_id", currentBusiness.id)
+      .order("display_order", { ascending: true });
+
+    if (error) {
+      console.error("Failed to load categories:", error);
+    } else {
+      setCategories((data || []) as ServiceCategory[]);
+    }
+  };
+
   const handleCreateService = async () => {
     if (!currentBusiness || !newService.name) {
       toast.error("Please enter a service name");
@@ -146,6 +145,7 @@ export default function ServicesPage() {
       duration_minutes: parseInt(newService.duration) || 30,
       price: newService.price ? parseFloat(newService.price) : null,
       color: newService.color,
+      category_id: newService.categoryId !== "none" ? newService.categoryId : null,
     });
 
     if (error) {
@@ -155,7 +155,7 @@ export default function ServicesPage() {
 
     toast.success("Service added!");
     setDialogOpen(false);
-    setNewService({ name: "", description: "", duration: "30", price: "", color: COLORS[0] });
+    setNewService(DEFAULT_FORM);
     fetchServices();
   };
 
@@ -190,6 +190,7 @@ export default function ServicesPage() {
       duration: service.duration_minutes.toString(),
       price: service.price?.toString() || "",
       color: service.color || COLORS[0],
+      categoryId: service.category_id || "none",
     });
     setEditDialogOpen(true);
   };
@@ -208,6 +209,7 @@ export default function ServicesPage() {
         duration_minutes: parseInt(editForm.duration) || 30,
         price: editForm.price ? parseFloat(editForm.price) : null,
         color: editForm.color,
+        category_id: editForm.categoryId !== "none" ? editForm.categoryId : null,
       })
       .eq("id", editingService.id);
 
@@ -234,6 +236,7 @@ export default function ServicesPage() {
       duration_minutes: service.duration_minutes,
       price: service.price,
       color: service.color,
+      category_id: service.category_id,
       display_order: maxOrder + 1,
     });
 
@@ -280,10 +283,59 @@ export default function ServicesPage() {
 
   const activeService = activeId ? services.find((s) => s.id === activeId) : null;
 
-  const filteredServices = services.filter((service) =>
-    service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (service.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-  );
+  const filteredServices = useMemo(() => {
+    return services.filter((service) => {
+      const matchesSearch =
+        service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (service.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      const matchesCategory =
+        selectedCategoryId === null || service.category_id === selectedCategoryId;
+      return matchesSearch && matchesCategory;
+    });
+  }, [services, searchQuery, selectedCategoryId]);
+
+  // Group services by category for display
+  const groupedServices = useMemo(() => {
+    if (selectedCategoryId !== null) {
+      return [{ category: null, services: filteredServices }];
+    }
+
+    const uncategorized: Service[] = [];
+    const byCategory = new Map<string, { category: ServiceCategory; services: Service[] }>();
+
+    filteredServices.forEach((service) => {
+      if (!service.category_id) {
+        uncategorized.push(service);
+      } else {
+        const category = categories.find((c) => c.id === service.category_id);
+        if (category) {
+          const existing = byCategory.get(service.category_id);
+          if (existing) {
+            existing.services.push(service);
+          } else {
+            byCategory.set(service.category_id, { category, services: [service] });
+          }
+        } else {
+          uncategorized.push(service);
+        }
+      }
+    });
+
+    const result: { category: ServiceCategory | null; services: Service[] }[] = [];
+    
+    // Sort by category display_order
+    const sortedCategories = Array.from(byCategory.values()).sort(
+      (a, b) => a.category.display_order - b.category.display_order
+    );
+    
+    sortedCategories.forEach((group) => result.push(group));
+    
+    if (uncategorized.length > 0) {
+      result.push({ category: null, services: uncategorized });
+    }
+
+    return result;
+  }, [filteredServices, categories, selectedCategoryId]);
 
   return (
     <DashboardLayout
@@ -306,84 +358,7 @@ export default function ServicesPage() {
                 Add Service
               </Button>
             </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Service</DialogTitle>
-              <DialogDescription>
-                Create a new service that customers can book
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Service Name *</Label>
-                <Input
-                  value={newService.name}
-                  onChange={(e) =>
-                    setNewService({ ...newService, name: e.target.value })
-                  }
-                  placeholder="Haircut"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={newService.description}
-                  onChange={(e) =>
-                    setNewService({ ...newService, description: e.target.value })
-                  }
-                  placeholder="Describe this service..."
-                  rows={2}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Duration (minutes)</Label>
-                  <Input
-                    type="number"
-                    value={newService.duration}
-                    onChange={(e) =>
-                      setNewService({ ...newService, duration: e.target.value })
-                    }
-                    placeholder="30"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Price ($)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={newService.price}
-                    onChange={(e) =>
-                      setNewService({ ...newService, price: e.target.value })
-                    }
-                    placeholder="50.00"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <div className="flex gap-2">
-                  {COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        newService.color === color
-                          ? "border-foreground scale-110"
-                          : "border-transparent"
-                      }`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setNewService({ ...newService, color })}
-                    />
-                  ))}
-                </div>
-              </div>
-              <Button onClick={handleCreateService} className="w-full gradient-primary">
-                Add Service
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </Dialog>
         </div>
       }
     >
@@ -401,21 +376,39 @@ export default function ServicesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {/* Search Bar */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search services..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+        <div className="space-y-6">
+          {/* Category Management */}
+          {currentBusiness && (
+            <CategoryManagement
+              businessId={currentBusiness.id}
+              categories={categories}
+              onCategoriesChange={fetchCategories}
             />
+          )}
+
+          {/* Search and Category Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative max-w-md flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search services..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
+
+          {/* Category Filter Pills */}
+          <CategoryFilter
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
+            onCategorySelect={setSelectedCategoryId}
+          />
 
           {filteredServices.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              No services found matching "{searchQuery}"
+              No services found matching your filters
             </div>
           ) : (
             <DndContext
@@ -424,20 +417,39 @@ export default function ServicesPage() {
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <SortableContext items={filteredServices.map((s) => s.id)} strategy={rectSortingStrategy}>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredServices.map((service) => (
-                    <SortableServiceCard
-                      key={service.id}
-                      service={service}
-                      onEdit={handleEditClick}
-                      onDuplicate={handleDuplicateService}
-                      onToggleActive={handleToggleActive}
-                      onDelete={handleDeleteService}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
+              <div className="space-y-8">
+                {groupedServices.map((group, index) => (
+                  <div key={group.category?.id || "uncategorized"}>
+                    {group.category && (
+                      <h3 className="text-lg font-semibold mb-4 text-foreground">
+                        {group.category.name}
+                      </h3>
+                    )}
+                    {!group.category && categories.length > 0 && groupedServices.length > 1 && (
+                      <h3 className="text-lg font-semibold mb-4 text-muted-foreground">
+                        Uncategorized
+                      </h3>
+                    )}
+                    <SortableContext
+                      items={group.services.map((s) => s.id)}
+                      strategy={rectSortingStrategy}
+                    >
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {group.services.map((service) => (
+                          <SortableServiceCard
+                            key={service.id}
+                            service={service}
+                            onEdit={handleEditClick}
+                            onDuplicate={handleDuplicateService}
+                            onToggleActive={handleToggleActive}
+                            onDelete={handleDeleteService}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </div>
+                ))}
+              </div>
               <DragOverlay>
                 {activeService ? <ServiceCardOverlay service={activeService} /> : null}
               </DragOverlay>
@@ -455,86 +467,31 @@ export default function ServicesPage() {
         />
       )}
 
+      {/* Add Service Dialog */}
+      <ServiceFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Add New Service"
+        description="Create a new service that customers can book"
+        formData={newService}
+        onFormChange={setNewService}
+        onSubmit={handleCreateService}
+        submitLabel="Add Service"
+        categories={categories}
+      />
+
       {/* Edit Service Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Service</DialogTitle>
-            <DialogDescription>
-              Update the details for this service
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Service Name *</Label>
-              <Input
-                value={editForm.name}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, name: e.target.value })
-                }
-                placeholder="Haircut"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={editForm.description}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, description: e.target.value })
-                }
-                placeholder="Describe this service..."
-                rows={2}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Duration (minutes)</Label>
-                <Input
-                  type="number"
-                  value={editForm.duration}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, duration: e.target.value })
-                  }
-                  placeholder="30"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Price ($)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editForm.price}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, price: e.target.value })
-                  }
-                  placeholder="50.00"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <div className="flex gap-2">
-                {COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      editForm.color === color
-                        ? "border-foreground scale-110"
-                        : "border-transparent"
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setEditForm({ ...editForm, color })}
-                  />
-                ))}
-              </div>
-            </div>
-            <Button onClick={handleUpdateService} className="w-full gradient-primary">
-              Save Changes
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ServiceFormDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        title="Edit Service"
+        description="Update the details for this service"
+        formData={editForm}
+        onFormChange={setEditForm}
+        onSubmit={handleUpdateService}
+        submitLabel="Save Changes"
+        categories={categories}
+      />
     </DashboardLayout>
   );
 }

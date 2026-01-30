@@ -48,6 +48,14 @@ interface Service {
   duration_minutes: number;
   image_url: string | null;
   color: string | null;
+  category_id: string | null;
+}
+
+interface ServiceCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  display_order: number;
 }
 
 interface GalleryImage {
@@ -65,6 +73,7 @@ export default function PublicBookingPage() {
   const [business, setBusiness] = useState<Business | null>(null);
   const [theme, setTheme] = useState<PageTheme | null>(null);
   const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
 
   useEffect(() => {
@@ -97,8 +106,8 @@ export default function PublicBookingPage() {
       settings: businessData.settings as Business["settings"],
     });
 
-    // Fetch theme, services, and gallery in parallel
-    const [themeResult, servicesResult, galleryResult] = await Promise.all([
+    // Fetch theme, services, categories, and gallery in parallel
+    const [themeResult, servicesResult, categoriesResult, galleryResult] = await Promise.all([
       supabase
         .from("page_themes")
         .select("*")
@@ -106,10 +115,16 @@ export default function PublicBookingPage() {
         .maybeSingle(),
       supabase
         .from("services")
-        .select("id, name, description, price, duration_minutes, image_url, color")
+        .select("id, name, description, price, duration_minutes, image_url, color, category_id")
         .eq("business_id", businessData.id)
         .eq("is_active", true)
-        .order("name"),
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("service_categories")
+        .select("id, name, description, display_order")
+        .eq("business_id", businessData.id)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true }),
       supabase
         .from("gallery_images")
         .select("id, image_url, title, description, display_order")
@@ -119,6 +134,7 @@ export default function PublicBookingPage() {
 
     if (themeResult.data) setTheme(themeResult.data);
     if (servicesResult.data) setServices(servicesResult.data);
+    if (categoriesResult.data) setCategories(categoriesResult.data);
     if (galleryResult.data) setGallery(galleryResult.data);
 
     setLoading(false);
@@ -185,6 +201,7 @@ export default function PublicBookingPage() {
       {services.length > 0 && (
         <BookingServices
           services={services}
+          categories={categories}
           theme={theme}
           businessId={business.id}
         />
