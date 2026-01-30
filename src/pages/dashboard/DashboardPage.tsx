@@ -65,9 +65,15 @@ export default function DashboardPage() {
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageType, setMessageType] = useState<"sms" | "whatsapp" | "email">("sms");
   const [availabilityContext, setAvailabilityContext] = useState<AvailabilityContext | undefined>(undefined);
-  const { settings: widgetSettings, updateSetting: updateWidgetSetting } = useDashboardWidgetSettings();
-  const { order: widgetOrder, reorder: reorderWidgets } = useWidgetOrder();
-  const { sizes: widgetSizes, setSize: setWidgetSize } = useWidgetSizes();
+  const { settings: widgetSettings, updateSetting: updateWidgetSetting, resetSettings: resetWidgetSettings } = useDashboardWidgetSettings();
+  const { order: widgetOrder, reorder: reorderWidgets, resetOrder: resetWidgetOrder } = useWidgetOrder();
+  const { sizes: widgetSizes, setSize: setWidgetSize, resetSizes: resetWidgetSizes } = useWidgetSizes();
+
+  const handleResetLayout = () => {
+    resetWidgetSettings();
+    resetWidgetOrder();
+    resetWidgetSizes();
+  };
 
   const handleSendSMS = () => {
     setMessageType("sms");
@@ -244,6 +250,7 @@ export default function DashboardPage() {
         <DashboardWidgetToggle
           settings={widgetSettings}
           onUpdateSetting={updateWidgetSetting}
+          onResetLayout={handleResetLayout}
         />
       }
     >
