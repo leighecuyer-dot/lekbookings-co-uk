@@ -21,6 +21,7 @@ import { BulkMessageDialog, type AvailabilityContext } from "@/components/messag
 import { StaffAvailabilityWidget } from "@/components/dashboard/StaffAvailabilityWidget";
 import { DashboardWidgetToggle, useDashboardWidgetSettings } from "@/components/dashboard/DashboardWidgetToggle";
 import { DraggableWidgetGrid, useWidgetOrder, type WidgetId } from "@/components/dashboard/DraggableWidgetGrid";
+import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 interface Booking {
   id: string;
   start_time: string;
@@ -361,15 +362,26 @@ export default function DashboardPage() {
         )}
 
         {/* Privacy Notice for Reseller Mode */}
-        {currentBusiness && isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true) && (
-          <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground">
-            <Lock className="h-4 w-4 shrink-0" />
-            <span>
-              <span className="font-medium text-foreground">Some data is private.</span>{" "}
-              Revenue figures are hidden because the business owner has not enabled revenue sharing.
-            </span>
-          </div>
-        )}
+        {currentBusiness && isResellerMode && (() => {
+          const privacySettings = getPrivacySettings(currentBusiness.settings as Record<string, unknown> | null);
+          const hiddenItems: string[] = [];
+          
+          if (!privacySettings.share_revenue_with_reseller) hiddenItems.push("revenue data");
+          if (!privacySettings.share_customer_contact_with_reseller) hiddenItems.push("customer contacts");
+          if (!privacySettings.share_booking_notes_with_reseller) hiddenItems.push("booking notes");
+          
+          if (hiddenItems.length === 0) return null;
+          
+          return (
+            <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground">
+              <Lock className="h-4 w-4 shrink-0" />
+              <span>
+                <span className="font-medium text-foreground">Some data is private.</span>{" "}
+                Hidden: {hiddenItems.join(", ")}.
+              </span>
+            </div>
+          );
+        })()}
 
         {/* Draggable Widget Grid */}
         {currentBusiness && (
