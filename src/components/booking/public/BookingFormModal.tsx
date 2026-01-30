@@ -14,8 +14,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, addDays, setHours, setMinutes, isBefore, startOfDay } from "date-fns";
-import { Clock, CheckCircle, User } from "lucide-react";
+import { format, addDays, setHours, setMinutes, isBefore, startOfDay, endOfDay } from "date-fns";
+import { Clock, CheckCircle, User, Users } from "lucide-react";
+import { WaitlistDialog } from "@/components/waitlist/WaitlistDialog";
+
+interface Booking {
+  id: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+}
 
 interface Service {
   id: string;
@@ -105,6 +113,9 @@ export function BookingFormModal({
     depositType: "percentage" | "fixed";
     depositAmount: number;
   } | null>(null);
+  const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
+  const [waitlistDialogOpen, setWaitlistDialogOpen] = useState(false);
+  const [waitlistSlot, setWaitlistSlot] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -138,6 +149,9 @@ export function BookingFormModal({
       setSelectedTime(null);
       setSelectedStaff(null);
       setHasSavedDetails(false);
+      setExistingBookings([]);
+      setWaitlistDialogOpen(false);
+      setWaitlistSlot(null);
       // Only reset form if no saved details
       const saved = getSavedDetails();
       if (saved) {
@@ -149,6 +163,30 @@ export function BookingFormModal({
       }
     }
   }, [open, businessId]);
+
+  // Fetch existing bookings when date changes
+  useEffect(() => {
+    if (selectedDate && businessId) {
+      fetchBookingsForDate(selectedDate);
+    }
+  }, [selectedDate, businessId]);
+
+  const fetchBookingsForDate = async (date: Date) => {
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+    
+    const { data } = await supabase
+      .from("bookings")
+      .select("id, start_time, end_time, status")
+      .eq("business_id", businessId)
+      .gte("start_time", dayStart.toISOString())
+      .lte("start_time", dayEnd.toISOString())
+      .neq("status", "cancelled");
+    
+    if (data) {
+      setExistingBookings(data);
+    }
+  };
 
   const fetchStaff = async () => {
     const { data } = await supabase
@@ -225,10 +263,31 @@ export function BookingFormModal({
     });
   };
 
+  // Check if a time slot is already booked
+  const isSlotBooked = (slot: string): boolean => {
+    if (!selectedDate) return false;
+    
+    const [hours, minutes] = slot.split(":").map(Number);
+    const slotStart = setMinutes(setHours(selectedDate, hours), minutes);
+    const slotEnd = new Date(slotStart.getTime() + service.duration_minutes * 60000);
+    
+    return existingBookings.some(booking => {
+      const bookingStart = new Date(booking.start_time);
+      const bookingEnd = new Date(booking.end_time);
+      // Check for overlap
+      return slotStart < bookingEnd && slotEnd > bookingStart;
+    });
+  };
+
   // Get available staff for a given date (not on leave)
   const getAvailableStaff = () => {
     if (!selectedDate) return staff;
     return staff.filter(s => !isStaffOnLeave(s.id, selectedDate));
+  };
+
+  const handleJoinWaitlist = (slot: string) => {
+    setWaitlistSlot(slot);
+    setWaitlistDialogOpen(true);
   };
 
   const handleSubmit = async () => {
@@ -398,23 +457,47 @@ export function BookingFormModal({
               </p>
             ) : (
               <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-                {availableSlots.map((slot) => (
-                  <Button
-                    key={slot}
-                    variant={selectedTime === slot ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setSelectedTime(slot);
-                      setStep("details");
-                    }}
-                    style={selectedTime === slot ? { backgroundColor: primaryColor } : {}}
-                    className="justify-center"
-                  >
-                    <Clock className="w-3 h-3 mr-1" />
-                    {slot}
-                  </Button>
-                ))}
+                {availableSlots.map((slot) => {
+                  const booked = isSlotBooked(slot);
+                  return (
+                    <div key={slot} className="relative">
+                      <Button
+                        variant={selectedTime === slot ? "default" : booked ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          if (booked) {
+                            handleJoinWaitlist(slot);
+                          } else {
+                            setSelectedTime(slot);
+                            setStep("details");
+                          }
+                        }}
+                        style={selectedTime === slot ? { backgroundColor: primaryColor } : {}}
+                        className={`justify-center w-full ${booked ? "opacity-60" : ""}`}
+                      >
+                        {booked ? (
+                          <Users className="w-3 h-3 mr-1" />
+                        ) : (
+                          <Clock className="w-3 h-3 mr-1" />
+                        )}
+                        {slot}
+                      </Button>
+                      {booked && (
+                        <span className="absolute -top-1 -right-1 text-[10px] bg-amber-100 text-amber-700 px-1 rounded">
+                          Waitlist
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+            )}
+
+            {existingBookings.length > 0 && (
+              <p className="text-xs text-muted-foreground text-center">
+                <Users className="w-3 h-3 inline mr-1" />
+                Booked slots can be joined on the waitlist
+              </p>
             )}
 
             <Button variant="ghost" onClick={() => setStep("date")} className="w-full">
@@ -533,6 +616,20 @@ export function BookingFormModal({
           </div>
         )}
       </DialogContent>
+
+      {/* Waitlist Dialog */}
+      {selectedDate && waitlistSlot && (
+        <WaitlistDialog
+          open={waitlistDialogOpen}
+          onOpenChange={setWaitlistDialogOpen}
+          businessId={businessId}
+          service={service}
+          selectedDate={selectedDate}
+          selectedTime={waitlistSlot}
+          staffId={selectedStaff}
+          primaryColor={primaryColor}
+        />
+      )}
     </Dialog>
   );
 }
