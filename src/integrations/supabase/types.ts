@@ -726,9 +726,51 @@ export type Database = {
         }
         Relationships: []
       }
+      service_categories: {
+        Row: {
+          business_id: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           business_id: string
+          category_id: string | null
           color: string | null
           created_at: string
           description: string | null
@@ -743,6 +785,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          category_id?: string | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -757,6 +800,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          category_id?: string | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -775,6 +819,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
             referencedColumns: ["id"]
           },
         ]
