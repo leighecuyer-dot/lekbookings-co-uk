@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, Mail, Phone, User, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock } from "lucide-react";
+import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -283,18 +284,36 @@ export default function CustomersPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      {customer.email && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
-                          <Mail className="w-3 h-3 flex-shrink-0" />
-                          {customer.email}
-                        </p>
-                      )}
-                      {customer.phone && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Phone className="w-3 h-3 flex-shrink-0" />
-                          {customer.phone}
-                        </p>
-                      )}
+                      {(() => {
+                        const privacySettings = getPrivacySettings(currentBusiness?.settings as Record<string, unknown> | null);
+                        const hideContact = isResellerMode && !privacySettings.share_customer_contact_with_reseller;
+                        
+                        if (hideContact) {
+                          return (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                              <Lock className="w-3 h-3" />
+                              Contact info hidden
+                            </p>
+                          );
+                        }
+                        
+                        return (
+                          <>
+                            {customer.email && (
+                              <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
+                                <Mail className="w-3 h-3 flex-shrink-0" />
+                                {customer.email}
+                              </p>
+                            )}
+                            {customer.phone && (
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Phone className="w-3 h-3 flex-shrink-0" />
+                                {customer.phone}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                       <p className="text-xs text-muted-foreground mt-2">
                         Added {format(new Date(customer.created_at), "MMM d, yyyy")}
                       </p>

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { usePaymentStatus } from "@/hooks/bookings";
+import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import { format, parseISO } from "date-fns";
 import { Trash2, Clock, User, Calendar, CreditCard, CheckCircle, CircleDollarSign } from "lucide-react";
 import { BookingImageUpload } from "./BookingImageUpload";
@@ -75,8 +76,13 @@ export function BookingEditDialog({
   staffList,
   onUpdate,
 }: BookingEditDialogProps) {
-  const { isResellerMode } = useBusiness();
+  const { currentBusiness, isResellerMode } = useBusiness();
   const { getPaymentConfig, markDepositPaid, markPaidInFull } = usePaymentStatus();
+  
+  // Get privacy settings
+  const privacySettings = getPrivacySettings(currentBusiness?.settings as Record<string, unknown> | null);
+  const hideContactInfo = isResellerMode && !privacySettings.share_customer_contact_with_reseller;
+  const hideNotes = isResellerMode && !privacySettings.share_booking_notes_with_reseller;
   const [editData, setEditData] = useState({
     customerName: "",
     customerEmail: "",
@@ -382,23 +388,31 @@ export function BookingEditDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={editData.customerEmail}
-                onChange={(e) => setEditData({ ...editData, customerEmail: e.target.value })}
-              />
+          {/* Contact Info - Hidden in reseller mode if privacy setting is off */}
+          {hideContactInfo ? (
+            <div className="p-3 rounded-lg bg-muted/50 border border-border flex items-center gap-2 text-sm text-muted-foreground">
+              <User className="w-4 h-4" />
+              Customer contact info is private
             </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input
-                value={editData.customerPhone}
-                onChange={(e) => setEditData({ ...editData, customerPhone: e.target.value })}
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={editData.customerEmail}
+                  onChange={(e) => setEditData({ ...editData, customerEmail: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input
+                  value={editData.customerPhone}
+                  onChange={(e) => setEditData({ ...editData, customerPhone: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Service & Staff */}
           <div className="grid grid-cols-2 gap-4">
@@ -440,15 +454,22 @@ export function BookingEditDialog({
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea
-              value={editData.notes}
-              onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
-              rows={2}
-            />
-          </div>
+          {/* Notes - Hidden in reseller mode if privacy setting is off */}
+          {hideNotes ? (
+            <div className="p-3 rounded-lg bg-muted/50 border border-border flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="w-4 h-4" />
+              Booking notes are private
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={editData.notes}
+                onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+          )}
 
           {/* Photo Attachments */}
           <BookingImageUpload
