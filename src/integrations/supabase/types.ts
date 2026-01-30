@@ -894,12 +894,14 @@ export type Database = {
         Row: {
           avatar_url: string | null
           business_id: string
+          commission_percentage: number
           created_at: string
           email: string | null
           id: string
           is_active: boolean
           name: string
           phone: string | null
+          revenue_tracking_enabled: boolean
           updated_at: string
           user_id: string | null
           working_hours: Json | null
@@ -907,12 +909,14 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           business_id: string
+          commission_percentage?: number
           created_at?: string
           email?: string | null
           id?: string
           is_active?: boolean
           name: string
           phone?: string | null
+          revenue_tracking_enabled?: boolean
           updated_at?: string
           user_id?: string | null
           working_hours?: Json | null
@@ -920,12 +924,14 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           business_id?: string
+          commission_percentage?: number
           created_at?: string
           email?: string | null
           id?: string
           is_active?: boolean
           name?: string
           phone?: string | null
+          revenue_tracking_enabled?: boolean
           updated_at?: string
           user_id?: string | null
           working_hours?: Json | null
