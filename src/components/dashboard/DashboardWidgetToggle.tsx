@@ -14,6 +14,7 @@ import { toast } from "sonner";
 export interface DashboardWidgetSettings {
   showPerformanceTile: boolean;
   showRevenueTile: boolean;
+  showRevenueBreakdownTile: boolean;
   showTrendsChart: boolean;
   showAvailabilityTile: boolean;
 }
@@ -23,6 +24,7 @@ const STORAGE_KEY = "dashboard-widget-settings";
 export const DEFAULT_SETTINGS: DashboardWidgetSettings = {
   showPerformanceTile: true,
   showRevenueTile: true,
+  showRevenueBreakdownTile: true,
   showTrendsChart: true,
   showAvailabilityTile: true,
 };
@@ -111,6 +113,16 @@ export function DashboardWidgetToggle({
                 id="revenue"
                 checked={settings.showRevenueTile}
                 onCheckedChange={(checked) => onUpdateSetting("showRevenueTile", checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="revenueBreakdown" className="text-sm font-normal cursor-pointer">
+                Revenue Breakdown
+              </Label>
+              <Switch
+                id="revenueBreakdown"
+                checked={settings.showRevenueBreakdownTile}
+                onCheckedChange={(checked) => onUpdateSetting("showRevenueBreakdownTile", checked)}
               />
             </div>
             <div className="flex items-center justify-between">
