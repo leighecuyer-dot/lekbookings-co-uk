@@ -1,5 +1,20 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,16 +31,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Clock, DollarSign, MoreHorizontal, Briefcase, Sparkles, Pencil } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, Briefcase, Sparkles } from "lucide-react";
 import { AiServiceImportDialog } from "@/components/services/AiServiceImportDialog";
+import { SortableServiceCard } from "@/components/services/SortableServiceCard";
 
 interface Service {
   id: string;
@@ -35,6 +44,7 @@ interface Service {
   price: number | null;
   color: string | null;
   is_active: boolean;
+  display_order: number;
 }
 
 const COLORS = [
@@ -89,6 +99,17 @@ export default function ServicesPage() {
     }
   }, [currentBusiness]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const fetchServices = async () => {
     if (!currentBusiness) return;
     
@@ -97,12 +118,12 @@ export default function ServicesPage() {
       .from("services")
       .select("*")
       .eq("business_id", currentBusiness.id)
-      .order("name", { ascending: true });
+      .order("display_order", { ascending: true });
 
     if (error) {
       toast.error("Failed to load services");
     } else {
-      setServices(data || []);
+      setServices((data || []) as Service[]);
     }
     setLoading(false);
   };
@@ -194,6 +215,33 @@ export default function ServicesPage() {
     setEditDialogOpen(false);
     setEditingService(null);
     fetchServices();
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = services.findIndex((s) => s.id === active.id);
+      const newIndex = services.findIndex((s) => s.id === over.id);
+
+      const newServices = arrayMove(services, oldIndex, newIndex);
+      setServices(newServices);
+
+      // Update display_order in database
+      const updates = newServices.map((service, index) => ({
+        id: service.id,
+        display_order: index + 1,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from("services")
+          .update({ display_order: update.display_order })
+          .eq("id", update.id);
+      }
+
+      toast.success("Service order updated!");
+    }
   };
 
   return (
@@ -312,73 +360,25 @@ export default function ServicesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
-            <Card
-              key={service.id}
-              className={`border-0 shadow-soft ${!service.is_active ? "opacity-60" : ""}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <div
-                    className="w-3 h-full min-h-[60px] rounded-full"
-                    style={{ backgroundColor: service.color || "#3B82F6" }}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium">{service.name}</h3>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEditClick(service)}
-                          >
-                            <Pencil className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleToggleActive(service.id, service.is_active)
-                            }
-                          >
-                            {service.is_active ? "Deactivate" : "Activate"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteService(service.id)}
-                            className="text-destructive"
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    {service.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {service.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-4 mt-3">
-                      <span className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {service.duration_minutes} min
-                      </span>
-                      {service.price && (
-                        <span className="text-sm font-medium flex items-center gap-1">
-                          <DollarSign className="w-3 h-3" />
-                          {service.price.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={services.map((s) => s.id)} strategy={rectSortingStrategy}>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {services.map((service) => (
+                <SortableServiceCard
+                  key={service.id}
+                  service={service}
+                  onEdit={handleEditClick}
+                  onToggleActive={handleToggleActive}
+                  onDelete={handleDeleteService}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {currentBusiness && (
