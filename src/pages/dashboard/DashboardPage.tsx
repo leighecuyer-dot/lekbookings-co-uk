@@ -19,6 +19,7 @@ import { WeeklyTrendsChart } from "@/components/dashboard/WeeklyTrendsChart";
 import { RevenueGrowthTile } from "@/components/dashboard/RevenueGrowthTile";
 import { BulkMessageDialog, type AvailabilityContext } from "@/components/messaging/BulkMessageDialog";
 import { StaffAvailabilityWidget } from "@/components/dashboard/StaffAvailabilityWidget";
+import { DashboardWidgetToggle, useDashboardWidgetSettings } from "@/components/dashboard/DashboardWidgetToggle";
 interface Booking {
   id: string;
   start_time: string;
@@ -62,6 +63,7 @@ export default function DashboardPage() {
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageType, setMessageType] = useState<"sms" | "whatsapp" | "email">("sms");
   const [availabilityContext, setAvailabilityContext] = useState<AvailabilityContext | undefined>(undefined);
+  const { settings: widgetSettings, updateSetting: updateWidgetSetting } = useDashboardWidgetSettings();
 
   const handleSendSMS = () => {
     setMessageType("sms");
@@ -234,6 +236,12 @@ export default function DashboardPage() {
     <DashboardLayout
       title={`Welcome${currentBusiness ? `, ${currentBusiness.name}` : ""}`}
       description="Here's what's happening today"
+      actions={
+        <DashboardWidgetToggle
+          settings={widgetSettings}
+          onUpdateSetting={updateWidgetSetting}
+        />
+      }
     >
       <div className="space-y-3 sm:space-y-6 animate-fade-in h-full">
         {/* Stats Grid - Compact on mobile */}
@@ -351,38 +359,40 @@ export default function DashboardPage() {
         )}
 
         {/* Availability + Performance + Revenue Grid */}
-        <div className="grid gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Available Slots Tile */}
-          {currentBusiness && (
-            <AvailableSlotsTile 
-              businessId={currentBusiness.id} 
-              businessName={currentBusiness.name}
-              onSendCampaign={(type, context) => {
-                setMessageType(type);
-                setAvailabilityContext(context);
-                setMessageDialogOpen(true);
-              }}
-            />
-          )}
+        {(widgetSettings.showAvailabilityTile || widgetSettings.showPerformanceTile || widgetSettings.showRevenueTile) && (
+          <div className="grid gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* Available Slots Tile */}
+            {currentBusiness && widgetSettings.showAvailabilityTile && (
+              <AvailableSlotsTile 
+                businessId={currentBusiness.id} 
+                businessName={currentBusiness.name}
+                onSendCampaign={(type, context) => {
+                  setMessageType(type);
+                  setAvailabilityContext(context);
+                  setMessageDialogOpen(true);
+                }}
+              />
+            )}
 
-          {/* Weekly Performance Tile */}
-          {currentBusiness && (
-            <WeeklyPerformanceTile
-              businessId={currentBusiness.id}
-              currentWeekBookings={stats.weekBookings}
-              onSendSMS={handleSendSMS}
-              onSendEmail={handleSendEmail}
-            />
-          )}
+            {/* Weekly Performance Tile */}
+            {currentBusiness && widgetSettings.showPerformanceTile && (
+              <WeeklyPerformanceTile
+                businessId={currentBusiness.id}
+                currentWeekBookings={stats.weekBookings}
+                onSendSMS={handleSendSMS}
+                onSendEmail={handleSendEmail}
+              />
+            )}
 
-          {/* Revenue Growth Tile */}
-          {currentBusiness && (
-            <RevenueGrowthTile businessId={currentBusiness.id} />
-          )}
-        </div>
+            {/* Revenue Growth Tile */}
+            {currentBusiness && widgetSettings.showRevenueTile && (
+              <RevenueGrowthTile businessId={currentBusiness.id} />
+            )}
+          </div>
+        )}
 
         {/* Weekly Trends Chart */}
-        {currentBusiness && (
+        {currentBusiness && widgetSettings.showTrendsChart && (
           <WeeklyTrendsChart 
             businessId={currentBusiness.id} 
             currentWeekBookings={stats.weekBookings}
