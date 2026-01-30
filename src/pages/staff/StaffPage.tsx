@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays } from "lucide-react";
+import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,8 +27,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { StaffAvailabilityModal } from "@/components/staff/StaffAvailabilityModal";
 import { StaffLeaveModal } from "@/components/staff/StaffLeaveModal";
+import { StaffRevenueSettingsModal } from "@/components/staff/StaffRevenueSettingsModal";
 import { useSubscriptionTier } from "@/hooks/subscription/useSubscriptionTier";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface WorkingHours {
   monday: { enabled: boolean; start: string; end: string };
@@ -47,6 +49,8 @@ interface Staff {
   phone: string | null;
   is_active: boolean;
   working_hours: WorkingHours | null;
+  revenue_tracking_enabled: boolean;
+  commission_percentage: number;
 }
 
 export default function StaffPage() {
@@ -57,8 +61,10 @@ export default function StaffPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  const [revenueModalOpen, setRevenueModalOpen] = useState(false);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState<Staff | null>(null);
   const [selectedStaffForLeave, setSelectedStaffForLeave] = useState<Staff | null>(null);
+  const [selectedStaffForRevenue, setSelectedStaffForRevenue] = useState<Staff | null>(null);
   
   const [newStaff, setNewStaff] = useState({
     name: "",
@@ -95,6 +101,8 @@ export default function StaffPage() {
         phone: s.phone,
         is_active: s.is_active,
         working_hours: s.working_hours as unknown as WorkingHours | null,
+        revenue_tracking_enabled: s.revenue_tracking_enabled,
+        commission_percentage: s.commission_percentage,
       }));
       setStaffList(mappedStaff);
     }
@@ -302,6 +310,15 @@ export default function StaffPage() {
                             <CalendarDays className="w-4 h-4 mr-2" />
                             Manage Leave
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedStaffForRevenue(staff);
+                              setRevenueModalOpen(true);
+                            }}
+                          >
+                            <DollarSign className="w-4 h-4 mr-2" />
+                            Revenue Settings
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() =>
@@ -331,6 +348,38 @@ export default function StaffPage() {
                         {staff.phone}
                       </p>
                     )}
+                    {/* Revenue tracking indicator */}
+                    <div className="flex items-center gap-2 mt-2">
+                      {staff.revenue_tracking_enabled ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="text-xs gap-1 cursor-help">
+                                <Percent className="w-3 h-3" />
+                                {staff.commission_percentage}%
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Commission rate: {staff.commission_percentage}%</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className="text-xs gap-1 cursor-help">
+                                <DollarSign className="w-3 h-3" />
+                                No tracking
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Revenue tracking disabled - paid by customers</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -359,6 +408,19 @@ export default function StaffPage() {
           staffId={selectedStaffForLeave.id}
           staffName={selectedStaffForLeave.name}
           businessId={currentBusiness.id}
+        />
+      )}
+
+      {/* Revenue Settings Modal */}
+      {selectedStaffForRevenue && (
+        <StaffRevenueSettingsModal
+          open={revenueModalOpen}
+          onOpenChange={setRevenueModalOpen}
+          staffId={selectedStaffForRevenue.id}
+          staffName={selectedStaffForRevenue.name}
+          currentRevenueTrackingEnabled={selectedStaffForRevenue.revenue_tracking_enabled}
+          currentCommissionPercentage={selectedStaffForRevenue.commission_percentage}
+          onSave={fetchStaff}
         />
       )}
     </DashboardLayout>
