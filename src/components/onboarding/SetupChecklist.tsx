@@ -1,47 +1,56 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight, Scissors, Users, Share2, X } from "lucide-react";
+import { Check, ArrowRight, Users, Share2, X, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SetupServiceModal } from "./SetupServiceModal";
 import { SetupStaffModal } from "./SetupStaffModal";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getIndustryIcon } from "@/lib/industryIcons";
 
 interface ChecklistItem {
   id: string;
   label: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   action: "services" | "staff" | "share";
   href?: string;
 }
 
-const CHECKLIST_ITEMS: ChecklistItem[] = [
-  {
-    id: "services",
-    label: "Add your services",
-    description: "Set up the treatments you offer",
-    icon: Scissors,
-    action: "services",
-  },
-  {
-    id: "staff",
-    label: "Add a team member",
-    description: "Add yourself or your first stylist",
-    icon: Users,
-    action: "staff",
-  },
-  {
-    id: "share",
-    label: "Share your booking page",
-    description: "Get your shareable booking link",
-    icon: Share2,
-    action: "share",
-    href: "/settings",
-  },
-];
+function useChecklistItems(): ChecklistItem[] {
+  const { currentBusiness } = useBusiness();
+  
+  return useMemo(() => {
+    const ServiceIcon = getIndustryIcon(currentBusiness?.industry);
+    
+    return [
+      {
+        id: "services",
+        label: "Add your services",
+        description: "Set up the treatments you offer",
+        icon: ServiceIcon,
+        action: "services",
+      },
+      {
+        id: "staff",
+        label: "Add a team member",
+        description: "Add yourself or your first stylist",
+        icon: Users,
+        action: "staff",
+      },
+      {
+        id: "share",
+        label: "Share your booking page",
+        description: "Get your shareable booking link",
+        icon: Share2,
+        action: "share",
+        href: "/settings",
+      },
+    ];
+  }, [currentBusiness?.industry]);
+}
 
 interface SetupChecklistProps {
   hasServices: boolean;
@@ -51,6 +60,7 @@ interface SetupChecklistProps {
 
 export function SetupChecklist({ hasServices, hasStaff, onRefresh }: SetupChecklistProps) {
   const { currentBusiness } = useBusiness();
+  const checklistItems = useChecklistItems();
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [staffModalOpen, setStaffModalOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -129,7 +139,7 @@ export function SetupChecklist({ hasServices, hasStaff, onRefresh }: SetupCheckl
   };
 
   const completedCount = [hasServices, hasStaff, linkShared].filter(Boolean).length;
-  const allComplete = completedCount === CHECKLIST_ITEMS.length;
+  const allComplete = completedCount === checklistItems.length;
 
   // Don't show if dismissed or all complete
   if (dismissed || allComplete) {
@@ -153,12 +163,12 @@ export function SetupChecklist({ hasServices, hasStaff, onRefresh }: SetupCheckl
             Getting Started
           </CardTitle>
           <CardDescription className="text-white/80">
-            Complete these steps to set up your salon ({completedCount}/{CHECKLIST_ITEMS.length})
+            Complete these steps to set up your salon ({completedCount}/{checklistItems.length})
           </CardDescription>
         </CardHeader>
         
         <CardContent className="space-y-3">
-          {CHECKLIST_ITEMS.map((item) => {
+          {checklistItems.map((item) => {
             const completed = getItemCompleted(item);
             const Icon = item.icon;
             

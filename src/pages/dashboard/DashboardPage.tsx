@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight, UserPlus, Scissors, UserCog } from "lucide-react";
+import { Calendar, Users, Clock, TrendingUp, Plus, ArrowRight, UserPlus, UserCog } from "lucide-react";
+import { getIndustryIcon } from "@/lib/industryIcons";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
@@ -182,11 +183,12 @@ export default function DashboardPage() {
     },
   ];
 
+  const ServiceIcon = getIndustryIcon(currentBusiness?.industry);
   const quickActions = [
     { title: "New Booking", description: "Create a new appointment", href: "/calendar", icon: Plus },
     { title: "Add Customer", description: "Register a new client", href: "/customers?action=add", icon: UserPlus },
     { title: "View Customers", description: "See all your clients", href: "/customers", icon: Users },
-    { title: "Add Service", description: "Define a new service offering", href: "/services?action=add", icon: Clock },
+    { title: "Add Service", description: "Define a new service offering", href: "/services?action=add", icon: ServiceIcon },
     { title: "View Calendar", description: "See all appointments", href: "/calendar", icon: Calendar },
   ];
 
@@ -305,7 +307,7 @@ export default function DashboardPage() {
             to="/services?action=add"
             className="bg-foreground text-background rounded-xl p-3 sm:p-4 hover:scale-[1.02] transition-transform flex flex-col items-center justify-center gap-1 sm:gap-2 text-center"
           >
-            <Scissors className="w-5 h-5 sm:w-6 sm:h-6" />
+            <ServiceIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             <span className="text-xs sm:text-sm font-medium">Add Service</span>
           </Link>
           <Link
