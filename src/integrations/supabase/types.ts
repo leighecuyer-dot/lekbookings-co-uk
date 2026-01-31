@@ -397,6 +397,47 @@ export type Database = {
           },
         ]
       }
+      dashboard_settings: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          widget_order: string[] | null
+          widget_sizes: Json | null
+          widget_visibility: Json | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          widget_order?: string[] | null
+          widget_sizes?: Json | null
+          widget_visibility?: Json | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          widget_order?: string[] | null
+          widget_sizes?: Json | null
+          widget_visibility?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gallery_images: {
         Row: {
           business_id: string
