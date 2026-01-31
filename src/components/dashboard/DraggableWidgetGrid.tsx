@@ -4,6 +4,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -18,7 +19,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Maximize2, Minimize2 } from "lucide-react";
+import { GripVertical, Maximize2, Minimize2, Move } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,7 +122,7 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
         className
       )}
     >
-      {/* Drag handle */}
+      {/* Desktop drag handle - hidden on mobile */}
       <button
         {...attributes}
         {...listeners}
@@ -132,6 +133,20 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
         aria-label="Drag to reorder"
       >
         <GripVertical className="w-4 h-4 text-muted-foreground" />
+      </button>
+
+      {/* Mobile drag handle - visible on touch devices */}
+      <button
+        {...attributes}
+        {...listeners}
+        className={cn(
+          "absolute top-2 left-2 p-1.5 rounded-md bg-background/80 backdrop-blur-sm shadow-sm z-10 sm:hidden touch-none",
+          "opacity-60 active:opacity-100 active:scale-95 transition-all",
+          isDragging && "opacity-0"
+        )}
+        aria-label="Hold and drag to reorder"
+      >
+        <Move className="w-4 h-4 text-muted-foreground" />
       </button>
 
       {/* Resize controls - hidden on mobile and while dragging */}
@@ -269,10 +284,17 @@ export function DraggableWidgetGrid({
 }: DraggableWidgetGridProps) {
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
   
+  // Configure sensors for both desktop and mobile
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms long press to start drag
+        tolerance: 5, // 5px movement tolerance during delay
       },
     }),
     useSensor(KeyboardSensor, {
