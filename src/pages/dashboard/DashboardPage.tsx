@@ -20,8 +20,9 @@ import { RevenueGrowthTile } from "@/components/dashboard/RevenueGrowthTile";
 import { RevenueBreakdownTile } from "@/components/dashboard/RevenueBreakdownTile";
 import { BulkMessageDialog, type AvailabilityContext } from "@/components/messaging/BulkMessageDialog";
 import { StaffAvailabilityWidget } from "@/components/dashboard/StaffAvailabilityWidget";
-import { DashboardWidgetToggle, useDashboardWidgetSettings } from "@/components/dashboard/DashboardWidgetToggle";
-import { DraggableWidgetGrid, useWidgetOrder, useWidgetSizes, type WidgetId } from "@/components/dashboard/DraggableWidgetGrid";
+import { DashboardWidgetToggle } from "@/components/dashboard/DashboardWidgetToggle";
+import { DraggableWidgetGrid, type WidgetId } from "@/components/dashboard/DraggableWidgetGrid";
+import { useWidgetOrder, useWidgetSizes, useWidgetVisibility } from "@/hooks/dashboard/useDashboardSettings";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 interface Booking {
   id: string;
@@ -66,7 +67,7 @@ export default function DashboardPage() {
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [messageType, setMessageType] = useState<"sms" | "whatsapp" | "email">("sms");
   const [availabilityContext, setAvailabilityContext] = useState<AvailabilityContext | undefined>(undefined);
-  const { settings: widgetSettings, updateSetting: updateWidgetSetting, resetSettings: resetWidgetSettings } = useDashboardWidgetSettings();
+  const { settings: widgetSettings, updateSetting: updateWidgetSetting, resetSettings: resetWidgetSettings } = useWidgetVisibility();
   const { order: widgetOrder, reorder: reorderWidgets, resetOrder: resetWidgetOrder } = useWidgetOrder();
   const { sizes: widgetSizes, setSize: setWidgetSize, resetSizes: resetWidgetSizes } = useWidgetSizes();
 

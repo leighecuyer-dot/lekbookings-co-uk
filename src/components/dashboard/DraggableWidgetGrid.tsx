@@ -182,7 +182,11 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
   );
 }
 
-export function useWidgetOrder() {
+/**
+ * @deprecated Use useWidgetOrder from @/hooks/dashboard/useDashboardSettings instead
+ * This hook uses localStorage only - for cross-device sync, use the database-backed hook
+ */
+export function useWidgetOrderLocal() {
   const [order, setOrder] = useState<WidgetId[]>(() => {
     try {
       const stored = localStorage.getItem(WIDGET_ORDER_KEY);
@@ -214,7 +218,11 @@ export function useWidgetOrder() {
   return { order, reorder, resetOrder };
 }
 
-export function useWidgetSizes() {
+/**
+ * @deprecated Use useWidgetSizes from @/hooks/dashboard/useDashboardSettings instead
+ * This hook uses localStorage only - for cross-device sync, use the database-backed hook
+ */
+export function useWidgetSizesLocal() {
   const [sizes, setSizes] = useState<Record<WidgetId, WidgetSize>>(() => {
     try {
       const stored = localStorage.getItem(WIDGET_SIZES_KEY);

@@ -29,6 +29,10 @@ export const DEFAULT_SETTINGS: DashboardWidgetSettings = {
   showAvailabilityTile: true,
 };
 
+/**
+ * @deprecated Use useWidgetVisibility from @/hooks/dashboard/useDashboardSettings instead
+ * This hook uses localStorage only - for cross-device sync, use the database-backed hook
+ */
 export function useDashboardWidgetSettings() {
   const [settings, setSettings] = useState<DashboardWidgetSettings>(() => {
     try {
