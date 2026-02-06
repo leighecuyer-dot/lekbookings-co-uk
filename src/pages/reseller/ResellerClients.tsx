@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Search, MoreHorizontal, Building2, Mail, Settings, UserPlus } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Building2, Mail, Settings, UserPlus, Crown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,12 +51,9 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { useIndustries } from "@/hooks/business";
 import { InviteUserDialog } from "@/components/reseller/InviteUserDialog";
+import { ChangeTierDialog, SUBSCRIPTION_TIERS } from "@/components/reseller/ChangeTierDialog";
 
-const TIERS = [
-  { value: "essential", label: "Essential", price: 2000 },
-  { value: "professional", label: "Professional", price: 5900 },
-  { value: "enterprise", label: "Enterprise", price: 14900 },
-];
+// Use shared tier configuration from ChangeTierDialog
 
 export default function ResellerClients() {
   const navigate = useNavigate();
@@ -67,7 +64,8 @@ export default function ResellerClients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<{ id: string; name: string } | null>(null);
+  const [tierDialogOpen, setTierDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<{ id: string; name: string; tier: string | null; clientId: string } | null>(null);
 
   const [newClient, setNewClient] = useState({
     businessName: "",
@@ -89,9 +87,14 @@ export default function ResellerClients() {
     navigate("/dashboard");
   };
 
-  const handleInviteUsers = (businessId: string, businessName: string) => {
-    setSelectedClient({ id: businessId, name: businessName });
+  const handleInviteUsers = (businessId: string, businessName: string, tier: string | null, clientId: string) => {
+    setSelectedClient({ id: businessId, name: businessName, tier, clientId });
     setInviteDialogOpen(true);
+  };
+
+  const handleChangeTier = (businessId: string, businessName: string, currentTier: string | null, clientId: string) => {
+    setSelectedClient({ id: businessId, name: businessName, tier: currentTier, clientId });
+    setTierDialogOpen(true);
   };
 
   const handleAddClient = async () => {
@@ -269,7 +272,7 @@ export default function ResellerClients() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {TIERS.map((tier) => (
+                          {SUBSCRIPTION_TIERS.filter(t => t.value !== "free").map((tier) => (
                             <SelectItem key={tier.value} value={tier.value}>
                               {tier.label} - £{(tier.price / 100).toFixed(2)}/mo
                             </SelectItem>
@@ -397,11 +400,20 @@ export default function ResellerClients() {
                               <DropdownMenuItem
                                 onClick={() =>
                                   client.business?.id &&
-                                  handleInviteUsers(client.business.id, client.business.name || "Business")
+                                  handleInviteUsers(client.business.id, client.business.name || "Business", client.subscription_tier, client.id)
                                 }
                               >
                                 <UserPlus className="h-4 w-4 mr-2" />
                                 Invite Users
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  client.business?.id &&
+                                  handleChangeTier(client.business.id, client.business.name || "Business", client.subscription_tier, client.id)
+                                }
+                              >
+                                <Crown className="h-4 w-4 mr-2" />
+                                Change Tier
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -431,6 +443,18 @@ export default function ResellerClients() {
           onOpenChange={setInviteDialogOpen}
           businessId={selectedClient.id}
           businessName={selectedClient.name}
+        />
+      )}
+
+      {/* Change Tier Dialog */}
+      {selectedClient && (
+        <ChangeTierDialog
+          open={tierDialogOpen}
+          onOpenChange={setTierDialogOpen}
+          clientId={selectedClient.clientId}
+          businessName={selectedClient.name}
+          currentTier={selectedClient.tier}
+          onSuccess={refreshClients}
         />
       )}
     </ResellerLayout>
