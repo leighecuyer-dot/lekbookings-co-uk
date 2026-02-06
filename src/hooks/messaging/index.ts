@@ -17,3 +17,5 @@ export type {
   SendResult,
   CampaignResult,
 } from "./useMessaging";
+
+export { MessageLogsPanel } from "@/components/messaging/MessageLogsPanel";

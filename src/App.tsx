@@ -28,6 +28,7 @@ import PublicBookingPage from "./pages/booking/PublicBookingPage";
 import NotFound from "./pages/NotFound";
 import DiagnosticsPage from "./pages/admin/DiagnosticsPage";
 import CampaignsReportPage from "./pages/reports/CampaignsReportPage";
+import MessageLogsPage from "./pages/messaging/MessageLogsPage";
 
 // Reseller Pages
 import ResellerDashboard from "./pages/reseller/ResellerDashboard";
@@ -153,6 +154,14 @@ const AppRoutes = () => (
         element={
           <RouteGuard requireAuth requireBusiness>
             <CampaignsReportPage />
+          </RouteGuard>
+        } 
+      />
+      <Route 
+        path="/reports/messages" 
+        element={
+          <RouteGuard requireAuth requireBusiness>
+            <MessageLogsPage />
           </RouteGuard>
         } 
       />
