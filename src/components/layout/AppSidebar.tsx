@@ -42,7 +42,9 @@ import {
   UserCog,
   BarChart3,
   ClipboardList,
+  Share2,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const mainNavItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -58,6 +60,10 @@ const mainNavItems = [
 
 const reportNavItems = [
   { title: "Campaign Reports", href: "/reports/campaigns", icon: BarChart3 },
+];
+
+const integrationNavItems = [
+  { title: "Social Media", icon: Share2, comingSoon: true },
 ];
 
 
@@ -222,6 +228,37 @@ export function AppSidebar() {
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Integrations Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/60">
+            Integrations
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {integrationNavItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SidebarMenuButton className="cursor-default opacity-60">
+                        <item.icon className="w-4 h-4" />
+                        <span className="flex items-center gap-2">
+                          {item.title}
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            Coming Soon
+                          </Badge>
+                        </span>
+                      </SidebarMenuButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>Facebook & Instagram integration coming soon</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
