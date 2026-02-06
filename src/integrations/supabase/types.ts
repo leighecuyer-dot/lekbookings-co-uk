@@ -353,6 +353,96 @@ export type Database = {
           },
         ]
       }
+      customer_contact_preferences: {
+        Row: {
+          business_id: string
+          consent_ip_address: string | null
+          consent_source: string | null
+          consent_timestamp: string | null
+          created_at: string
+          customer_id: string
+          email: string | null
+          id: string
+          last_marketing_email_at: string | null
+          last_marketing_sms_at: string | null
+          last_marketing_whatsapp_at: string | null
+          marketing_email_opt_in: boolean
+          marketing_messages_this_week: number
+          marketing_sms_opt_in: boolean
+          marketing_whatsapp_opt_in: boolean
+          phone: string | null
+          transactional_email_enabled: boolean
+          transactional_sms_enabled: boolean
+          transactional_whatsapp_enabled: boolean
+          updated_at: string
+          week_start_date: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          business_id: string
+          consent_ip_address?: string | null
+          consent_source?: string | null
+          consent_timestamp?: string | null
+          created_at?: string
+          customer_id: string
+          email?: string | null
+          id?: string
+          last_marketing_email_at?: string | null
+          last_marketing_sms_at?: string | null
+          last_marketing_whatsapp_at?: string | null
+          marketing_email_opt_in?: boolean
+          marketing_messages_this_week?: number
+          marketing_sms_opt_in?: boolean
+          marketing_whatsapp_opt_in?: boolean
+          phone?: string | null
+          transactional_email_enabled?: boolean
+          transactional_sms_enabled?: boolean
+          transactional_whatsapp_enabled?: boolean
+          updated_at?: string
+          week_start_date?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          business_id?: string
+          consent_ip_address?: string | null
+          consent_source?: string | null
+          consent_timestamp?: string | null
+          created_at?: string
+          customer_id?: string
+          email?: string | null
+          id?: string
+          last_marketing_email_at?: string | null
+          last_marketing_sms_at?: string | null
+          last_marketing_whatsapp_at?: string | null
+          marketing_email_opt_in?: boolean
+          marketing_messages_this_week?: number
+          marketing_sms_opt_in?: boolean
+          marketing_whatsapp_opt_in?: boolean
+          phone?: string | null
+          transactional_email_enabled?: boolean
+          transactional_sms_enabled?: boolean
+          transactional_whatsapp_enabled?: boolean
+          updated_at?: string
+          week_start_date?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_contact_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_contact_preferences_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           business_id: string
@@ -502,6 +592,94 @@ export type Database = {
           label?: string
         }
         Relationships: []
+      }
+      message_logs: {
+        Row: {
+          business_id: string
+          campaign_id: string | null
+          channel: string
+          cost_estimate: number | null
+          created_at: string
+          currency: string | null
+          customer_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          message_preview: string | null
+          message_type: string
+          provider: string
+          provider_message_id: string | null
+          recipient: string
+          status: string
+          status_updated_at: string | null
+          subject: string | null
+          template_name: string | null
+        }
+        Insert: {
+          business_id: string
+          campaign_id?: string | null
+          channel: string
+          cost_estimate?: number | null
+          created_at?: string
+          currency?: string | null
+          customer_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          message_preview?: string | null
+          message_type: string
+          provider: string
+          provider_message_id?: string | null
+          recipient: string
+          status?: string
+          status_updated_at?: string | null
+          subject?: string | null
+          template_name?: string | null
+        }
+        Update: {
+          business_id?: string
+          campaign_id?: string | null
+          channel?: string
+          cost_estimate?: number | null
+          created_at?: string
+          currency?: string | null
+          customer_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          message_preview?: string | null
+          message_type?: string
+          provider?: string
+          provider_message_id?: string | null
+          recipient?: string
+          status?: string
+          status_updated_at?: string | null
+          subject?: string | null
+          template_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       page_sections: {
         Row: {
@@ -1291,6 +1469,14 @@ export type Database = {
     Functions: {
       accept_business_invite: { Args: { _token: string }; Returns: Json }
       can_access_business: { Args: { p_business_id: string }; Returns: boolean }
+      check_marketing_rate_limit: {
+        Args: {
+          p_business_id: string
+          p_channel: string
+          p_customer_id: string
+        }
+        Returns: boolean
+      }
       create_business_with_owner: {
         Args: {
           _industry: string
@@ -1351,6 +1537,10 @@ export type Database = {
       }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_business_ids: { Args: { _user_id: string }; Returns: string[] }
+      handle_messaging_opt_out: {
+        Args: { p_channel: string; p_phone: string }
+        Returns: undefined
+      }
       has_business_role: {
         Args: {
           _business_id: string
@@ -1358,6 +1548,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_marketing_counter: {
+        Args: {
+          p_business_id: string
+          p_channel: string
+          p_customer_id: string
+        }
+        Returns: undefined
       }
       is_reseller: { Args: { _user_id: string }; Returns: boolean }
       is_reseller_client: {
