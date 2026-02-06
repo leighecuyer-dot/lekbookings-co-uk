@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock } from "lucide-react";
+import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2 } from "lucide-react";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,9 +33,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
+import { CustomerPreferencesDialog } from "@/components/customers";
 
 interface Customer {
   id: string;
@@ -55,6 +57,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [preferencesCustomer, setPreferencesCustomer] = useState<Customer | null>(null);
   
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -284,6 +287,13 @@ export default function CustomersPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
+                              onClick={() => setPreferencesCustomer(customer)}
+                            >
+                              <Settings2 className="w-4 h-4 mr-2" />
+                              Contact Preferences
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
                               onClick={() => handleDeleteCustomer(customer.id)}
                               className="text-destructive"
                             >
@@ -348,6 +358,19 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      {/* Customer Preferences Dialog */}
+      {preferencesCustomer && currentBusiness && (
+        <CustomerPreferencesDialog
+          open={!!preferencesCustomer}
+          onOpenChange={(open) => !open && setPreferencesCustomer(null)}
+          customerId={preferencesCustomer.id}
+          customerName={preferencesCustomer.name}
+          customerEmail={preferencesCustomer.email}
+          customerPhone={preferencesCustomer.phone}
+          businessId={currentBusiness.id}
+        />
+      )}
     </DashboardLayout>
   );
 }

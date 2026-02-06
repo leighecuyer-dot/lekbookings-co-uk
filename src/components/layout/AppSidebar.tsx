@@ -43,6 +43,7 @@ import {
   BarChart3,
   ClipboardList,
   Share2,
+  MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -60,6 +61,7 @@ const mainNavItems = [
 
 const reportNavItems = [
   { title: "Campaign Reports", href: "/reports/campaigns", icon: BarChart3 },
+  { title: "Message History", href: "/reports/messages", icon: MessageSquare },
 ];
 
 const integrationNavItems = [
