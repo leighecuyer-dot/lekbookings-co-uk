@@ -25,6 +25,8 @@ import {
   Info,
   Mail,
   Sparkles,
+  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -37,6 +39,7 @@ interface Customer {
   phone: string | null;
   email: string | null;
   lastBooking?: string | null;
+  optedIn?: boolean;
 }
 
 export interface AvailabilityContext {
@@ -167,6 +170,16 @@ const generateDynamicTemplates = (
   return templates;
 };
 
+// Map channel to opt-in field name
+const getOptInField = (channel: "sms" | "whatsapp" | "email") => {
+  const fieldMap = {
+    email: "marketing_email_opt_in",
+    sms: "marketing_sms_opt_in",
+    whatsapp: "marketing_whatsapp_opt_in",
+  } as const;
+  return fieldMap[channel];
+};
+
 export function BulkMessageDialog({
   open,
   onOpenChange,
@@ -182,7 +195,7 @@ export function BulkMessageDialog({
   const [emailSubject, setEmailSubject] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [filterType, setFilterType] = useState<"all" | "inactive">("inactive");
+  const [filterType, setFilterType] = useState<"all" | "inactive" | "opted-in">("opted-in");
 
   const staticTemplates = MESSAGE_TEMPLATES[messageType];
   const dynamicTemplates = useMemo(
@@ -193,7 +206,7 @@ export function BulkMessageDialog({
 
   useEffect(() => {
     if (open && businessId) {
-      fetchCustomers();
+      fetchCustomersWithPreferences();
       // Use dynamic template if available, otherwise use first static template
       const defaultTemplate = dynamicTemplates.length > 0 ? dynamicTemplates[0] : staticTemplates[0];
       setMessage(defaultTemplate.message);
@@ -212,11 +225,10 @@ export function BulkMessageDialog({
     }
   }, [open, businessId, messageType, availabilityContext]);
 
-  const fetchCustomers = async () => {
+  const fetchCustomersWithPreferences = async () => {
     setLoading(true);
     try {
-      // Fetch customers with their last booking
-      // For email, we need customers with email; for SMS/WhatsApp, we need phone
+      // Fetch customers with their contact info
       const query = supabase
         .from("customers")
         .select("id, name, phone, email")
@@ -231,6 +243,21 @@ export function BulkMessageDialog({
       const { data: customersData, error: customersError } = await query;
 
       if (customersError) throw customersError;
+
+      // Fetch contact preferences for opt-in status
+      const { data: preferencesData, error: preferencesError } = await supabase
+        .from("customer_contact_preferences")
+        .select("customer_id, marketing_email_opt_in, marketing_sms_opt_in, marketing_whatsapp_opt_in")
+        .eq("business_id", businessId);
+
+      if (preferencesError) throw preferencesError;
+
+      // Create a map of customer preferences
+      const preferencesMap = new Map<string, boolean>();
+      const optInField = getOptInField(messageType);
+      preferencesData?.forEach((pref) => {
+        preferencesMap.set(pref.customer_id, pref[optInField] ?? false);
+      });
 
       // Fetch last booking for each customer
       const { data: bookingsData, error: bookingsError } = await supabase
@@ -252,9 +279,16 @@ export function BulkMessageDialog({
       const customersWithBookings: Customer[] = (customersData || []).map((c) => ({
         ...c,
         lastBooking: lastBookingMap.get(c.id) || null,
+        optedIn: preferencesMap.get(c.id) ?? false,
       }));
 
       setCustomers(customersWithBookings);
+      
+      // Pre-select opted-in customers
+      const optedInIds = customersWithBookings
+        .filter(c => c.optedIn)
+        .map(c => c.id);
+      setSelectedIds(new Set(optedInIds));
     } catch (error) {
       console.error("Error fetching customers:", error);
       toast.error("Failed to load customers");
@@ -265,6 +299,11 @@ export function BulkMessageDialog({
 
   const filteredCustomers = useMemo(() => {
     let filtered = customers;
+
+    // Filter by opt-in status
+    if (filterType === "opted-in") {
+      filtered = filtered.filter((c) => c.optedIn);
+    }
 
     // Filter by inactive (no booking in last 30 days)
     if (filterType === "inactive") {
@@ -288,6 +327,19 @@ export function BulkMessageDialog({
 
     return filtered;
   }, [customers, filterType, searchQuery]);
+
+  // Count opted-in customers
+  const optedInCount = useMemo(() => {
+    return customers.filter(c => c.optedIn).length;
+  }, [customers]);
+
+  // Count selected customers who are NOT opted in (will be blocked)
+  const blockedCount = useMemo(() => {
+    return Array.from(selectedIds).filter(id => {
+      const customer = customers.find(c => c.id === id);
+      return customer && !customer.optedIn;
+    }).length;
+  }, [selectedIds, customers]);
 
   const toggleSelect = (id: string) => {
     const newSelected = new Set(selectedIds);
@@ -352,24 +404,36 @@ export function BulkMessageDialog({
     try {
       const selectedCustomers = customers.filter((c) => selectedIds.has(c.id));
 
-      const { data, error } = await supabase.functions.invoke("send-bulk-messages", {
+      // Build recipients array for the new send-message API
+      const recipients = selectedCustomers.map((c) => ({
+        customerId: c.id,
+        email: c.email || undefined,
+        phone: c.phone || undefined,
+        name: c.name,
+      }));
+
+      // Use the new unified send-message edge function
+      const { data, error } = await supabase.functions.invoke("send-message", {
         body: {
-          customers: selectedCustomers.map((c) => ({
-            id: c.id,
-            name: c.name,
-            phone: c.phone,
-            email: c.email,
-          })),
-          messageTemplate: message,
-          emailSubject: messageType === "email" ? emailSubject : undefined,
-          businessName,
-          messageType,
+          type: "marketing",
+          channel: messageType,
+          businessId,
+          recipients,
+          subject: messageType === "email" ? emailSubject : undefined,
+          message,
+          fromName: businessName,
         },
       });
 
       if (error) throw error;
 
-      const result = data as { sent: number; failed: number };
+      const result = data as { 
+        totalRecipients: number;
+        sent: number; 
+        failed: number; 
+        blocked: number;
+        errors?: Array<{ customerId: string; error: string }>;
+      };
       
       // Save campaign to database for tracking
       try {
@@ -382,7 +446,7 @@ export function BulkMessageDialog({
           target_audience: filterType,
           recipient_count: selectedCustomers.length,
           sent_count: result.sent,
-          failed_count: result.failed,
+          failed_count: result.failed + result.blocked,
           recipient_customer_ids: selectedCustomers.map((c) => c.id),
         });
       } catch (campaignError) {
@@ -392,17 +456,24 @@ export function BulkMessageDialog({
       
       if (result.sent > 0) {
         toast.success(`Successfully sent ${result.sent} messages`);
-        if (result.failed > 0) {
-          toast.warning(`${result.failed} messages failed to send`);
-        }
+      }
+      if (result.blocked > 0) {
+        toast.warning(`${result.blocked} recipients blocked (no opt-in or rate limited)`);
+      }
+      if (result.failed > 0) {
+        toast.error(`${result.failed} messages failed to send`);
+      }
+      
+      if (result.sent > 0 || result.blocked > 0) {
         onOpenChange(false);
         setSelectedIds(new Set());
-      } else {
+      } else if (result.sent === 0 && result.failed > 0) {
         toast.error("Failed to send messages. Please check your messaging configuration.");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error sending messages:", error);
-      toast.error(error.message || "Failed to send messages");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(errorMessage || "Failed to send messages");
     } finally {
       setSending(false);
     }
@@ -424,6 +495,12 @@ export function BulkMessageDialog({
     return "SMS";
   };
 
+  const getOptInLabel = () => {
+    if (isEmail) return "email marketing";
+    if (isWhatsApp) return "WhatsApp marketing";
+    return "SMS marketing";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
@@ -436,6 +513,14 @@ export function BulkMessageDialog({
             Select customers and compose your message to fill available slots
           </DialogDescription>
         </DialogHeader>
+
+        {/* Opt-in status banner */}
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+          <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
+          <p className="text-sm">
+            <span className="font-medium">{optedInCount}</span> of {customers.length} customers opted in for {getOptInLabel()}
+          </p>
+        </div>
 
         <Tabs defaultValue="select" className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2">
@@ -451,8 +536,8 @@ export function BulkMessageDialog({
 
           <TabsContent value="select" className="flex-1 flex flex-col min-h-0 mt-4">
             {/* Filters */}
-            <div className="flex gap-2 mb-3">
-              <div className="relative flex-1">
+            <div className="flex gap-2 mb-3 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search customers..."
@@ -461,6 +546,15 @@ export function BulkMessageDialog({
                   className="pl-9"
                 />
               </div>
+              <Button
+                variant={filterType === "opted-in" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterType(filterType === "opted-in" ? "all" : "opted-in")}
+                className="gap-1"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Opted-in
+              </Button>
               <Button
                 variant={filterType === "inactive" ? "default" : "outline"}
                 size="sm"
@@ -478,7 +572,17 @@ export function BulkMessageDialog({
             ) : filteredCustomers.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
                 <Users className="h-8 w-8 mb-2 opacity-50" />
-                <p>No customers with {isEmail ? "email addresses" : "phone numbers"} found</p>
+                <p>No customers {filterType === "opted-in" ? `opted in for ${getOptInLabel()}` : `with ${isEmail ? "email addresses" : "phone numbers"}`}</p>
+                {filterType === "opted-in" && (
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    onClick={() => setFilterType("all")}
+                    className="mt-1"
+                  >
+                    Show all customers
+                  </Button>
+                )}
               </div>
             ) : (
               <>
@@ -508,10 +612,23 @@ export function BulkMessageDialog({
                           onCheckedChange={() => toggleSelect(customer.id)}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{customer.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {isEmail ? customer.email : customer.phone}
-                        </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate">{customer.name}</p>
+                            {customer.optedIn ? (
+                              <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-200">
+                                <ShieldCheck className="h-3 w-3 mr-1" />
+                                Opted-in
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-200">
+                                <ShieldAlert className="h-3 w-3 mr-1" />
+                                No opt-in
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {isEmail ? customer.email : customer.phone}
+                          </p>
                         </div>
                         {customer.lastBooking && (
                           <Badge variant="outline" className="text-xs shrink-0">
@@ -607,12 +724,24 @@ export function BulkMessageDialog({
               </div>
             )}
 
+            {/* Warning for non-opted-in selections */}
+            {blockedCount > 0 && (
+              <div className="flex items-start gap-2 p-2 bg-amber-500/10 border border-amber-200 rounded-lg">
+                <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">
+                  <strong>{blockedCount}</strong> selected customer{blockedCount !== 1 ? "s" : ""} haven't opted in. 
+                  Messages to them will be blocked to comply with consent requirements.
+                </p>
+              </div>
+            )}
+
             {/* Help text */}
             <div className="flex items-start gap-2 p-2 bg-muted rounded-lg">
               <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">
                 Use <code className="bg-background px-1 rounded">{"{name}"}</code> for customer name and{" "}
                 <code className="bg-background px-1 rounded">{"{business}"}</code> for your business name.
+                Marketing messages require customer opt-in consent.
               </p>
             </div>
           </TabsContent>
@@ -625,6 +754,9 @@ export function BulkMessageDialog({
               <>
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 {selectedCount} customer{selectedCount !== 1 ? "s" : ""} selected
+                {blockedCount > 0 && (
+                  <span className="text-amber-600">({blockedCount} will be blocked)</span>
+                )}
               </>
             ) : (
               <>
@@ -647,7 +779,7 @@ export function BulkMessageDialog({
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              Send {selectedCount > 0 ? `to ${selectedCount}` : ""}
+              Send {selectedCount > 0 ? `to ${selectedCount - blockedCount}` : ""}
             </Button>
           </div>
         </div>
