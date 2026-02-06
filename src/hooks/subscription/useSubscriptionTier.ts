@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type SubscriptionTier = "essential" | "professional" | "enterprise" | "unknown";
+export type SubscriptionTier = "free" | "essential" | "professional" | "enterprise" | "unknown";
 
 export interface TierLimits {
   maxStaff: number;
@@ -14,6 +14,15 @@ export interface TierLimits {
 }
 
 const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
+  free: {
+    maxStaff: Infinity,
+    maxBookingsPerMonth: Infinity,
+    maxSmsPerMonth: Infinity,
+    hasAdvancedAnalytics: true,
+    hasCampaignReports: true,
+    hasApiAccess: true,
+    hasFullPageBuilder: true,
+  },
   essential: {
     maxStaff: 2,
     maxBookingsPerMonth: 100,
@@ -94,6 +103,7 @@ export function useSubscriptionTier(businessId: string | null) {
     tier,
     limits,
     loading,
+    isFree: tier === "free",
     isEssential: tier === "essential",
     isProfessional: tier === "professional",
     isEnterprise: tier === "enterprise",
