@@ -507,7 +507,7 @@ export function BookingFormModal({
         )}
 
         {step === "details" && (
-          <div className="py-4 space-y-4">
+          <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
             {hasSavedDetails && (
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg text-sm">
                 <User className="w-4 h-4 text-muted-foreground" />
