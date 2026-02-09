@@ -19,7 +19,8 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { usePaymentStatus } from "@/hooks/bookings";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import { format, parseISO } from "date-fns";
-import { Trash2, Clock, User, Calendar, CreditCard, CheckCircle, CircleDollarSign, CheckCheck } from "lucide-react";
+import { Trash2, Clock, User, Calendar, CreditCard, CheckCircle, CircleDollarSign, CheckCheck, ChevronDown, Banknote, Smartphone, Building2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { BookingImageUpload } from "./BookingImageUpload";
 import { BookingCompleteDialog } from "./BookingCompleteDialog";
 import { getWorkflowConfig } from "@/components/settings/WorkflowAutomationSettings";
@@ -79,7 +80,7 @@ export function BookingEditDialog({
   onUpdate,
 }: BookingEditDialogProps) {
   const { currentBusiness, isResellerMode } = useBusiness();
-  const { getPaymentConfig, markDepositPaid, markPaidInFull } = usePaymentStatus();
+  const { getPaymentConfig, markDepositPaid, markPaidInFull, recordPayment } = usePaymentStatus();
   
   // Get privacy settings
   const privacySettings = getPrivacySettings(currentBusiness?.settings as Record<string, unknown> | null);
@@ -98,6 +99,9 @@ export function BookingEditDialog({
   const [loading, setLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [customPaymentOpen, setCustomPaymentOpen] = useState(false);
+  const [customAmount, setCustomAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
 
   useEffect(() => {
     if (booking) {
@@ -335,7 +339,7 @@ export function BookingEditDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-2">
+        <div className="space-y-4 mt-2 max-h-[60vh] overflow-y-auto pr-1">
           {/* Status */}
           <div className="space-y-2">
             <Label>Status</Label>
@@ -385,10 +389,16 @@ export function BookingEditDialog({
                       ${amountPaid.toFixed(2)}
                     </span>
                   </div>
+                  {totalPrice > amountPaid && (
+                    <div className="flex justify-between font-medium">
+                      <span>Remaining:</span>
+                      <span className="text-foreground">${(totalPrice - amountPaid).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               )}
               
-              {/* Payment Actions */}
+              {/* Quick Payment Actions */}
               {paymentStatus !== "paid" && (
                 <div className="flex gap-2 pt-2">
                   {depositAmount > 0 && paymentStatus === "unpaid" && (
@@ -414,6 +424,88 @@ export function BookingEditDialog({
                     Paid in Full
                   </Button>
                 </div>
+              )}
+
+              {/* Expandable Custom Payment Entry */}
+              {paymentStatus !== "paid" && (
+                <Collapsible open={customPaymentOpen} onOpenChange={setCustomPaymentOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground hover:text-foreground">
+                      Record partial or custom payment
+                      <ChevronDown className={`w-3 h-3 transition-transform ${customPaymentOpen ? "rotate-180" : ""}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 pt-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Amount Received</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder={(totalPrice - amountPaid).toFixed(2)}
+                          value={customAmount}
+                          onChange={(e) => setCustomAmount(e.target.value)}
+                          className="pl-7"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Payment Method</Label>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { value: "cash", label: "Cash", icon: Banknote },
+                          { value: "card", label: "Card", icon: CreditCard },
+                          { value: "transfer", label: "Transfer", icon: Building2 },
+                          { value: "other", label: "Other", icon: Smartphone },
+                        ].map(({ value, label, icon: Icon }) => (
+                          <Button
+                            key={value}
+                            type="button"
+                            variant={paymentMethod === value ? "default" : "outline"}
+                            size="sm"
+                            className="flex-col h-auto py-2 px-1 text-xs gap-1"
+                            onClick={() => setPaymentMethod(value)}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                            {label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      disabled={paymentLoading || !customAmount || parseFloat(customAmount) <= 0}
+                      onClick={async () => {
+                        const amount = parseFloat(customAmount);
+                        if (isNaN(amount) || amount <= 0) {
+                          toast.error("Enter a valid amount");
+                          return;
+                        }
+                        setPaymentLoading(true);
+                        const success = await recordPayment(booking.id, amount, {
+                          id: booking.id,
+                          status: booking.status,
+                          payment_status: paymentStatus,
+                          total_price: totalPrice,
+                          deposit_amount: depositAmount,
+                          amount_paid: amountPaid,
+                        });
+                        setPaymentLoading(false);
+                        if (success) {
+                          setCustomAmount("");
+                          setCustomPaymentOpen(false);
+                          onUpdate();
+                        }
+                      }}
+                    >
+                      <Banknote className="w-4 h-4 mr-1" />
+                      Record ${customAmount || "0.00"} {paymentMethod}
+                    </Button>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
             </div>
           )}
