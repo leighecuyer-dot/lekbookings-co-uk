@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import {
@@ -46,7 +46,7 @@ import {
   Share2,
   MessageSquare,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+
 import { Badge } from "@/components/ui/badge";
 
 const mainNavItems = [
