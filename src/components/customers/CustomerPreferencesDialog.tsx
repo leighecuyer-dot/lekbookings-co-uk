@@ -247,45 +247,23 @@ export function CustomerPreferencesDialog({
                 Booking confirmations, reminders, and updates
               </p>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="trans-email" className="flex items-center gap-2 text-sm">
-                    <Mail className="h-3.5 w-3.5" />
-                    Email
-                  </Label>
-                  <Switch
-                    id="trans-email"
-                    checked={formData.transactional_email_enabled}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, transactional_email_enabled: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="trans-sms" className="flex items-center gap-2 text-sm">
-                    <Phone className="h-3.5 w-3.5" />
-                    SMS
-                  </Label>
-                  <Switch
-                    id="trans-sms"
-                    checked={formData.transactional_sms_enabled}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, transactional_sms_enabled: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="trans-whatsapp" className="flex items-center gap-2 text-sm">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    WhatsApp
-                  </Label>
-                  <Switch
-                    id="trans-whatsapp"
-                    checked={formData.transactional_whatsapp_enabled}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, transactional_whatsapp_enabled: checked })
-                    }
-                  />
-                </div>
+                {[
+                  { id: "trans-email", icon: <Mail className="h-3.5 w-3.5 shrink-0" />, label: "Email", key: "transactional_email_enabled" as const },
+                  { id: "trans-sms", icon: <Phone className="h-3.5 w-3.5 shrink-0" />, label: "SMS", key: "transactional_sms_enabled" as const },
+                  { id: "trans-whatsapp", icon: <MessageSquare className="h-3.5 w-3.5 shrink-0" />, label: "WhatsApp", key: "transactional_whatsapp_enabled" as const },
+                ].map(({ id, icon, label, key }) => (
+                  <div key={id} className="flex items-center justify-between gap-4 min-h-[2rem]">
+                    <span className="flex items-center gap-2 text-sm text-foreground shrink-0">
+                      {icon}
+                      {label}
+                    </span>
+                    <Switch
+                      id={id}
+                      checked={formData[key]}
+                      onCheckedChange={(checked) => setFormData({ ...formData, [key]: checked })}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -301,45 +279,23 @@ export function CustomerPreferencesDialog({
                 Promotions, offers, and availability updates
               </p>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="mkt-email" className="flex items-center gap-2 text-sm">
-                    <Mail className="h-3.5 w-3.5" />
-                    Email Marketing
-                  </Label>
-                  <Switch
-                    id="mkt-email"
-                    checked={formData.marketing_email_opt_in}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, marketing_email_opt_in: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="mkt-sms" className="flex items-center gap-2 text-sm">
-                    <Phone className="h-3.5 w-3.5" />
-                    SMS Marketing
-                  </Label>
-                  <Switch
-                    id="mkt-sms"
-                    checked={formData.marketing_sms_opt_in}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, marketing_sms_opt_in: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="mkt-whatsapp" className="flex items-center gap-2 text-sm">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    WhatsApp Marketing
-                  </Label>
-                  <Switch
-                    id="mkt-whatsapp"
-                    checked={formData.marketing_whatsapp_opt_in}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, marketing_whatsapp_opt_in: checked })
-                    }
-                  />
-                </div>
+                {[
+                  { id: "mkt-email", icon: <Mail className="h-3.5 w-3.5 shrink-0" />, label: "Email Marketing", key: "marketing_email_opt_in" as const },
+                  { id: "mkt-sms", icon: <Phone className="h-3.5 w-3.5 shrink-0" />, label: "SMS Marketing", key: "marketing_sms_opt_in" as const },
+                  { id: "mkt-whatsapp", icon: <MessageSquare className="h-3.5 w-3.5 shrink-0" />, label: "WhatsApp Marketing", key: "marketing_whatsapp_opt_in" as const },
+                ].map(({ id, icon, label, key }) => (
+                  <div key={id} className="flex items-center justify-between gap-4 min-h-[2rem]">
+                    <span className="flex items-center gap-2 text-sm text-foreground shrink-0">
+                      {icon}
+                      {label}
+                    </span>
+                    <Switch
+                      id={id}
+                      checked={formData[key]}
+                      onCheckedChange={(checked) => setFormData({ ...formData, [key]: checked })}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 
