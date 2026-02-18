@@ -20,6 +20,7 @@ interface Plan {
   description: string;
   price: number;
   period: string;
+  transactionFee: string;
   features: Feature[];
   pageBuilder: string;
   cta: string;
@@ -34,6 +35,7 @@ const plans: Plan[] = [
     description: "For solo practitioners",
     price: 20,
     period: "month",
+    transactionFee: "1.5%",
     features: [
       { name: "Up to 2 staff members", included: true },
       { name: "Up to 100 bookings/month", included: true },
@@ -54,6 +56,7 @@ const plans: Plan[] = [
     description: "For growing businesses",
     price: 59,
     period: "month",
+    transactionFee: "1%",
     features: [
       { name: "Up to 5 staff members", included: true },
       { name: "Unlimited bookings", included: true },
@@ -73,6 +76,7 @@ const plans: Plan[] = [
     description: "For larger teams",
     price: 149,
     period: "month",
+    transactionFee: "0.5%",
     features: [
       { name: "Unlimited staff", included: true },
       { name: "Unlimited bookings", included: true },
@@ -146,6 +150,10 @@ export function PricingSection() {
                   "text-sm ml-1",
                   plan.popular ? "text-background/70" : "text-muted-foreground"
                 )}>/{plan.period}</span>
+                <p className={cn(
+                  "text-xs mt-2",
+                  plan.popular ? "text-background/60" : "text-muted-foreground"
+                )}>+ {plan.transactionFee} per transaction</p>
               </div>
 
               {/* Page Builder Badge */}
