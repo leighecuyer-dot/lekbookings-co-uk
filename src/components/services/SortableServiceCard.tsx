@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Clock, DollarSign, MoreHorizontal, Pencil, GripVertical, Copy } from "lucide-react";
+import { Clock, PoundSterling, MoreHorizontal, Pencil, GripVertical, Copy } from "lucide-react";
 
 interface Service {
   id: string;
@@ -136,7 +136,7 @@ export function SortableServiceCard({
               </span>
               {service.price && (
                 <span className="text-sm font-medium flex items-center gap-1">
-                  <DollarSign className="w-3 h-3" />
+                  <PoundSterling className="w-3 h-3" />
                   {service.price.toFixed(2)}
                 </span>
               )}

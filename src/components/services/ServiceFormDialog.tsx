@@ -130,7 +130,7 @@ export function ServiceFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>Price ($)</Label>
+              <Label>Price (£)</Label>
               <Input
                 type="number"
                 step="0.01"
