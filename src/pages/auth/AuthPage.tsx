@@ -261,12 +261,8 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Temporary DNS setup link */}
-      <div className="fixed bottom-4 right-4 z-50">
-        <Button asChild size="sm" variant="outline" className="shadow-lg rounded-full text-xs">
-          <Link to="/dns-setup">📋 DNS Setup</Link>
-        </Button>
-      </div>
+
+
     </div>
   );
 }
