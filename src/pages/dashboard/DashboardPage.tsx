@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,8 @@ interface Staff {
 }
 
 export default function DashboardPage() {
-  const { currentBusiness, isResellerMode } = useBusiness();
+  const { currentBusiness, isResellerMode, currentRole } = useBusiness();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     todayBookings: 0,
@@ -428,7 +430,8 @@ export default function DashboardPage() {
                 visible: widgetSettings.showRevenueBreakdownTile,
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
-                  return <RevenueBreakdownTile businessId={currentBusiness.id} locked={revenueLocked} />;
+                  const isStaffRole = currentRole?.role === "staff";
+                  return <RevenueBreakdownTile businessId={currentBusiness.id} locked={revenueLocked} staffUserId={isStaffRole ? user?.id : null} />;
                 },
               },
               {

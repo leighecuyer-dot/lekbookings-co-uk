@@ -16,6 +16,8 @@ import { Progress } from "@/components/ui/progress";
 interface RevenueBreakdownTileProps {
   businessId: string;
   locked?: boolean;
+  /** If provided, only shows revenue for the staff member linked to this user ID */
+  staffUserId?: string | null;
 }
 
 interface StaffRevenue {
@@ -41,7 +43,7 @@ interface RevenueBreakdownData {
 
 type TimePeriod = "week" | "month";
 
-export function RevenueBreakdownTile({ businessId, locked = false }: RevenueBreakdownTileProps) {
+export function RevenueBreakdownTile({ businessId, locked = false, staffUserId }: RevenueBreakdownTileProps) {
   const [data, setData] = useState<RevenueBreakdownData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -67,25 +69,31 @@ export function RevenueBreakdownTile({ businessId, locked = false }: RevenueBrea
         }
 
         // Fetch completed bookings with staff info
-        const [bookingsResult, staffResult] = await Promise.all([
-          supabase
-            .from("bookings")
-            .select("id, total_price, staff_id, status")
-            .eq("business_id", businessId)
-            .eq("status", "completed")
-            .gte("start_time", startDate.toISOString())
-            .lte("start_time", endDate.toISOString()),
-          supabase
-            .from("staff")
-            .select("id, name, revenue_tracking_enabled, commission_percentage")
-            .eq("business_id", businessId),
-        ]);
+        const staffQuery = supabase
+          .from("staff")
+          .select("id, name, revenue_tracking_enabled, commission_percentage, user_id")
+          .eq("business_id", businessId);
+
+        const bookingsQuery = supabase
+          .from("bookings")
+          .select("id, total_price, staff_id, status")
+          .eq("business_id", businessId)
+          .eq("status", "completed")
+          .gte("start_time", startDate.toISOString())
+          .lte("start_time", endDate.toISOString());
+
+        const [bookingsResult, staffResult] = await Promise.all([bookingsQuery, staffQuery]);
 
         if (bookingsResult.error) throw bookingsResult.error;
         if (staffResult.error) throw staffResult.error;
 
         const bookings = bookingsResult.data || [];
         const staffList = staffResult.data || [];
+
+        // If staffUserId is set, find the linked staff record and only show that person
+        const linkedStaffId = staffUserId
+          ? staffList.find((s) => s.user_id === staffUserId)?.id ?? null
+          : null;
 
         // Create a map for quick staff lookup
         const staffMap = new Map(staffList.map((s) => [s.id, s]));
@@ -96,7 +104,12 @@ export function RevenueBreakdownTile({ businessId, locked = false }: RevenueBrea
         let unassignedBookings = 0;
         let totalRevenue = 0;
 
-        bookings.forEach((booking) => {
+        // Filter bookings to only those assigned to this staff member (if restricted view)
+        const filteredBookings = linkedStaffId
+          ? bookings.filter((b) => b.staff_id === linkedStaffId)
+          : bookings;
+
+        filteredBookings.forEach((booking) => {
           const revenue = booking.total_price || 0;
           totalRevenue += revenue;
 
@@ -144,7 +157,7 @@ export function RevenueBreakdownTile({ businessId, locked = false }: RevenueBrea
         const businessNetRevenue = staffBreakdown.reduce((sum, s) => sum + s.businessRetained, 0) + unassignedRevenue;
 
         setData({
-          totalCompletedBookings: bookings.length,
+          totalCompletedBookings: filteredBookings.length,
           totalRevenue,
           staffBreakdown,
           unassignedRevenue,
@@ -161,7 +174,7 @@ export function RevenueBreakdownTile({ businessId, locked = false }: RevenueBrea
     };
 
     fetchRevenueBreakdown();
-  }, [businessId, period]);
+  }, [businessId, period, staffUserId]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-GB", {
@@ -201,7 +214,7 @@ export function RevenueBreakdownTile({ businessId, locked = false }: RevenueBrea
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <PoundSterling className="h-4 w-4 text-muted-foreground" />
-            Revenue Breakdown
+            {staffUserId ? "My Earnings" : "Revenue Breakdown"}
           </CardTitle>
           <div className="flex gap-1">
             <Button
@@ -227,17 +240,31 @@ export function RevenueBreakdownTile({ businessId, locked = false }: RevenueBrea
         {/* Summary Stats */}
         <div className="grid grid-cols-2 gap-4">
           <div className="p-3 rounded-lg bg-primary/5">
-            <p className="text-xs text-muted-foreground mb-1">Total Revenue</p>
+            <p className="text-xs text-muted-foreground mb-1">
+              {staffUserId ? "My Revenue" : "Total Revenue"}
+            </p>
             <p className="text-xl font-bold">{formatCurrency(data.totalRevenue)}</p>
             <p className="text-xs text-muted-foreground">
               {data.totalCompletedBookings} completed booking{data.totalCompletedBookings !== 1 ? "s" : ""}
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-success/10">
-            <p className="text-xs text-muted-foreground mb-1">Business Net</p>
-            <p className="text-xl font-bold text-success">{formatCurrency(data.businessNetRevenue)}</p>
-            <p className="text-xs text-muted-foreground">After staff earnings</p>
-          </div>
+          {staffUserId ? (
+            <div className="p-3 rounded-lg bg-success/10">
+              <p className="text-xs text-muted-foreground mb-1">My Earnings</p>
+              <p className="text-xl font-bold text-success">
+                {formatCurrency(data.staffBreakdown[0]?.staffEarnings ?? 0)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {data.staffBreakdown[0]?.commissionPercentage ?? 0}% commission
+              </p>
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-success/10">
+              <p className="text-xs text-muted-foreground mb-1">Business Net</p>
+              <p className="text-xl font-bold text-success">{formatCurrency(data.businessNetRevenue)}</p>
+              <p className="text-xs text-muted-foreground">After staff earnings</p>
+            </div>
+          )}
         </div>
 
         {/* Staff earnings summary */}
@@ -260,8 +287,8 @@ export function RevenueBreakdownTile({ businessId, locked = false }: RevenueBrea
           </div>
         )}
 
-        {/* Staff Breakdown Collapsible */}
-        {data.staffBreakdown.length > 0 && (
+        {/* Staff Breakdown Collapsible — only shown to owners/admins */}
+        {!staffUserId && data.staffBreakdown.length > 0 && (
           <Collapsible open={expanded} onOpenChange={setExpanded}>
             <CollapsibleTrigger asChild>
               <Button
