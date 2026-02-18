@@ -58,11 +58,11 @@ const AppRoutes = () => (
     <Route path="/book/:slug" element={<PublicBookingPage />} />
     <Route path="/dns-setup" element={<DnsSetupPage />} />
     
-    {/* Onboarding (authenticated but no business) */}
+    {/* Onboarding - authenticated users can always access to add more businesses */}
     <Route 
       path="/onboarding" 
       element={
-        <RouteGuard requireAuth redirectIfHasBusiness>
+        <RouteGuard requireAuth>
           <OnboardingPage />
         </RouteGuard>
       } 
