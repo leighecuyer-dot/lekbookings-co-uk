@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2 } from "lucide-react";
+import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2, Upload } from "lucide-react";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -170,7 +170,14 @@ export default function CustomersPage() {
       title="Customers"
       description="Manage your customer database"
       actions={
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/import?tab=customers">
+              <Upload className="w-4 h-4 mr-2" />
+              Import
+            </Link>
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary">
               <Plus className="w-4 h-4 mr-2" />
@@ -232,7 +239,8 @@ export default function CustomersPage() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       }
     >
       <div className="space-y-6">
