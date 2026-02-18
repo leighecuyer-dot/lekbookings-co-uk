@@ -28,6 +28,7 @@ import PublicBookingPage from "./pages/booking/PublicBookingPage";
 import NotFound from "./pages/NotFound";
 import DiagnosticsPage from "./pages/admin/DiagnosticsPage";
 import CampaignsReportPage from "./pages/reports/CampaignsReportPage";
+import DnsSetupPage from "./pages/DnsSetupPage";
 import MessageLogsPage from "./pages/messaging/MessageLogsPage";
 
 // Reseller Pages
@@ -55,6 +56,7 @@ const AppRoutes = () => (
     <Route path="/install" element={<InstallPage />} />
     <Route path="/invite/accept" element={<AcceptInvitePage />} />
     <Route path="/book/:slug" element={<PublicBookingPage />} />
+    <Route path="/dns-setup" element={<DnsSetupPage />} />
     
     {/* Onboarding (authenticated but no business) */}
     <Route 
