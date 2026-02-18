@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import {
   Calendar,
   Users,
@@ -45,6 +46,7 @@ import {
   Share2,
   MessageSquare,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
 const mainNavItems = [
@@ -71,6 +73,7 @@ const integrationNavItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { currentBusiness, businesses, setCurrentBusiness } = useBusiness();
 
@@ -118,6 +121,11 @@ export function AppSidebar() {
                   {business.name}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/onboarding")} className="text-primary">
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Business
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
