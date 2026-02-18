@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const emailResponse = await resend.emails.send({
-      from: "LEK Booking <noreply@resend.dev>",
+      from: "LEK Booking <onboarding@resend.dev>",
       to: [email],
       subject: `Booking Confirmed: ${serviceName}`,
       html: `
