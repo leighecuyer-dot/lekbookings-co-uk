@@ -122,9 +122,11 @@ export function AppSidebar() {
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/onboarding")} className="text-primary">
-                <Plus className="w-4 h-4 mr-2" />
-                Add New Business
+              <DropdownMenuItem asChild>
+                <Link to="/onboarding" className="text-primary cursor-pointer">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New Business
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
