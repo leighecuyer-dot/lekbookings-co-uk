@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock, DollarSign, GripVertical } from "lucide-react";
+import { Clock, PoundSterling, GripVertical } from "lucide-react";
 
 interface Service {
   id: string;
@@ -49,7 +49,7 @@ export function ServiceCardOverlay({ service }: ServiceCardOverlayProps) {
               </span>
               {service.price && (
                 <span className="text-sm font-medium flex items-center gap-1">
-                  <DollarSign className="w-3 h-3" />
+                  <PoundSterling className="w-3 h-3" />
                   {service.price.toFixed(2)}
                 </span>
               )}
