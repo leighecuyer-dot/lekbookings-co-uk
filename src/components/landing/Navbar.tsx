@@ -9,7 +9,7 @@ const navItems = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "Testimonials", href: "#testimonials" },
-  { label: "Customer Portal", href: "/customer-portal", isRoute: true },
+  { label: "Customer Portal", href: "/auth", isRoute: true },
 ];
 
 export function Navbar() {
