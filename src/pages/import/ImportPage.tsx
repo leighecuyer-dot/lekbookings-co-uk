@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +64,11 @@ interface ParsedBooking {
 export default function ImportPage() {
   const { currentBusiness } = useBusiness();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<DataType>("bookings");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<DataType>(() => {
+    const tab = searchParams.get("tab");
+    return (tab && ["customers","services","staff","bookings"].includes(tab) ? tab : "bookings") as DataType;
+  });
   const [diaryText, setDiaryText] = useState("");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
