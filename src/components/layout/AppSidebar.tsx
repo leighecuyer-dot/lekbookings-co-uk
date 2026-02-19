@@ -283,18 +283,17 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {/* Booking Page - External Link */}
+              {/* Booking Page Editor - Internal Link */}
               {currentBusiness && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <a
-                      href={`${window.location.origin}/book/${currentBusiness.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === "/booking-page"}
+                  >
+                    <Link to="/booking-page">
                       <ExternalLink className="w-4 h-4" />
                       <span>Booking Page</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
