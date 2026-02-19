@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
-import { startOfWeek, endOfWeek, addDays } from "date-fns";
+
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { KanbanView } from "@/components/calendar/KanbanView";
 import { StatusFilter } from "@/components/calendar/StatusFilter";
@@ -103,19 +103,13 @@ export default function KanbanPage() {
     if (!currentBusiness) return;
     
     setLoading(true);
-    
-    // Fetch a wide range for kanban view
-    const queryStart = startOfWeek(selectedDate, { weekStartsOn: 1 }).toISOString();
-    const queryEnd = endOfWeek(addDays(selectedDate, 30), { weekStartsOn: 1 }).toISOString();
 
     const [bookingsRes, servicesRes, staffRes, customersRes] = await Promise.all([
       supabase
         .from("bookings")
         .select("*")
         .eq("business_id", currentBusiness.id)
-        .gte("start_time", queryStart)
-        .lte("start_time", queryEnd)
-        .order("start_time", { ascending: true }),
+        .order("start_time", { ascending: false }),
       supabase
         .from("services")
         .select("id, name, duration_minutes, color, price")
