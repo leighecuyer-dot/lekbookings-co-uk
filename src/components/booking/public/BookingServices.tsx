@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Clock, DollarSign, Search } from "lucide-react";
+import { Clock, PoundSterling, Search } from "lucide-react";
 import { BookingFormModal } from "./BookingFormModal";
 
 interface Service {
@@ -108,9 +108,9 @@ export function BookingServices({ services, categories, theme, businessId }: Boo
 
   const formatPrice = (price: number | null) => {
     if (price === null) return "Price varies";
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-GB", {
       style: "currency",
-      currency: "USD",
+      currency: "GBP",
     }).format(price / 100);
   };
 
@@ -274,7 +274,7 @@ export function BookingServices({ services, categories, theme, businessId }: Boo
                               {formatDuration(service.duration_minutes)}
                             </span>
                             <span className="flex items-center gap-1">
-                              <DollarSign className="w-4 h-4" />
+                              <PoundSterling className="w-4 h-4" />
                               {formatPrice(service.price)}
                             </span>
                           </div>

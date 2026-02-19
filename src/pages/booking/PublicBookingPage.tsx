@@ -7,6 +7,7 @@ import { BookingGallery } from "@/components/booking/public/BookingGallery";
 import { BookingContact } from "@/components/booking/public/BookingContact";
 import { BookingFooter } from "@/components/booking/public/BookingFooter";
 import { FloatingWhatsApp } from "@/components/booking/public/FloatingWhatsApp";
+import { BookingPageSetupWizard } from "@/components/booking/public/BookingPageSetupWizard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface SocialLinks {
@@ -186,6 +187,17 @@ export default function PublicBookingPage() {
 
   const logoUrl = theme?.logo_url || business.logo_url;
   const whatsappNumber = business.settings?.socialLinks?.whatsapp;
+
+  // Show setup wizard if the page has no services set up yet
+  const isNewPage = services.length === 0 && gallery.length === 0 && !theme;
+  if (isNewPage) {
+    return (
+      <BookingPageSetupWizard
+        businessName={business.name}
+        primaryColor="#4F46E5"
+      />
+    );
+  }
 
   return (
     <div
