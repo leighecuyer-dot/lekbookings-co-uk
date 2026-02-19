@@ -71,7 +71,13 @@ export function StaffAvailabilityModal({
 
   useEffect(() => {
     if (currentHours) {
-      setHours(currentHours);
+      // Merge with DEFAULT_HOURS to ensure all day keys are always present
+      setHours({
+        ...DEFAULT_HOURS,
+        ...Object.fromEntries(
+          Object.entries(currentHours).filter(([, v]) => v !== undefined)
+        ),
+      } as WorkingHours);
     } else {
       setHours(DEFAULT_HOURS);
     }
