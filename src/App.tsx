@@ -25,6 +25,7 @@ import SettingsPage from "./pages/settings/SettingsPage";
 import InstallPage from "./pages/install/InstallPage";
 import ImportPage from "./pages/import/ImportPage";
 import PublicBookingPage from "./pages/booking/PublicBookingPage";
+import BookingPageEditor from "./pages/booking/BookingPageEditor";
 import NotFound from "./pages/NotFound";
 import DiagnosticsPage from "./pages/admin/DiagnosticsPage";
 import CampaignsReportPage from "./pages/reports/CampaignsReportPage";
@@ -138,6 +139,14 @@ const AppRoutes = () => (
       element={
         <RouteGuard requireAuth requireBusiness>
           <ImportPage />
+        </RouteGuard>
+      } 
+    />
+    <Route 
+      path="/booking-page" 
+      element={
+        <RouteGuard requireAuth requireBusiness>
+          <BookingPageEditor />
         </RouteGuard>
       } 
     />
