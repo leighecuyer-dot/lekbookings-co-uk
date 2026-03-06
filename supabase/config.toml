@@ -1,7 +1,9 @@
 project_id = "oleozgrhqfxavbmsiecf"
 
-[functions.twilio-webhook]
-verify_jwt = false
-
-[functions.messaging-webhook]
-verify_jwt = false
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.messaging-webhook]
+    verify_jwt = false
+  [functions.twilio-webhook]
+    verify_jwt = false
