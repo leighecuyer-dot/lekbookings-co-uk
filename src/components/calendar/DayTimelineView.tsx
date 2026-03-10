@@ -59,6 +59,27 @@ interface DayTimelineViewProps {
   draggingBookingId?: string | null;
 }
 
+// Staff color palette for unique card backgrounds
+const STAFF_COLORS = [
+  { bg: '#2563EB', text: '#ffffff' }, // blue
+  { bg: '#7C3AED', text: '#ffffff' }, // violet
+  { bg: '#059669', text: '#ffffff' }, // emerald
+  { bg: '#D97706', text: '#ffffff' }, // amber
+  { bg: '#DC2626', text: '#ffffff' }, // red
+  { bg: '#0891B2', text: '#ffffff' }, // cyan
+  { bg: '#4F46E5', text: '#ffffff' }, // indigo
+  { bg: '#BE185D', text: '#ffffff' }, // pink
+  { bg: '#65A30D', text: '#ffffff' }, // lime
+  { bg: '#EA580C', text: '#ffffff' }, // orange
+];
+
+function getStaffColor(staffId: string | null, staffList: { id: string }[]): { bg: string; text: string } {
+  if (!staffId) return { bg: 'hsl(var(--foreground))', text: 'hsl(var(--background))' };
+  const index = staffList.findIndex((s) => s.id === staffId);
+  if (index === -1) return { bg: 'hsl(var(--foreground))', text: 'hsl(var(--background))' };
+  return STAFF_COLORS[index % STAFF_COLORS.length];
+}
+
 // Generate time slots from 8:00 to 18:00 (30-min intervals)
 const TIME_SLOTS = Array.from({ length: 21 }, (_, i) => {
   const hour = Math.floor(i / 2) + 8;
