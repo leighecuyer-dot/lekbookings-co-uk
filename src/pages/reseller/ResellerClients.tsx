@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Search, MoreHorizontal, Building2, Mail, Settings, UserPlus, Crown } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Building2, Mail, Settings, UserPlus, Crown, Copy, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
