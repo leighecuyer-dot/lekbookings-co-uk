@@ -44,7 +44,13 @@ export default function AuthPage() {
     const { error } = await signIn(email, password);
     
     if (error) {
-      toast.error(error.message);
+      if (error.message.includes("Email not confirmed")) {
+        toast.error("Please check your email and click the confirmation link before signing in.");
+      } else if (error.message.includes("Invalid login")) {
+        toast.error("Invalid email or password. Please check your credentials and try again.");
+      } else {
+        toast.error(error.message);
+      }
     } else {
       toast.success("Welcome back!");
       navigate("/dashboard");
