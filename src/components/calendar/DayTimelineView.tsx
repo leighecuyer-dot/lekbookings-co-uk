@@ -292,10 +292,10 @@ export function DayTimelineView({
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-background truncate text-sm sm:text-base">
+                          <p className="font-medium truncate text-sm sm:text-base">
                             {booking.customer_name}
                           </p>
-                          <p className="text-xs sm:text-sm text-background/70 truncate">
+                          <p className="text-xs sm:text-sm truncate" style={{ opacity: 0.8 }}>
                             {service?.name || "No service"}
                             {staff && ` • ${staff.name}`}
                           </p>
