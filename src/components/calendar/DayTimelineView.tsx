@@ -203,77 +203,86 @@ export function DayTimelineView({
     <TooltipProvider>
       <div className="space-y-1">
         {TIME_SLOTS.map((slot) => {
-          const booking = getBookingForSlot(slot);
-          const isStart = booking ? isBookingStart(slot, booking) : false;
-          const service = booking ? services.find((s) => s.id === booking.service_id) : null;
-          const staff = booking ? staffList.find((s) => s.id === booking.staff_id) : null;
-          const isDragging = booking && draggingBookingId === booking.id;
+          const slotBookings = getBookingsForSlot(slot);
+          // Filter to only bookings that START at this slot
+          const startingBookings = slotBookings.filter((b) => isBookingStart(slot, b));
+          // Bookings that are continuing (started earlier)
+          const continuingBookings = slotBookings.filter((b) => !isBookingStart(slot, b));
 
-          // If this slot is occupied by a booking but isn't the start, skip rendering
-          if (booking && !isStart) {
+          // If all bookings in this slot are continuing (none start here), skip
+          // unless there are no bookings at all (free slot)
+          if (slotBookings.length > 0 && startingBookings.length === 0) {
             return null;
           }
 
-          // If this is the start of a booking, render the booking card
-          if (booking && isStart) {
-            const slotSpan = getBookingSlotSpan(booking);
-            // Height: each slot is ~52px (min-h-[52px] + gap)
-            const height = slotSpan * 52 - 4; // Subtract gap
-
+          // Render starting bookings
+          if (startingBookings.length > 0) {
             return (
-              <div
-                key={slot}
-                draggable
-                onDragStart={(e) => onDragStart?.(e, booking)}
-                onDragEnd={onDragEnd}
-                onClick={() => onBookingClick(booking)}
-                className={cn(
-                  "flex items-stretch gap-2 sm:gap-3 cursor-grab active:cursor-grabbing hover:scale-[1.01] transition-all",
-                  isDragging && "opacity-50"
-                )}
-                style={{ minHeight: `${height}px` }}
-              >
-                {/* Time label */}
-                <div className="w-12 sm:w-16 shrink-0 text-xs sm:text-sm text-muted-foreground pt-2">
-                  {slot}
-                </div>
+              <div key={slot} className="space-y-1">
+                {startingBookings.map((booking) => {
+                  const slotSpan = getBookingSlotSpan(booking);
+                  const height = slotSpan * 52 - 4;
+                  const service = services.find((s) => s.id === booking.service_id);
+                  const staff = staffList.find((s) => s.id === booking.staff_id);
+                  const isDragging = draggingBookingId === booking.id;
 
-                {/* Booking card */}
-                <div
-                  className="flex-1 flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background"
-                  style={{
-                    borderLeft: service?.color ? `4px solid ${service.color}` : undefined,
-                  }}
-                >
-                  <GripVertical className="w-4 h-4 text-background/40 shrink-0 hidden sm:block" />
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
-                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
+                  return (
+                    <div
+                      key={booking.id}
+                      draggable
+                      onDragStart={(e) => onDragStart?.(e, booking)}
+                      onDragEnd={onDragEnd}
+                      onClick={() => onBookingClick(booking)}
+                      className={cn(
+                        "flex items-stretch gap-2 sm:gap-3 cursor-grab active:cursor-grabbing hover:scale-[1.01] transition-all",
+                        isDragging && "opacity-50"
+                      )}
+                      style={{ minHeight: `${height}px` }}
+                    >
+                      {/* Time label */}
+                      <div className="w-12 sm:w-16 shrink-0 text-xs sm:text-sm text-muted-foreground pt-2">
+                        {slot}
+                      </div>
+
+                      {/* Booking card */}
+                      <div
+                        className="flex-1 flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background"
+                        style={{
+                          borderLeft: service?.color ? `4px solid ${service.color}` : undefined,
+                        }}
+                      >
+                        <GripVertical className="w-4 h-4 text-background/40 shrink-0 hidden sm:block" />
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
+                            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-background text-sm sm:text-base">
+                              {format(parseISO(booking.start_time), "HH:mm")}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-background/60">
+                              {format(parseISO(booking.end_time), "HH:mm")}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-background truncate text-sm sm:text-base">
+                            {booking.customer_name}
+                          </p>
+                          <p className="text-xs sm:text-sm text-background/70 truncate">
+                            {service?.name || "No service"}
+                            {staff && ` • ${staff.name}`}
+                          </p>
+                        </div>
+
+                        <Badge className={`${getStatusColor(booking.status)} text-[10px] sm:text-xs`}>
+                          {booking.status}
+                        </Badge>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-background text-sm sm:text-base">
-                        {format(parseISO(booking.start_time), "HH:mm")}
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-background/60">
-                        {format(parseISO(booking.end_time), "HH:mm")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-background truncate text-sm sm:text-base">
-                      {booking.customer_name}
-                    </p>
-                    <p className="text-xs sm:text-sm text-background/70 truncate">
-                      {service?.name || "No service"}
-                      {staff && ` • ${staff.name}`}
-                    </p>
-                  </div>
-
-                  <Badge className={`${getStatusColor(booking.status)} text-[10px] sm:text-xs`}>
-                    {booking.status}
-                  </Badge>
-                </div>
+                  );
+                })}
               </div>
             );
           }
@@ -290,7 +299,6 @@ export function DayTimelineView({
           const staffOnLeave = getStaffOnLeave(staffList, selectedDate, isOnLeave);
           const hasStaffOnLeave = staffOnLeave.length > 0;
 
-          // Pre-select the first available staff member when clicking a slot
           const preSelectedStaffId = availableStaff.length > 0 ? availableStaff[0].id : undefined;
 
           return (
@@ -305,12 +313,10 @@ export function DayTimelineView({
                 draggingBookingId && "hover:bg-primary/10 hover:border-primary"
               )}
             >
-              {/* Time label */}
               <div className="w-12 sm:w-16 shrink-0 text-xs sm:text-sm text-muted-foreground">
                 {slot}
               </div>
 
-              {/* Free slot indicator */}
               <div className={cn(
                 "flex-1 flex items-center justify-between gap-2 p-2 sm:p-3 rounded-xl border-2 border-dashed transition-all",
                 hasAvailableStaff
@@ -336,7 +342,6 @@ export function DayTimelineView({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Leave indicator */}
                   {hasStaffOnLeave && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -358,7 +363,6 @@ export function DayTimelineView({
                     </Tooltip>
                   )}
 
-                  {/* Staff availability indicator */}
                   {staffList.length > 0 && (
                     <Tooltip>
                       <TooltipTrigger asChild>
