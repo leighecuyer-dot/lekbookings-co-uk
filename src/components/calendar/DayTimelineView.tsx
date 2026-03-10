@@ -59,6 +59,27 @@ interface DayTimelineViewProps {
   draggingBookingId?: string | null;
 }
 
+// Staff color palette for unique card backgrounds
+const STAFF_COLORS = [
+  { bg: '#2563EB', text: '#ffffff' }, // blue
+  { bg: '#7C3AED', text: '#ffffff' }, // violet
+  { bg: '#059669', text: '#ffffff' }, // emerald
+  { bg: '#D97706', text: '#ffffff' }, // amber
+  { bg: '#DC2626', text: '#ffffff' }, // red
+  { bg: '#0891B2', text: '#ffffff' }, // cyan
+  { bg: '#4F46E5', text: '#ffffff' }, // indigo
+  { bg: '#BE185D', text: '#ffffff' }, // pink
+  { bg: '#65A30D', text: '#ffffff' }, // lime
+  { bg: '#EA580C', text: '#ffffff' }, // orange
+];
+
+function getStaffColor(staffId: string | null, staffList: { id: string }[]): { bg: string; text: string } {
+  if (!staffId) return { bg: 'hsl(var(--foreground))', text: 'hsl(var(--background))' };
+  const index = staffList.findIndex((s) => s.id === staffId);
+  if (index === -1) return { bg: 'hsl(var(--foreground))', text: 'hsl(var(--background))' };
+  return STAFF_COLORS[index % STAFF_COLORS.length];
+}
+
 // Generate time slots from 8:00 to 18:00 (30-min intervals)
 const TIME_SLOTS = Array.from({ length: 21 }, (_, i) => {
   const hour = Math.floor(i / 2) + 8;
@@ -226,6 +247,8 @@ export function DayTimelineView({
                   const staff = staffList.find((s) => s.id === booking.staff_id);
                   const isDragging = draggingBookingId === booking.id;
 
+                  const staffColor = getStaffColor(booking.staff_id, staffList);
+
                   return (
                     <div
                       key={booking.id}
@@ -246,31 +269,33 @@ export function DayTimelineView({
 
                       {/* Booking card */}
                       <div
-                        className="flex-1 flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background"
+                        className="flex-1 flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl"
                         style={{
+                          backgroundColor: staffColor.bg,
+                          color: staffColor.text,
                           borderLeft: service?.color ? `4px solid ${service.color}` : undefined,
                         }}
                       >
-                        <GripVertical className="w-4 h-4 text-background/40 shrink-0 hidden sm:block" />
+                        <GripVertical className="w-4 h-4 shrink-0 hidden sm:block" style={{ opacity: 0.4 }} />
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
-                            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
+                          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                           </div>
                           <div>
-                            <p className="font-semibold text-background text-sm sm:text-base">
+                            <p className="font-semibold text-sm sm:text-base">
                               {format(parseISO(booking.start_time), "HH:mm")}
                             </p>
-                            <p className="text-[10px] sm:text-xs text-background/60">
+                            <p className="text-[10px] sm:text-xs" style={{ opacity: 0.7 }}>
                               {format(parseISO(booking.end_time), "HH:mm")}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-background truncate text-sm sm:text-base">
+                          <p className="font-medium truncate text-sm sm:text-base">
                             {booking.customer_name}
                           </p>
-                          <p className="text-xs sm:text-sm text-background/70 truncate">
+                          <p className="text-xs sm:text-sm truncate" style={{ opacity: 0.8 }}>
                             {service?.name || "No service"}
                             {staff && ` • ${staff.name}`}
                           </p>
