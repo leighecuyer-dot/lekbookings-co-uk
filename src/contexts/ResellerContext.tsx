@@ -125,8 +125,8 @@ export function ResellerProvider({ children }: { children: ReactNode }) {
     }
   }, [reseller]);
 
-  // A reseller needs onboarding if they don't have logo_url set (required for white-label)
-  const needsOnboarding = !!reseller && !reseller.logo_url;
+  // Onboarding is optional — skip logo requirement for now
+  const needsOnboarding = false;
 
   return (
     <ResellerContext.Provider
