@@ -59,7 +59,11 @@ export default function AuthPage() {
     const { error } = await signUp(email, password, fullName);
     
     if (error) {
-      toast.error(error.message);
+      if (error.message.includes("security purposes") || error.message.includes("rate limit")) {
+        toast.error("Please wait a moment before trying again. If you already signed up, check your email for the confirmation link.");
+      } else {
+        toast.error(error.message);
+      }
     } else {
       // In case sign-ups require email confirmation, there may be no session yet.
       const { data: { session } } = await supabase.auth.getSession();
