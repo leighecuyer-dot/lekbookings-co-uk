@@ -67,6 +67,8 @@ export default function ResellerClients() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [tierDialogOpen, setTierDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<{ id: string; name: string; tier: string | null; clientId: string } | null>(null);
+  const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [newClient, setNewClient] = useState({
     businessName: "",
