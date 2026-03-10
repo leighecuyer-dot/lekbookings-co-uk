@@ -52,6 +52,7 @@ import { TableSkeleton } from "@/components/common/Skeletons";
 import { useIndustries } from "@/hooks/business";
 import { InviteUserDialog } from "@/components/reseller/InviteUserDialog";
 import { ChangeTierDialog, SUBSCRIPTION_TIERS } from "@/components/reseller/ChangeTierDialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Use shared tier configuration from ChangeTierDialog
 
