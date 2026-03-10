@@ -75,6 +75,14 @@ const integrationNavItems = [
   { title: "Social Media", icon: Share2, comingSoon: true },
 ];
 
+const resellerNavItems = [
+  { title: "Overview", href: "/reseller", icon: Crown },
+  { title: "Clients", href: "/reseller/clients", icon: UsersRound },
+  { title: "Analytics", href: "/reseller/analytics", icon: BarChart3 },
+  { title: "Tickets", href: "/reseller/tickets", icon: TicketCheck },
+  { title: "Settings", href: "/reseller/settings", icon: Sliders },
+];
+
 
 export function AppSidebar() {
   const location = useLocation();
