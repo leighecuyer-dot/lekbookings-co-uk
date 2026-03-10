@@ -1,0 +1,1 @@
+UPDATE auth.users SET email_confirmed_at = now() WHERE id = '51dc8c9d-785d-44cb-863e-cb97f2ce3c7a' AND email_confirmed_at IS NULL;
