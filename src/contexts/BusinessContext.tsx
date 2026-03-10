@@ -39,7 +39,7 @@ interface BusinessContextType {
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
 export function BusinessProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [resellerClientBusinesses, setResellerClientBusinesses] = useState<Business[]>([]);
   const [currentBusiness, setCurrentBusinessState] = useState<Business | null>(null);
@@ -47,6 +47,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<BusinessMode>("business");
   const [loading, setLoading] = useState(true);
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+  const [fetchedForUserId, setFetchedForUserId] = useState<string | null>(null);
 
   const isResellerMode = mode === "reseller";
   const businessId = currentBusiness?.id ?? null;
