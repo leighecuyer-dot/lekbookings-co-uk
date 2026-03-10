@@ -45,6 +45,7 @@ interface Invite {
   expires_at: string;
   accepted_at: string | null;
   created_at: string;
+  token?: string;
 }
 
 const ROLES = [
