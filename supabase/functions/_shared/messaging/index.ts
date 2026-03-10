@@ -86,7 +86,7 @@ export async function sendTransactionalSMS(
   if (!provider) {
     return {
       success: false,
-      error: "SMS provider not configured. Please add Twilio credentials.",
+      error: "SMS provider not configured. Please add TEXTBELT_API_KEY.",
     };
   }
 
