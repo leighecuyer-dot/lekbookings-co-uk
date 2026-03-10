@@ -2,7 +2,7 @@
 // Provider-agnostic messaging service with automatic provider selection
 
 import { BrevoEmailProvider } from "./providers/brevo.ts";
-import { TwilioProvider } from "./providers/twilio.ts";
+import { TextbeltProvider } from "./providers/textbelt.ts";
 import type {
   TransactionalEmailParams,
   TransactionalSMSParams,
