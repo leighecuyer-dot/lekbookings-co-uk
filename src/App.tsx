@@ -57,6 +57,11 @@ const AppRoutes = () => (
     />
     <Route path="/install" element={<InstallPage />} />
     <Route path="/invite/accept" element={<AcceptInvitePage />} />
+    <Route path="/welcome" element={
+      <RouteGuard requireAuth requireBusiness>
+        <WelcomeSetupPage />
+      </RouteGuard>
+    } />
     <Route path="/book/:slug" element={<PublicBookingPage />} />
     <Route path="/dns-setup" element={<DnsSetupPage />} />
     
