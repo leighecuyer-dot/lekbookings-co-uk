@@ -75,8 +75,20 @@ export default function AuthPage() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
-        toast.success("Account created! Let's set up your business.");
-        navigate("/onboarding");
+        // Check if user already has a business (e.g. via accepted invite)
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("business_id")
+          .eq("user_id", session.user.id)
+          .limit(1);
+
+        if (roles && roles.length > 0) {
+          toast.success("Account created! Welcome to your business.");
+          navigate("/welcome");
+        } else {
+          toast.success("Account created! Let's set up your business.");
+          navigate("/onboarding");
+        }
       } else {
         toast.success("Account created! Please sign in to continue.");
         setTab("signin");
