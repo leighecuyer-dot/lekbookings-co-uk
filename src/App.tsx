@@ -39,6 +39,7 @@ import ResellerAnalytics from "./pages/reseller/ResellerAnalytics";
 import ResellerTickets from "./pages/reseller/ResellerTickets";
 import ResellerSettings from "./pages/reseller/ResellerSettings";
 import ResellerOnboarding from "./pages/reseller/ResellerOnboarding";
+import WelcomeSetupPage from "./pages/welcome/WelcomeSetupPage";
 
 const queryClient = new QueryClient();
 
