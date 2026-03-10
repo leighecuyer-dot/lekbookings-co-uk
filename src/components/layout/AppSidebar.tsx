@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useReseller } from "@/contexts/ResellerContext";
 import {
   Sidebar,
   SidebarContent,
@@ -45,6 +46,10 @@ import {
   ClipboardList,
   Share2,
   MessageSquare,
+  Crown,
+  UsersRound,
+  TicketCheck,
+  Sliders,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -70,12 +75,21 @@ const integrationNavItems = [
   { title: "Social Media", icon: Share2, comingSoon: true },
 ];
 
+const resellerNavItems = [
+  { title: "Overview", href: "/reseller", icon: Crown },
+  { title: "Clients", href: "/reseller/clients", icon: UsersRound },
+  { title: "Analytics", href: "/reseller/analytics", icon: BarChart3 },
+  { title: "Tickets", href: "/reseller/tickets", icon: TicketCheck },
+  { title: "Settings", href: "/reseller/settings", icon: Sliders },
+];
+
 
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { currentBusiness, businesses, setCurrentBusiness } = useBusiness();
+  const { isReseller } = useReseller();
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
@@ -276,6 +290,32 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Reseller Section */}
+        {isReseller && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/60">
+              Reseller
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {resellerNavItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === item.href}
+                    >
+                      <Link to={item.href}>
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/60">
