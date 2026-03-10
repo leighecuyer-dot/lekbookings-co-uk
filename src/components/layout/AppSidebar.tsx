@@ -89,6 +89,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { currentBusiness, businesses, setCurrentBusiness } = useBusiness();
+  const { isReseller } = useReseller();
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
