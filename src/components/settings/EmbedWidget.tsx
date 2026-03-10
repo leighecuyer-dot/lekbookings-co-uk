@@ -83,11 +83,19 @@ export function EmbedWidget() {
           <h1>Your Website</h1>
           <p>This is a preview of how the booking button will appear on your website.</p>
           <p>The floating button should appear in the ${position} corner.</p>
-          ${embedCode}
         </body>
         </html>
       `);
       newWindow.document.close();
+
+      // Create the button via DOM API to avoid script/quote escaping issues
+      const btn = newWindow.document.createElement("button");
+      btn.textContent = buttonText;
+      btn.style.cssText = \`position:fixed;\${position.includes('bottom') ? 'bottom:20px' : 'top:20px'};\${position.includes('right') ? 'right:20px' : 'left:20px'};z-index:9999;background:\${color};color:white;border:none;padding:12px 24px;border-radius:50px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.25);transition:transform 0.2s,box-shadow 0.2s;\`;
+      btn.onmouseover = function() { btn.style.transform = "scale(1.05)"; btn.style.boxShadow = "0 6px 20px rgba(0,0,0,0.3)"; };
+      btn.onmouseout = function() { btn.style.transform = "scale(1)"; btn.style.boxShadow = "0 4px 14px rgba(0,0,0,0.25)"; };
+      btn.onclick = function() { newWindow.open(bookingUrl, "_blank", "width=500,height=700"); };
+      newWindow.document.body.appendChild(btn);
     }
   };
 
