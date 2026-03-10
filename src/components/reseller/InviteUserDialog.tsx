@@ -126,7 +126,7 @@ export function InviteUserDialog({
 
       const result = data as { token?: string };
       const inviteUrl = result?.token 
-        ? `${window.location.origin}/invite/accept?token=${result.token}`
+        ? `https://lekbookings.co.uk/invite/accept?token=${result.token}`
         : null;
       
       setLastInviteUrl(inviteUrl);
