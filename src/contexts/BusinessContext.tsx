@@ -172,6 +172,10 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   }, [businesses]);
 
   useEffect(() => {
+    // If user changed and we haven't fetched for this user yet, keep loading true
+    if (user && fetchedForUserId !== user.id) {
+      setLoading(true);
+    }
     fetchBusinesses();
   }, [user]);
 
