@@ -26,18 +26,13 @@ function getEmailProvider(): BrevoEmailProvider | null {
   return new BrevoEmailProvider(apiKey);
 }
 
-function getSMSProvider(): TwilioProvider | null {
-  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const phoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
-  const whatsappNumber = Deno.env.get("TWILIO_WHATSAPP_FROM");
-
-  if (!accountSid || !authToken || !phoneNumber) {
-    console.warn("Twilio credentials not configured");
+function getSMSProvider(): TextbeltProvider | null {
+  const apiKey = Deno.env.get("TEXTBELT_API_KEY");
+  if (!apiKey) {
+    console.warn("TEXTBELT_API_KEY not configured");
     return null;
   }
-
-  return new TwilioProvider(accountSid, authToken, phoneNumber, whatsappNumber);
+  return new TextbeltProvider(apiKey);
 }
 
 // ============ Transactional Messaging ============
