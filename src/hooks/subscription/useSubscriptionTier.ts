@@ -82,7 +82,8 @@ export function useSubscriptionTier(businessId: string | null) {
 
       if (error) {
         console.error("Error fetching subscription tier:", error);
-        // Default to essential if no reseller_client record exists (direct signup)
+        // RLS may block non-reseller users from reading reseller_clients
+        // Try using can_access_business to determine if they have access
         setTier("essential");
       } else if (data?.subscription_tier) {
         setTier(data.subscription_tier as SubscriptionTier);
