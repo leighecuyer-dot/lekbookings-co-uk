@@ -311,6 +311,34 @@ export default function ResellerClients() {
                     >
                       {loading ? "Creating..." : "Add Client"}
                     </Button>
+
+                    {createdInviteUrl && (
+                      <Alert className="bg-muted/50">
+                        <AlertDescription className="space-y-2">
+                          <p className="text-sm font-medium">✅ Client created! Send this link to your client:</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 text-xs bg-background p-2 rounded border overflow-x-auto whitespace-nowrap">
+                              {createdInviteUrl}
+                            </code>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(createdInviteUrl);
+                                setLinkCopied(true);
+                                toast.success("Link copied to clipboard!");
+                                setTimeout(() => setLinkCopied(false), 2000);
+                              }}
+                            >
+                              {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            They'll use this link to create their account and access the business.
+                          </p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
