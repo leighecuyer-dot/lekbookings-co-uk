@@ -138,6 +138,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    setFetchedForUserId(user.id);
     setLoading(false);
   }, [user, currentBusiness, mode]);
 
