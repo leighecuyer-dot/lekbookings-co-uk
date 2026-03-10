@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Search, MoreHorizontal, Building2, Mail, Settings, UserPlus, Crown } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Building2, Mail, Settings, UserPlus, Crown, Copy, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +52,7 @@ import { TableSkeleton } from "@/components/common/Skeletons";
 import { useIndustries } from "@/hooks/business";
 import { InviteUserDialog } from "@/components/reseller/InviteUserDialog";
 import { ChangeTierDialog, SUBSCRIPTION_TIERS } from "@/components/reseller/ChangeTierDialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Use shared tier configuration from ChangeTierDialog
 
@@ -66,6 +67,8 @@ export default function ResellerClients() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [tierDialogOpen, setTierDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<{ id: string; name: string; tier: string | null; clientId: string } | null>(null);
+  const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [newClient, setNewClient] = useState({
     businessName: "",
@@ -128,19 +131,20 @@ export default function ResellerClients() {
         business_id: string;
         business_slug: string;
         invite_id: string | null;
+        invite_token: string | null;
         invite_email: string | null;
       };
 
-      if (result.invite_email) {
-        toast.success(
-          `Client created! An invite has been sent to ${result.invite_email}`,
-          { duration: 5000 }
-        );
+      if (result.invite_token) {
+        const inviteUrl = `${window.location.origin}/invite/accept?token=${result.invite_token}`;
+        setCreatedInviteUrl(inviteUrl);
+        setLinkCopied(false);
+        toast.success("Client created! Copy the invite link below to send to your client.");
       } else {
         toast.success("Client created successfully");
+        setDialogOpen(false);
       }
 
-      setDialogOpen(false);
       setNewClient({
         businessName: "",
         businessEmail: "",
@@ -196,7 +200,7 @@ export default function ResellerClients() {
                   className="pl-9 w-[200px]"
                 />
               </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setCreatedInviteUrl(null); }}>
                 <DialogTrigger asChild>
                   <Button className="gradient-primary">
                     <Plus className="h-4 w-4 mr-2" />
@@ -307,6 +311,34 @@ export default function ResellerClients() {
                     >
                       {loading ? "Creating..." : "Add Client"}
                     </Button>
+
+                    {createdInviteUrl && (
+                      <Alert className="bg-muted/50">
+                        <AlertDescription className="space-y-2">
+                          <p className="text-sm font-medium">✅ Client created! Send this link to your client:</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 text-xs bg-background p-2 rounded border overflow-x-auto whitespace-nowrap">
+                              {createdInviteUrl}
+                            </code>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(createdInviteUrl);
+                                setLinkCopied(true);
+                                toast.success("Link copied to clipboard!");
+                                setTimeout(() => setLinkCopied(false), 2000);
+                              }}
+                            >
+                              {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            They'll use this link to create their account and access the business.
+                          </p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
