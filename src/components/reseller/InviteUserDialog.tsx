@@ -259,7 +259,11 @@ export function InviteUserDialog({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendingInvites.map((invite) => (
+                {pendingInvites.map((invite) => {
+                  const inviteUrl = invite.token
+                    ? `${window.location.origin}/invite/accept?token=${invite.token}`
+                    : null;
+                  return (
                   <TableRow key={invite.id}>
                     <TableCell className="font-medium">{invite.email}</TableCell>
                     <TableCell>
@@ -270,7 +274,23 @@ export function InviteUserDialog({
                     <TableCell className="text-muted-foreground text-sm">
                       {format(new Date(invite.expires_at), "MMM d, yyyy")}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="flex items-center gap-1">
+                      {inviteUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            navigator.clipboard.writeText(inviteUrl);
+                            setCopiedInviteId(invite.id);
+                            toast.success("Invite link copied!");
+                            setTimeout(() => setCopiedInviteId(null), 2000);
+                          }}
+                          title="Copy invite link"
+                        >
+                          {copiedInviteId === invite.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -281,7 +301,8 @@ export function InviteUserDialog({
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
