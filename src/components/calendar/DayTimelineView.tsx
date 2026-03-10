@@ -247,6 +247,8 @@ export function DayTimelineView({
                   const staff = staffList.find((s) => s.id === booking.staff_id);
                   const isDragging = draggingBookingId === booking.id;
 
+                  const staffColor = getStaffColor(booking.staff_id, staffList);
+
                   return (
                     <div
                       key={booking.id}
@@ -267,21 +269,23 @@ export function DayTimelineView({
 
                       {/* Booking card */}
                       <div
-                        className="flex-1 flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-foreground text-background"
+                        className="flex-1 flex items-center gap-2 sm:gap-4 p-2 sm:p-4 rounded-xl sm:rounded-2xl"
                         style={{
+                          backgroundColor: staffColor.bg,
+                          color: staffColor.text,
                           borderLeft: service?.color ? `4px solid ${service.color}` : undefined,
                         }}
                       >
-                        <GripVertical className="w-4 h-4 text-background/40 shrink-0 hidden sm:block" />
+                        <GripVertical className="w-4 h-4 shrink-0 hidden sm:block" style={{ opacity: 0.4 }} />
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/10 flex items-center justify-center">
-                            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-background" />
+                          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                           </div>
                           <div>
-                            <p className="font-semibold text-background text-sm sm:text-base">
+                            <p className="font-semibold text-sm sm:text-base">
                               {format(parseISO(booking.start_time), "HH:mm")}
                             </p>
-                            <p className="text-[10px] sm:text-xs text-background/60">
+                            <p className="text-[10px] sm:text-xs" style={{ opacity: 0.7 }}>
                               {format(parseISO(booking.end_time), "HH:mm")}
                             </p>
                           </div>
