@@ -261,7 +261,7 @@ export function InviteUserDialog({
               <TableBody>
                 {pendingInvites.map((invite) => {
                   const inviteUrl = invite.token
-                    ? `${window.location.origin}/invite/accept?token=${invite.token}`
+                    ? `https://lekbookings.co.uk/invite/accept?token=${invite.token}`
                     : null;
                   return (
                   <TableRow key={invite.id}>

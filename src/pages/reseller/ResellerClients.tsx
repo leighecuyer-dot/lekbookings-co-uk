@@ -136,7 +136,7 @@ export default function ResellerClients() {
       };
 
       if (result.invite_token) {
-        const inviteUrl = `${window.location.origin}/invite/accept?token=${result.invite_token}`;
+        const inviteUrl = `https://lekbookings.co.uk/invite/accept?token=${result.invite_token}`;
         setCreatedInviteUrl(inviteUrl);
         setLinkCopied(false);
         toast.success("Client created! Copy the invite link below to send to your client.");
