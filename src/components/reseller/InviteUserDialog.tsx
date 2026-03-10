@@ -68,6 +68,7 @@ export function InviteUserDialog({
   const [fetchingInvites, setFetchingInvites] = useState(false);
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
 
   const fetchInvites = async () => {
     setFetchingInvites(true);
