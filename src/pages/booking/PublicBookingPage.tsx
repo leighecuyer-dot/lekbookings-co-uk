@@ -83,6 +83,62 @@ export default function PublicBookingPage() {
     }
   }, [slug]);
 
+  // Dynamically set PWA manifest and apple-touch-icon for this business
+  useEffect(() => {
+    if (!business) return;
+
+    const logoUrl = theme?.logo_url || business.logo_url;
+    if (!logoUrl) return;
+
+    // Set apple-touch-icon so iOS "Add to Home Screen" uses the business logo
+    let appleIcon = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement | null;
+    const originalAppleHref = appleIcon?.href;
+    if (appleIcon) {
+      appleIcon.href = logoUrl;
+    } else {
+      appleIcon = document.createElement("link");
+      appleIcon.rel = "apple-touch-icon";
+      appleIcon.href = logoUrl;
+      document.head.appendChild(appleIcon);
+    }
+
+    // Set page title to business name
+    const originalTitle = document.title;
+    document.title = business.name;
+
+    // Inject a dynamic manifest for Android "Add to Home Screen"
+    const manifest = {
+      name: business.name,
+      short_name: business.name,
+      start_url: window.location.pathname,
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: theme?.primary_color || "#4F46E5",
+      icons: [
+        { src: logoUrl, sizes: "192x192", type: "image/png" },
+        { src: logoUrl, sizes: "512x512", type: "image/png" },
+      ],
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+    const manifestUrl = URL.createObjectURL(blob);
+    const manifestLink = document.createElement("link");
+    manifestLink.rel = "manifest";
+    manifestLink.href = manifestUrl;
+
+    // Remove existing manifest and add the dynamic one
+    const existingManifest = document.querySelector('link[rel="manifest"]');
+    if (existingManifest) existingManifest.remove();
+    document.head.appendChild(manifestLink);
+
+    return () => {
+      // Restore originals on unmount
+      document.title = originalTitle;
+      if (appleIcon && originalAppleHref) appleIcon.href = originalAppleHref;
+      manifestLink.remove();
+      URL.revokeObjectURL(manifestUrl);
+    };
+  }, [business, theme]);
+
   const fetchBusinessData = async () => {
     if (!slug) return;
 
