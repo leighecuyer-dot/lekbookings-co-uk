@@ -59,6 +59,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       setCurrentBusinessState(null);
       setCurrentRole(null);
       setMode("business");
+      setFetchedForUserId(null);
       setLoading(false);
       return;
     }
