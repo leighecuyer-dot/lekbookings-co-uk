@@ -2,7 +2,7 @@
 // Provider-agnostic messaging service with automatic provider selection
 
 import { BrevoEmailProvider } from "./providers/brevo.ts";
-import { TwilioProvider } from "./providers/twilio.ts";
+import { TextbeltProvider } from "./providers/textbelt.ts";
 import type {
   TransactionalEmailParams,
   TransactionalSMSParams,
@@ -26,18 +26,13 @@ function getEmailProvider(): BrevoEmailProvider | null {
   return new BrevoEmailProvider(apiKey);
 }
 
-function getSMSProvider(): TwilioProvider | null {
-  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const phoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
-  const whatsappNumber = Deno.env.get("TWILIO_WHATSAPP_FROM");
-
-  if (!accountSid || !authToken || !phoneNumber) {
-    console.warn("Twilio credentials not configured");
+function getSMSProvider(): TextbeltProvider | null {
+  const apiKey = Deno.env.get("TEXTBELT_API_KEY");
+  if (!apiKey) {
+    console.warn("TEXTBELT_API_KEY not configured");
     return null;
   }
-
-  return new TwilioProvider(accountSid, authToken, phoneNumber, whatsappNumber);
+  return new TextbeltProvider(apiKey);
 }
 
 // ============ Transactional Messaging ============
@@ -91,7 +86,7 @@ export async function sendTransactionalSMS(
   if (!provider) {
     return {
       success: false,
-      error: "SMS provider not configured. Please add Twilio credentials.",
+      error: "SMS provider not configured. Please add TEXTBELT_API_KEY.",
     };
   }
 
@@ -101,29 +96,10 @@ export async function sendTransactionalSMS(
 export async function sendTransactionalWhatsApp(
   params: TransactionalWhatsAppParams
 ): Promise<SendResult> {
-  // Check if customer allows transactional WhatsApp
-  const canSend = await canSendTransactional(
-    params.customerId,
-    params.businessId,
-    "whatsapp"
-  );
-
-  if (!canSend.allowed) {
-    return {
-      success: false,
-      error: canSend.reason || "Cannot send transactional WhatsApp",
-    };
-  }
-
-  const provider = getSMSProvider();
-  if (!provider) {
-    return {
-      success: false,
-      error: "WhatsApp provider not configured. Please add Twilio credentials.",
-    };
-  }
-
-  return provider.sendTransactionalWhatsApp(params);
+  return {
+    success: false,
+    error: "WhatsApp is not currently configured. Twilio integration required for WhatsApp support.",
+  };
 }
 
 // ============ Marketing Campaigns ============
@@ -167,19 +143,13 @@ export async function sendMarketingSMSCampaign(
 export async function sendMarketingWhatsAppCampaign(
   params: MarketingWhatsAppCampaignParams
 ): Promise<CampaignResult> {
-  const provider = getSMSProvider();
-  if (!provider) {
-    return {
-      totalRecipients: params.recipients.length,
-      sent: 0,
-      failed: params.recipients.length,
-      blocked: 0,
-      errors: [{ customerId: "all", error: "WhatsApp provider not configured" }],
-    };
-  }
-
-  // Provider handles opt-in checks and rate limiting per recipient
-  return provider.sendMarketingWhatsApp(params);
+  return {
+    totalRecipients: params.recipients.length,
+    sent: 0,
+    failed: params.recipients.length,
+    blocked: 0,
+    errors: [{ customerId: "all", error: "WhatsApp not configured. Twilio integration required." }],
+  };
 }
 
 // ============ Re-exports ============

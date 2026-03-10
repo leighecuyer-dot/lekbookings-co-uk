@@ -3,7 +3,7 @@
 
 export type MessageChannel = 'email' | 'sms' | 'whatsapp';
 export type MessageType = 'transactional' | 'marketing';
-export type MessageProvider = 'brevo' | 'twilio' | 'resend';
+export type MessageProvider = 'brevo' | 'twilio' | 'textbelt' | 'resend';
 export type MessageStatus = 'queued' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'unsubscribed' | 'opened' | 'clicked';
 
 export interface ContactPreferences {
