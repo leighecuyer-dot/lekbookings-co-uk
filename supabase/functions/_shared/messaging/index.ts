@@ -96,29 +96,10 @@ export async function sendTransactionalSMS(
 export async function sendTransactionalWhatsApp(
   params: TransactionalWhatsAppParams
 ): Promise<SendResult> {
-  // Check if customer allows transactional WhatsApp
-  const canSend = await canSendTransactional(
-    params.customerId,
-    params.businessId,
-    "whatsapp"
-  );
-
-  if (!canSend.allowed) {
-    return {
-      success: false,
-      error: canSend.reason || "Cannot send transactional WhatsApp",
-    };
-  }
-
-  const provider = getSMSProvider();
-  if (!provider) {
-    return {
-      success: false,
-      error: "WhatsApp provider not configured. Please add Twilio credentials.",
-    };
-  }
-
-  return provider.sendTransactionalWhatsApp(params);
+  return {
+    success: false,
+    error: "WhatsApp is not currently configured. Twilio integration required for WhatsApp support.",
+  };
 }
 
 // ============ Marketing Campaigns ============
