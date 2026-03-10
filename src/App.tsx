@@ -39,6 +39,7 @@ import ResellerAnalytics from "./pages/reseller/ResellerAnalytics";
 import ResellerTickets from "./pages/reseller/ResellerTickets";
 import ResellerSettings from "./pages/reseller/ResellerSettings";
 import ResellerOnboarding from "./pages/reseller/ResellerOnboarding";
+import WelcomeSetupPage from "./pages/welcome/WelcomeSetupPage";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,11 @@ const AppRoutes = () => (
     />
     <Route path="/install" element={<InstallPage />} />
     <Route path="/invite/accept" element={<AcceptInvitePage />} />
+    <Route path="/welcome" element={
+      <RouteGuard requireAuth requireBusiness>
+        <WelcomeSetupPage />
+      </RouteGuard>
+    } />
     <Route path="/book/:slug" element={<PublicBookingPage />} />
     <Route path="/dns-setup" element={<DnsSetupPage />} />
     
