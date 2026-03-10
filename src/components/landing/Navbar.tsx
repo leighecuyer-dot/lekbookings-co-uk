@@ -10,6 +10,7 @@ const navItems = [
   { label: "Pricing", href: "#pricing" },
   { label: "Testimonials", href: "#testimonials" },
   { label: "Customer Portal", href: "/auth", isRoute: true },
+  { label: "Reseller Portal", href: "/reseller", isRoute: true },
 ];
 
 export function Navbar() {
