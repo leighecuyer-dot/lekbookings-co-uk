@@ -131,19 +131,20 @@ export default function ResellerClients() {
         business_id: string;
         business_slug: string;
         invite_id: string | null;
+        invite_token: string | null;
         invite_email: string | null;
       };
 
-      if (result.invite_email) {
-        toast.success(
-          `Client created! An invite has been sent to ${result.invite_email}`,
-          { duration: 5000 }
-        );
+      if (result.invite_token) {
+        const inviteUrl = `${window.location.origin}/invite/accept?token=${result.invite_token}`;
+        setCreatedInviteUrl(inviteUrl);
+        setLinkCopied(false);
+        toast.success("Client created! Copy the invite link below to send to your client.");
       } else {
         toast.success("Client created successfully");
+        setDialogOpen(false);
       }
 
-      setDialogOpen(false);
       setNewClient({
         businessName: "",
         businessEmail: "",
