@@ -46,6 +46,10 @@ import {
   ClipboardList,
   Share2,
   MessageSquare,
+  Crown,
+  UsersRound,
+  TicketCheck,
+  Sliders,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
