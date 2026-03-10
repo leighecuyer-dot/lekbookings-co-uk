@@ -143,19 +143,13 @@ export async function sendMarketingSMSCampaign(
 export async function sendMarketingWhatsAppCampaign(
   params: MarketingWhatsAppCampaignParams
 ): Promise<CampaignResult> {
-  const provider = getSMSProvider();
-  if (!provider) {
-    return {
-      totalRecipients: params.recipients.length,
-      sent: 0,
-      failed: params.recipients.length,
-      blocked: 0,
-      errors: [{ customerId: "all", error: "WhatsApp provider not configured" }],
-    };
-  }
-
-  // Provider handles opt-in checks and rate limiting per recipient
-  return provider.sendMarketingWhatsApp(params);
+  return {
+    totalRecipients: params.recipients.length,
+    sent: 0,
+    failed: params.recipients.length,
+    blocked: 0,
+    errors: [{ customerId: "all", error: "WhatsApp not configured. Twilio integration required." }],
+  };
 }
 
 // ============ Re-exports ============
