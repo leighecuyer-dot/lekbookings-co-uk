@@ -200,7 +200,7 @@ export default function ResellerClients() {
                   className="pl-9 w-[200px]"
                 />
               </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setCreatedInviteUrl(null); }}>
                 <DialogTrigger asChild>
                   <Button className="gradient-primary">
                     <Plus className="h-4 w-4 mr-2" />
