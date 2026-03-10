@@ -111,15 +111,15 @@ export function InviteUserDialog({
       });
 
       if (error) {
-        console.error("reseller_create_invite error:", error);
+        console.error("reseller_create_invite error:", error, "businessId:", businessId);
         if (error.message.includes("invite_already_pending")) {
           toast.error("An invite is already pending for this email");
         } else if (error.message.includes("reseller_not_linked_to_business")) {
-          toast.error("You are not authorized to manage this business");
+          toast.error("Authorization failed. Please log out and log back in, then try again.");
         } else if (error.message.includes("invalid_email")) {
           toast.error("Please enter a valid email address");
         } else {
-          toast.error("Failed to send invite");
+          toast.error("Failed to send invite: " + error.message);
         }
         return;
       }
