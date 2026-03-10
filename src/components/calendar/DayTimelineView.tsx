@@ -164,16 +164,15 @@ export function DayTimelineView({
   onDrop,
   draggingBookingId,
 }: DayTimelineViewProps) {
-  // Check if a time slot has a booking
-  const getBookingForSlot = (slotTime: string) => {
+  // Get all bookings for a time slot
+  const getBookingsForSlot = (slotTime: string) => {
     const [slotHour, slotMinute] = slotTime.split(":").map(Number);
     const slotDate = setMinutes(setHours(selectedDate, slotHour), slotMinute);
     const slotTimestamp = slotDate.getTime();
 
-    return bookings.find((booking) => {
+    return bookings.filter((booking) => {
       const bookingStart = parseISO(booking.start_time).getTime();
       const bookingEnd = parseISO(booking.end_time).getTime();
-      // Check if slot falls within booking time range
       return slotTimestamp >= bookingStart && slotTimestamp < bookingEnd;
     });
   };
