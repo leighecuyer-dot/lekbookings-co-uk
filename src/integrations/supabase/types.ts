@@ -1605,6 +1605,7 @@ export type Database = {
           expires_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          token: string
         }[]
       }
       reseller_revoke_invite: {
