@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logMessage, getSupabaseClient } from "../_shared/messaging/utils.ts";
+import { validateTwilioSignature, formDataToRecord } from "../_shared/messaging/twilio-signature.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
