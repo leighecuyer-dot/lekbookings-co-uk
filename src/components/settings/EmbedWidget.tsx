@@ -18,11 +18,23 @@ const BUTTON_POSITIONS = [
 
 const BUTTON_COLORS = [
   { value: "#4F46E5", label: "Indigo" },
-  { value: "#10B981", label: "Green" },
+  { value: "#10B981", label: "Emerald" },
   { value: "#F59E0B", label: "Amber" },
   { value: "#EF4444", label: "Red" },
   { value: "#8B5CF6", label: "Purple" },
   { value: "#EC4899", label: "Pink" },
+  { value: "#0EA5E9", label: "Sky Blue" },
+  { value: "#14B8A6", label: "Teal" },
+  { value: "#F97316", label: "Orange" },
+  { value: "#6366F1", label: "Violet" },
+  { value: "#D946EF", label: "Fuchsia" },
+  { value: "#84CC16", label: "Lime" },
+  { value: "#06B6D4", label: "Cyan" },
+  { value: "#E11D48", label: "Rose" },
+  { value: "#1D4ED8", label: "Blue" },
+  { value: "#000000", label: "Black" },
+  { value: "#B45309", label: "Bronze" },
+  { value: "#BE185D", label: "Magenta" },
 ];
 
 export function EmbedWidget() {
