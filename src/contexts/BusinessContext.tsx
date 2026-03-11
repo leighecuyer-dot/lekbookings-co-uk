@@ -253,7 +253,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         mode,
         isResellerMode,
         resellerClientBusinesses,
-        loading,
+        loading: isContextLoading,
         isRealtimeActive,
         setCurrentBusiness,
         enterResellerMode,
