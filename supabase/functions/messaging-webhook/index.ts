@@ -81,17 +81,17 @@ Deno.serve(async (req) => {
 
     // Validate Twilio signature
     const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    if (twilioAuthToken) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const webhookUrl = `${supabaseUrl}/functions/v1/messaging-webhook`;
-      const params = formDataToRecord(formData);
-      const isValid = await validateTwilioSignature(req, twilioAuthToken, webhookUrl, params);
-      if (!isValid) {
-        console.error("Invalid Twilio signature — rejecting request");
-        return new Response("Forbidden", { status: 403, headers: corsHeaders });
-      }
-    } else {
-      console.warn("TWILIO_AUTH_TOKEN not set — skipping signature validation");
+    if (!twilioAuthToken) {
+      console.error("TWILIO_AUTH_TOKEN not configured — rejecting request");
+      return new Response("Service unavailable", { status: 503, headers: corsHeaders });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const webhookUrl = `${supabaseUrl}/functions/v1/messaging-webhook`;
+    const params = formDataToRecord(formData);
+    const isValid = await validateTwilioSignature(req, twilioAuthToken, webhookUrl, params);
+    if (!isValid) {
+      console.error("Invalid Twilio signature — rejecting request");
+      return new Response("Forbidden", { status: 403, headers: corsHeaders });
     }
 
     const payload: TwilioWebhookPayload = {
