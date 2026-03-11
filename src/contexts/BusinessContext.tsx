@@ -51,6 +51,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
   const isResellerMode = mode === "reseller";
   const businessId = currentBusiness?.id ?? null;
+  const hasPendingUserBootstrap = Boolean(user && fetchedForUserId !== user.id);
+  const isContextLoading = loading || hasPendingUserBootstrap;
 
   const fetchBusinesses = useCallback(async () => {
     if (!user) {
@@ -74,6 +76,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
     if (rolesError) {
       console.error("Error fetching roles:", rolesError);
+      setFetchedForUserId(user.id);
       setLoading(false);
       return;
     }
@@ -105,6 +108,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       setBusinesses([]);
       setCurrentBusinessState(null);
       setCurrentRole(null);
+      setFetchedForUserId(user.id);
       setLoading(false);
       return;
     }
@@ -118,6 +122,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
     if (businessError) {
       console.error("Error fetching businesses:", businessError);
+      setFetchedForUserId(user.id);
       setLoading(false);
       return;
     }
