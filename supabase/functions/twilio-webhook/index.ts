@@ -1,11 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateTwilioSignature, formDataToRecord } from "../_shared/messaging/twilio-signature.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-twilio-signature",
 };
-
 interface TwilioWebhookPayload {
   From: string;
   To: string;
