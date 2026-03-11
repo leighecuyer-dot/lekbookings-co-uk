@@ -1,11 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateTwilioSignature, formDataToRecord } from "../_shared/messaging/twilio-signature.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-twilio-signature",
 };
-
 interface TwilioWebhookPayload {
   From: string;
   To: string;
@@ -60,6 +60,22 @@ Deno.serve(async (req) => {
   try {
     // Parse form data (Twilio sends as application/x-www-form-urlencoded)
     const formData = await req.formData();
+
+    // Validate Twilio signature
+    const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+    if (twilioAuthToken) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
+      const params = formDataToRecord(formData);
+      const isValid = await validateTwilioSignature(req, twilioAuthToken, webhookUrl, params);
+      if (!isValid) {
+        console.error("Invalid Twilio signature — rejecting request");
+        return new Response("Forbidden", { status: 403, headers: corsHeaders });
+      }
+    } else {
+      console.warn("TWILIO_AUTH_TOKEN not set — skipping signature validation");
+    }
+
     const payload: TwilioWebhookPayload = {
       From: formData.get("From")?.toString() || "",
       To: formData.get("To")?.toString() || "",
