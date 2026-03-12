@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2, Upload } from "lucide-react";
+import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2, Upload, Users } from "lucide-react";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import { Badge } from "@/components/ui/badge";
 import {
