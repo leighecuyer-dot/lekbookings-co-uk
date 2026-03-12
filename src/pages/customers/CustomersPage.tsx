@@ -59,6 +59,7 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [preferencesCustomer, setPreferencesCustomer] = useState<Customer | null>(null);
+  const [assignStaffCustomer, setAssignStaffCustomer] = useState<Customer | null>(null);
   
   const [newCustomer, setNewCustomer] = useState({
     name: "",
