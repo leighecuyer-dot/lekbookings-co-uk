@@ -194,19 +194,15 @@ export default function ResellerOnboarding() {
         await refreshReseller();
         toast.success("Branding setup complete!");
       } else {
-        // Create new reseller
-        const { error } = await supabase.from("resellers").insert({
-          user_id: user.id,
-          company_name: formData.companyName,
-          slug: formData.slug,
-          contact_email: formData.contactEmail || null,
-          contact_phone: formData.contactPhone || null,
-          logo_url: formData.logoUrl,
-          primary_color: formData.primaryColor,
-          secondary_color: formData.secondaryColor,
-          markup_percentage: formData.markupPercentage,
-          is_active: true,
-          settings: settingsData,
+        // Create new reseller via secure RPC function
+        const { error } = await supabase.rpc("create_reseller_account", {
+          _company_name: formData.companyName,
+          _slug: formData.slug,
+          _contact_email: formData.contactEmail || null,
+          _contact_phone: formData.contactPhone || null,
+          _logo_url: formData.logoUrl,
+          _primary_color: formData.primaryColor,
+          _secondary_color: formData.secondaryColor,
         });
 
         if (error) {

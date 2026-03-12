@@ -1507,6 +1507,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_reseller_account: {
+        Args: {
+          _company_name: string
+          _contact_email?: string
+          _contact_phone?: string
+          _logo_url?: string
+          _primary_color?: string
+          _secondary_color?: string
+          _slug: string
+        }
+        Returns: string
+      }
       create_reseller_client_business: {
         Args: {
           _business_email?: string
