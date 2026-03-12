@@ -87,32 +87,24 @@ export function AssignStaffDialog({
     const toAdd = [...assignedStaffIds].filter((id) => !initialStaffIds.has(id));
     const toRemove = [...initialStaffIds].filter((id) => !assignedStaffIds.has(id));
 
-    const promises: Promise<unknown>[] = [];
-
     if (toAdd.length > 0) {
-      promises.push(
-        supabase.from("staff_customers").insert(
-          toAdd.map((staff_id) => ({
-            staff_id,
-            customer_id: customerId,
-            business_id: businessId,
-          }))
-        )
+      await supabase.from("staff_customers").insert(
+        toAdd.map((staff_id) => ({
+          staff_id,
+          customer_id: customerId,
+          business_id: businessId,
+        }))
       );
     }
 
     if (toRemove.length > 0) {
-      promises.push(
-        supabase
-          .from("staff_customers")
-          .delete()
-          .eq("customer_id", customerId)
-          .eq("business_id", businessId)
-          .in("staff_id", toRemove)
-      );
+      await supabase
+        .from("staff_customers")
+        .delete()
+        .eq("customer_id", customerId)
+        .eq("business_id", businessId)
+        .in("staff_id", toRemove);
     }
-
-    await Promise.all(promises);
 
     toast.success("Staff assignments updated");
     setSaving(false);
