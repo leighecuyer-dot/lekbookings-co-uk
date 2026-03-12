@@ -387,6 +387,17 @@ export default function CustomersPage() {
           businessId={currentBusiness.id}
         />
       )}
+
+      {/* Assign Staff Dialog */}
+      {assignStaffCustomer && currentBusiness && (
+        <AssignStaffDialog
+          open={!!assignStaffCustomer}
+          onOpenChange={(open) => !open && setAssignStaffCustomer(null)}
+          customerId={assignStaffCustomer.id}
+          customerName={assignStaffCustomer.name}
+          businessId={currentBusiness.id}
+        />
+      )}
     </DashboardLayout>
   );
 }
