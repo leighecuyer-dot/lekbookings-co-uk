@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +10,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Calendar, CheckCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+
+const LOVABLE_HOST_SUFFIXES = ["lovable.app", "lovableproject.com", "localhost", "127.0.0.1"] as const;
+
+const isLovableHostedDomain = (hostname: string) =>
+  LOVABLE_HOST_SUFFIXES.some((suffix) => hostname === suffix || hostname.endsWith(`.${suffix}`));
+
+const getAllowedOAuthHosts = () => {
+  const allowedHosts = new Set<string>(["accounts.google.com"]);
+
+  try {
+    const backendHost = new URL(import.meta.env.VITE_SUPABASE_URL).hostname;
+    allowedHosts.add(backendHost);
+  } catch {
+    // Keep fallback hosts only.
+  }
+
+  return allowedHosts;
+};
 
 export default function AuthPage() {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
@@ -24,17 +41,47 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
+
     try {
-      const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      if (error) {
-        toast.error(error.message || "Failed to sign in with Google");
+      const redirectTo = `${window.location.origin}/`;
+      const isCustomDomain = !isLovableHostedDomain(window.location.hostname);
+
+      if (isCustomDomain) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo,
+            skipBrowserRedirect: true,
+          },
+        });
+
+        if (error) throw error;
+        if (!data?.url) throw new Error("Missing OAuth redirect URL");
+
+        const oauthUrl = new URL(data.url);
+        const allowedHosts = getAllowedOAuthHosts();
+        if (!allowedHosts.has(oauthUrl.hostname)) {
+          throw new Error("Invalid OAuth redirect URL");
+        }
+
+        window.location.assign(data.url);
+        return;
       }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+        },
+      });
+
+      if (error) throw error;
     } catch (err) {
-      toast.error("Failed to sign in with Google");
+      const message = err instanceof Error ? err.message : "Failed to sign in with Google";
+      toast.error(message);
+    } finally {
+      setGoogleLoading(false);
     }
-    setGoogleLoading(false);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
