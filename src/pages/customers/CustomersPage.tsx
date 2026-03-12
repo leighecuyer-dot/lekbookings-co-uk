@@ -302,6 +302,12 @@ export default function CustomersPage() {
                               <Settings2 className="w-4 h-4 mr-2" />
                               Contact Preferences
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setAssignStaffCustomer(customer)}
+                            >
+                              <Users className="w-4 h-4 mr-2" />
+                              Assign Staff
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleDeleteCustomer(customer.id)}
