@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { CustomerPreferencesDialog } from "@/components/customers";
+import { AssignStaffDialog } from "@/components/customers/AssignStaffDialog";
 
 interface Customer {
   id: string;
