@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2, Upload } from "lucide-react";
+import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2, Upload, Users } from "lucide-react";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { CustomerPreferencesDialog } from "@/components/customers";
+import { AssignStaffDialog } from "@/components/customers/AssignStaffDialog";
 
 interface Customer {
   id: string;
@@ -58,6 +59,7 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [preferencesCustomer, setPreferencesCustomer] = useState<Customer | null>(null);
+  const [assignStaffCustomer, setAssignStaffCustomer] = useState<Customer | null>(null);
   
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -300,6 +302,12 @@ export default function CustomersPage() {
                               <Settings2 className="w-4 h-4 mr-2" />
                               Contact Preferences
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setAssignStaffCustomer(customer)}
+                            >
+                              <Users className="w-4 h-4 mr-2" />
+                              Assign Staff
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleDeleteCustomer(customer.id)}
@@ -376,6 +384,17 @@ export default function CustomersPage() {
           customerName={preferencesCustomer.name}
           customerEmail={preferencesCustomer.email}
           customerPhone={preferencesCustomer.phone}
+          businessId={currentBusiness.id}
+        />
+      )}
+
+      {/* Assign Staff Dialog */}
+      {assignStaffCustomer && currentBusiness && (
+        <AssignStaffDialog
+          open={!!assignStaffCustomer}
+          onOpenChange={(open) => !open && setAssignStaffCustomer(null)}
+          customerId={assignStaffCustomer.id}
+          customerName={assignStaffCustomer.name}
           businessId={currentBusiness.id}
         />
       )}

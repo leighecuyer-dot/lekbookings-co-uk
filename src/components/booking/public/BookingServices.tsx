@@ -111,7 +111,7 @@ export function BookingServices({ services, categories, theme, businessId }: Boo
     return new Intl.NumberFormat("en-GB", {
       style: "currency",
       currency: "GBP",
-    }).format(price / 100);
+    }).format(price);
   };
 
   return (
