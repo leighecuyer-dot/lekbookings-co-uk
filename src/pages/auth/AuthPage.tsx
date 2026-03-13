@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Calendar, CheckCircle } from "lucide-react";
+import { Calendar, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const LOVABLE_HOST_SUFFIXES = ["lovable.app", "lovableproject.com", "localhost", "127.0.0.1"] as const;
