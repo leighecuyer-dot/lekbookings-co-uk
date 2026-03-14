@@ -47,14 +47,7 @@ const AppRoutes = () => (
   <Routes>
     {/* Public routes */}
     <Route path="/" element={<LandingPage />} />
-    <Route 
-      path="/auth" 
-      element={
-        <RouteGuard redirectAuthenticated>
-          <AuthPage />
-        </RouteGuard>
-      } 
-    />
+    <Route path="/auth" element={<AuthPage />} />
     <Route path="/install" element={<InstallPage />} />
     <Route path="/invite/accept" element={<AcceptInvitePage />} />
     <Route path="/welcome" element={
