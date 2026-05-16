@@ -109,6 +109,29 @@ export function ThemeCustomization() {
     }
   };
 
+  const downscaleImage = (dataUrl: string, maxDim = 2048): Promise<string> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const { width, height } = img;
+        if (width <= maxDim && height <= maxDim) return resolve(dataUrl);
+        const scale = Math.min(maxDim / width, maxDim / height);
+        const w = Math.round(width * scale);
+        const h = Math.round(height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(dataUrl);
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, w, h);
+        // PNG preserves transparency for logos; quality stays sharp at 2048px
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-selecting same file later
@@ -120,8 +143,10 @@ export function ThemeCustomization() {
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setCropSrc(reader.result as string);
+    reader.onload = async () => {
+      const original = reader.result as string;
+      const resized = await downscaleImage(original, 2048);
+      setCropSrc(resized);
       setCropOpen(true);
     };
     reader.readAsDataURL(file);
