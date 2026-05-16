@@ -92,7 +92,7 @@ export function ThemeCustomization() {
     setUploadingLogo(true);
     try {
       const fileExt = file.name.split(".").pop();
-      const filePath = `business-logos/${currentBusiness.id}/${Date.now()}.${fileExt}`;
+      const filePath = `${currentBusiness.id}/logos/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("business-assets")
