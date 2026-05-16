@@ -139,6 +139,40 @@ export default function PublicBookingPage() {
     };
   }, [business, theme]);
 
+  // Dynamically load the selected Google Fonts so they actually render on the page
+  useEffect(() => {
+    const families: string[] = [];
+    const headingRaw = theme?.font_heading || "Plus Jakarta Sans";
+    const bodyRaw = theme?.font_body || "Inter";
+    // font_heading may be a CSS stack like "GFS Didot, Didot, serif" — use the first family
+    const pickFirst = (s: string) => s.split(",")[0].trim().replace(/['"]/g, "");
+    [pickFirst(headingRaw), pickFirst(bodyRaw)].forEach((f) => {
+      if (f && !families.includes(f) && !/^(serif|sans-serif|monospace|system-ui)$/i.test(f)) {
+        families.push(f);
+      }
+    });
+    if (families.length === 0) return;
+
+    const href =
+      "https://fonts.googleapis.com/css2?" +
+      families
+        .map(
+          (f) =>
+            `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@400;500;600;700;800`
+        )
+        .join("&") +
+      "&display=swap";
+
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+
+    return () => {
+      link.remove();
+    };
+  }, [theme?.font_heading, theme?.font_body]);
+
   const fetchBusinessData = async () => {
     if (!slug) return;
 
