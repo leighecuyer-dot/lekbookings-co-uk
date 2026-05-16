@@ -18,6 +18,7 @@ const FONT_OPTIONS = [
   { value: "Open Sans", label: "Open Sans" },
   { value: "Lato", label: "Lato" },
   { value: "Montserrat", label: "Montserrat" },
+  { value: "GFS Didot, Didot, serif", label: "Didot" },
 ];
 
 interface PageTheme {
