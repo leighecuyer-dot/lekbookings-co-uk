@@ -204,7 +204,6 @@ export function BookingContact({ business, theme }: BookingContactProps) {
           </div>
         )}
 
-        )}
 
         {/* Direct Message Buttons */}
         {hasMessageLinks && (
