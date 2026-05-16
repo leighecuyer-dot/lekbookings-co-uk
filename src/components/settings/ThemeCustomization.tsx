@@ -38,6 +38,8 @@ export function ThemeCustomization() {
   const { currentBusiness } = useBusiness();
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [theme, setTheme] = useState<PageTheme | null>(null);
   
   const [formData, setFormData] = useState({
