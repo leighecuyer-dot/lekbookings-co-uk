@@ -84,23 +84,40 @@ export function ThemeCustomization() {
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting same file later
     if (!file || !currentBusiness) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("File size must be less than 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropSrc(reader.result as string);
+      setCropOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditExisting = () => {
+    if (!formData.logo_url) return;
+    // Cache-bust so the cropper always pulls a fresh copy
+    setCropSrc(`${formData.logo_url}?t=${Date.now()}`);
+    setCropOpen(true);
+  };
+
+  const uploadCroppedBlob = async (blob: Blob) => {
+    if (!currentBusiness) return;
     setUploadingLogo(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${currentBusiness.id}/logos/${Date.now()}.${fileExt}`;
+      const filePath = `${currentBusiness.id}/logos/${Date.now()}.png`;
 
       const { error: uploadError } = await supabase.storage
         .from("business-assets")
-        .upload(filePath, file);
+        .upload(filePath, blob, { contentType: "image/png", upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -109,7 +126,7 @@ export function ThemeCustomization() {
         .getPublicUrl(filePath);
 
       setFormData({ ...formData, logo_url: urlData.publicUrl });
-      toast.success("Logo uploaded successfully");
+      toast.success("Logo updated — don't forget to Save");
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to upload logo");
