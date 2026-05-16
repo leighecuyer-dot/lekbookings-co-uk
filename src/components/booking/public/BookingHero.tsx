@@ -126,14 +126,25 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
                 document.querySelector("section");
               target?.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
-            className="mt-8 px-8 py-3 rounded-full font-semibold text-base shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            disabled={isLoading || ctaDisabled}
+            aria-busy={isLoading}
+            className="mt-8 inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full font-semibold text-base shadow-lg transition-all transform enabled:hover:shadow-xl enabled:hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
             style={{
               backgroundColor: "#fff",
               color: primaryColor,
               fontFamily: fontBody,
             }}
           >
-            Book an Appointment
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading…
+              </>
+            ) : ctaDisabled ? (
+              "No services available"
+            ) : (
+              "Book an Appointment"
+            )}
           </button>
         </div>
       </div>
