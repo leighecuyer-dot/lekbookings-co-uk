@@ -27,6 +27,7 @@ import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { WeekView } from "@/components/calendar/WeekView";
 import { KanbanView } from "@/components/calendar/KanbanView";
 import { DayTimelineView } from "@/components/calendar/DayTimelineView";
+import { PinchZoomWrapper } from "@/components/calendar/PinchZoomWrapper";
 import { StatusFilter } from "@/components/calendar/StatusFilter";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { useStaffLeave } from "@/hooks/staff/useStaffLeave";
