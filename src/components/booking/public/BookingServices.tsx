@@ -273,8 +273,7 @@ export function BookingServices({ services, categories, theme, businessId }: Boo
                               <Clock className="w-4 h-4" />
                               {formatDuration(service.duration_minutes)}
                             </span>
-                            <span className="flex items-center gap-1">
-                              <PoundSterling className="w-4 h-4" />
+                            <span className="flex items-center gap-1 font-medium text-foreground">
                               {formatPrice(service.price)}
                             </span>
                           </div>
