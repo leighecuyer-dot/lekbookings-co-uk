@@ -74,7 +74,10 @@ export default function BookingPageEditor() {
           </CardContent>
         </Card>
 
-        {/* Theme / Branding */}
+        {/* Custom Slug */}
+        <SlugEditor />
+
+
         <ThemeCustomization />
 
         {/* Gallery */}
