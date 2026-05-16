@@ -115,7 +115,7 @@ export function BookingServices({ services, categories, theme, businessId }: Boo
   };
 
   return (
-    <section className="py-16 sm:py-20 bg-background">
+    <section id="booking-services" className="py-16 sm:py-20 bg-background">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-8">
           <h2
