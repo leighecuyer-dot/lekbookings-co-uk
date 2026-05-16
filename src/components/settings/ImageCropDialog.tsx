@@ -177,6 +177,37 @@ export function ImageCropDialog({
           />
         </div>
 
+        {/* Live preview at target sizes */}
+        <div className="space-y-2">
+          <Label className="text-xs">Preview</Label>
+          <div className="flex items-end justify-around gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+            <div className="flex flex-col items-center gap-1.5">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Favicon preview" className="w-8 h-8 rounded-sm object-cover border border-border" />
+              ) : (
+                <div className="w-8 h-8 rounded-sm bg-muted" />
+              )}
+              <span className="text-[10px] text-muted-foreground">Favicon · 32px</span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Header preview" className="w-16 h-16 rounded-lg object-cover border border-border" />
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-muted" />
+              )}
+              <span className="text-[10px] text-muted-foreground">Header · 64px</span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Full preview" className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover border border-border" />
+              ) : (
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl bg-muted" />
+              )}
+              <span className="text-[10px] text-muted-foreground">Full · 128px</span>
+            </div>
+          </div>
+        </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
