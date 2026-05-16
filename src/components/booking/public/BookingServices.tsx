@@ -235,11 +235,26 @@ export function BookingServices({ services, categories, theme, businessId }: Boo
                     >
                       {/* Service Image or Color Header */}
                       {service.image_url ? (
-                        <div className="h-40 overflow-hidden">
+                        <div
+                          className="relative w-full aspect-[4/3] overflow-hidden bg-muted"
+                          style={{ backgroundColor: `${service.color || primaryColor}10` }}
+                        >
                           <img
                             src={service.image_url}
                             alt={service.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            decoding="async"
+                            className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              const img = e.currentTarget;
+                              img.style.display = "none";
+                              const parent = img.parentElement;
+                              if (parent) {
+                                parent.classList.remove("aspect-[4/3]");
+                                parent.classList.add("h-3");
+                                parent.style.backgroundColor = service.color || primaryColor;
+                              }
+                            }}
                           />
                         </div>
                       ) : (
