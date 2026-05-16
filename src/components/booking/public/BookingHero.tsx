@@ -24,7 +24,7 @@ interface BookingHeroProps {
   ctaDisabled?: boolean;
 }
 
-export function BookingHero({ business, logoUrl, theme }: BookingHeroProps) {
+export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDisabled = false }: BookingHeroProps) {
   const primaryColor = theme?.primary_color || "#4F46E5";
   const fontHeading = theme?.font_heading || "Plus Jakarta Sans";
   const fontBody = theme?.font_body || "Inter";
