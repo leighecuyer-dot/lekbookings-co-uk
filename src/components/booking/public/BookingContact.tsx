@@ -80,6 +80,32 @@ export function BookingContact({ business, theme }: BookingContactProps) {
     return `https://wa.me/${cleaned}`;
   };
 
+  // Extract a handle/username from a profile URL or raw handle
+  const extractHandle = (input: string): string | null => {
+    if (!input) return null;
+    let s = input.trim().replace(/^@/, '');
+    try {
+      if (/^https?:\/\//i.test(s)) {
+        const u = new URL(s);
+        const parts = u.pathname.split('/').filter(Boolean);
+        // ignore common non-handle prefixes
+        const skip = new Set(['p', 'reel', 'reels', 'tv', 'stories', 'explore', 'pages', 'profile.php']);
+        const handle = parts.find(p => !skip.has(p.toLowerCase()));
+        s = handle || '';
+      }
+    } catch {
+      // not a URL — treat as handle
+    }
+    s = s.split('?')[0].split('#')[0].replace(/\/$/, '');
+    return s || null;
+  };
+
+  const igHandle = socialLinks?.instagram ? extractHandle(socialLinks.instagram) : null;
+  const fbHandle = socialLinks?.facebook ? extractHandle(socialLinks.facebook) : null;
+  const instagramDmUrl = igHandle ? `https://ig.me/m/${igHandle}` : null;
+  const facebookMsgUrl = fbHandle ? `https://m.me/${fbHandle}` : null;
+  const hasMessageLinks = !!(instagramDmUrl || facebookMsgUrl);
+
   return (
     <section className="py-16 sm:py-20 bg-background">
       <div className="max-w-4xl mx-auto px-4">
