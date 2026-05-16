@@ -57,6 +57,31 @@ export function ThemeCustomization() {
     }
   }, [currentBusiness]);
 
+  // Dynamically load Google Fonts for the chosen heading/body so the
+  // live preview (and the rest of the page) reflects the selection
+  // instantly — no manual refresh needed after Save.
+  useEffect(() => {
+    const pickFirst = (stack?: string | null) =>
+      (stack || "").split(",")[0].trim().replace(/['"]/g, "");
+    const families = [pickFirst(formData.font_heading), pickFirst(formData.font_body)]
+      .filter(Boolean)
+      .filter((f) => !/^(serif|sans-serif|monospace|system-ui|didot)$/i.test(f));
+    if (families.length === 0) return;
+
+    const id = `tc-fonts-${families.join("-").replace(/\s+/g, "+")}`;
+    if (document.getElementById(id)) return;
+
+    const href = `https://fonts.googleapis.com/css2?${families
+      .map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@400;500;600;700;800`)
+      .join("&")}&display=swap`;
+
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+  }, [formData.font_heading, formData.font_body]);
+
   const fetchTheme = async () => {
     if (!currentBusiness) return;
 
