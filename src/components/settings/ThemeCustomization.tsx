@@ -385,6 +385,16 @@ export function ThemeCustomization() {
           {loading ? "Saving..." : "Save Theme Settings"}
         </Button>
       </CardContent>
+
+      <ImageCropDialog
+        open={cropOpen}
+        onOpenChange={setCropOpen}
+        imageSrc={cropSrc}
+        aspect={1}
+        outputSize={512}
+        title="Crop Your Logo"
+        onCropComplete={uploadCroppedBlob}
+      />
     </Card>
   );
 }
