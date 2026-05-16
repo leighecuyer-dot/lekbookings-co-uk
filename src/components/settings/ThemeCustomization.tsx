@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Palette, Upload, Building2 } from "lucide-react";
+import { Palette, Upload, Building2, Crop } from "lucide-react";
+import { ImageCropDialog } from "./ImageCropDialog";
 
 const FONT_OPTIONS = [
   { value: "Inter", label: "Inter" },
@@ -37,6 +38,8 @@ export function ThemeCustomization() {
   const { currentBusiness } = useBusiness();
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [theme, setTheme] = useState<PageTheme | null>(null);
   
   const [formData, setFormData] = useState({
@@ -81,23 +84,40 @@ export function ThemeCustomization() {
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting same file later
     if (!file || !currentBusiness) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("File size must be less than 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropSrc(reader.result as string);
+      setCropOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditExisting = () => {
+    if (!formData.logo_url) return;
+    // Cache-bust so the cropper always pulls a fresh copy
+    setCropSrc(`${formData.logo_url}?t=${Date.now()}`);
+    setCropOpen(true);
+  };
+
+  const uploadCroppedBlob = async (blob: Blob) => {
+    if (!currentBusiness) return;
     setUploadingLogo(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${currentBusiness.id}/logos/${Date.now()}.${fileExt}`;
+      const filePath = `${currentBusiness.id}/logos/${Date.now()}.png`;
 
       const { error: uploadError } = await supabase.storage
         .from("business-assets")
-        .upload(filePath, file);
+        .upload(filePath, blob, { contentType: "image/png", upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -106,7 +126,7 @@ export function ThemeCustomization() {
         .getPublicUrl(filePath);
 
       setFormData({ ...formData, logo_url: urlData.publicUrl });
-      toast.success("Logo uploaded successfully");
+      toast.success("Logo updated — don't forget to Save");
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to upload logo");
@@ -192,24 +212,38 @@ export function ThemeCustomization() {
                 <Building2 className="h-8 w-8 text-muted-foreground/50" />
               </div>
             )}
-            <div>
-              <Label
-                htmlFor="business-logo-upload"
-                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-              >
-                <Upload className="h-4 w-4" />
-                {uploadingLogo ? "Uploading..." : formData.logo_url ? "Change Logo" : "Upload Logo"}
-              </Label>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <Label
+                  htmlFor="business-logo-upload"
+                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploadingLogo ? "Uploading..." : formData.logo_url ? "Change" : "Upload"}
+                </Label>
+                {formData.logo_url && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditExisting}
+                    disabled={uploadingLogo}
+                  >
+                    <Crop className="h-4 w-4 mr-1.5" />
+                    Edit / Crop
+                  </Button>
+                )}
+              </div>
               <input
                 id="business-logo-upload"
                 type="file"
                 accept="image/*"
-                onChange={handleLogoUpload}
+                onChange={handleFileSelected}
                 className="hidden"
                 disabled={uploadingLogo}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                PNG, JPG up to 2MB
+              <p className="text-xs text-muted-foreground">
+                PNG, JPG up to 5MB. You can crop after upload.
               </p>
             </div>
           </div>
@@ -351,6 +385,16 @@ export function ThemeCustomization() {
           {loading ? "Saving..." : "Save Theme Settings"}
         </Button>
       </CardContent>
+
+      <ImageCropDialog
+        open={cropOpen}
+        onOpenChange={setCropOpen}
+        imageSrc={cropSrc}
+        aspect={1}
+        outputSize={512}
+        title="Crop Your Logo"
+        onCropComplete={uploadCroppedBlob}
+      />
     </Card>
   );
 }
