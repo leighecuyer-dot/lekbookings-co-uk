@@ -52,11 +52,13 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
         <div className="flex flex-col items-center text-center text-white">
           {/* Logo */}
           {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={`${business.name} logo`}
-              className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl object-cover mb-6 shadow-2xl border-4 border-white/20"
-            />
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl mb-6 shadow-2xl border-4 border-white/20 bg-white/95 p-2 flex items-center justify-center overflow-hidden">
+              <img
+                src={logoUrl}
+                alt={`${business.name} logo`}
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
           ) : (
             <div
               className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl flex items-center justify-center mb-6 shadow-2xl border-4 border-white/20"
@@ -121,10 +123,13 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
           {/* CTA Button */}
           <button
             onClick={() => {
-              const target =
-                document.getElementById("booking-services") ||
-                document.querySelector("section");
-              target?.scrollIntoView({ behavior: "smooth", block: "start" });
+              const target = document.getElementById("booking-services");
+              if (target) {
+                const y = target.getBoundingClientRect().top + window.scrollY - 16;
+                window.scrollTo({ top: y, behavior: "smooth" });
+              } else {
+                window.scrollBy({ top: window.innerHeight * 0.8, behavior: "smooth" });
+              }
             }}
             disabled={isLoading || ctaDisabled}
             aria-busy={isLoading}
