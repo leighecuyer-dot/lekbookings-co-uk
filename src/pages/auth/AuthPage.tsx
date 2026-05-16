@@ -193,6 +193,22 @@ export default function AuthPage() {
                 Sign in to your account or create a new one
               </CardDescription>
             </CardHeader>
+            {tab === "signin" && (
+              <div className="mx-6 mb-4 rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
+                <p className="text-sm font-medium mb-2">New to LEK Bookings?</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Create your account and set up your business in minutes.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full gradient-primary hover:opacity-90"
+                  onClick={() => setTab("signup")}
+                >
+                  Get started — Sign up & onboard
+                </Button>
+              </div>
+            )}
             <CardContent>
               <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
