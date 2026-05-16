@@ -118,6 +118,12 @@ export function BookingHero({ business, logoUrl, theme }: BookingHeroProps) {
 
           {/* CTA Button */}
           <button
+            onClick={() => {
+              const target =
+                document.getElementById("booking-services") ||
+                document.querySelector("section");
+              target?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
             className="mt-8 px-8 py-3 rounded-full font-semibold text-base shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             style={{
               backgroundColor: "#fff",
