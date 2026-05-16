@@ -3,6 +3,7 @@ import { ThemeCustomization } from "@/components/settings/ThemeCustomization";
 import { GalleryManagement } from "@/components/settings/GalleryManagement";
 import { SocialLinksSettings } from "@/components/settings/SocialLinksSettings";
 import { EmbedWidget } from "@/components/settings/EmbedWidget";
+import { SlugEditor } from "@/components/settings/SlugEditor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
