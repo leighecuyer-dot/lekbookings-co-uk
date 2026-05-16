@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: 'https://lekbookings.co.uk',
+        emailRedirectTo: 'https://lekbookings.co.uk/auth',
         data: {
           full_name: fullName,
         },

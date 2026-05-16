@@ -44,7 +44,7 @@ export default function AuthPage() {
     setGoogleLoading(true);
 
     try {
-      const redirectTo = `${window.location.origin}/`;
+      const redirectTo = `${window.location.origin}/auth`;
       const isCustomDomain = !isLovableHostedDomain(window.location.hostname);
 
       if (isCustomDomain) {
