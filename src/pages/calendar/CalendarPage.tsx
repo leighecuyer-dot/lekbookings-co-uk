@@ -596,38 +596,42 @@ export default function CalendarPage() {
                   </div>
 
                   <div className="flex-1 overflow-auto">
-                    <DayTimelineView
-                      selectedDate={selectedDate}
-                      bookings={dayBookings}
-                      services={services}
-                      staffList={staffList}
-                      onBookingClick={handleBookingClick}
-                      onSlotClick={handleSlotClick}
-                      loading={loading}
-                      isOnLeave={isOnLeave}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      draggingBookingId={draggingBookingId}
-                    />
+                    <PinchZoomWrapper storageKey="lek-calendar-zoom-day">
+                      <DayTimelineView
+                        selectedDate={selectedDate}
+                        bookings={dayBookings}
+                        services={services}
+                        staffList={staffList}
+                        onBookingClick={handleBookingClick}
+                        onSlotClick={handleSlotClick}
+                        loading={loading}
+                        isOnLeave={isOnLeave}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        draggingBookingId={draggingBookingId}
+                      />
+                    </PinchZoomWrapper>
                   </div>
                 </div>
               )}
 
               {viewMode === "week" && (
                 <div className="h-full overflow-auto">
-                  <WeekView
-                    bookings={filteredBookings}
-                    services={services}
-                    selectedDate={selectedDate}
-                    onBookingClick={handleBookingClick}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    draggingBookingId={draggingBookingId}
-                  />
+                  <PinchZoomWrapper storageKey="lek-calendar-zoom-week">
+                    <WeekView
+                      bookings={filteredBookings}
+                      services={services}
+                      selectedDate={selectedDate}
+                      onBookingClick={handleBookingClick}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      draggingBookingId={draggingBookingId}
+                    />
+                  </PinchZoomWrapper>
                 </div>
               )}
 
