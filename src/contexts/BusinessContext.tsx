@@ -54,6 +54,26 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const hasPendingUserBootstrap = Boolean(user && fetchedForUserId !== user.id);
   const isContextLoading = loading || hasPendingUserBootstrap;
 
+  const rememberBusinessSelection = (business: Business, selectedMode: BusinessMode) => {
+    try {
+      window.localStorage.setItem("lek-current-business-id", business.id);
+      window.localStorage.setItem("lek-business-mode", selectedMode);
+    } catch {
+      // Ignore storage issues; access is still enforced by backend policies.
+    }
+  };
+
+  const getRememberedSelection = () => {
+    try {
+      return {
+        businessId: window.localStorage.getItem("lek-current-business-id"),
+        mode: window.localStorage.getItem("lek-business-mode") as BusinessMode | null,
+      };
+    } catch {
+      return { businessId: null, mode: null };
+    }
+  };
+
   const fetchBusinesses = useCallback(async () => {
     if (!user) {
       setBusinesses([]);
@@ -105,8 +125,22 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     setResellerClientBusinesses(clientBusinesses);
 
     if (!roles || roles.length === 0) {
+      const remembered = getRememberedSelection();
+      const resellerBusiness =
+        clientBusinesses.find((business) => business.id === remembered.businessId) ||
+        clientBusinesses[0];
+
       setBusinesses([]);
-      setCurrentBusinessState(null);
+
+      if (resellerBusiness) {
+        setMode("reseller");
+        setCurrentBusinessState(resellerBusiness);
+        rememberBusinessSelection(resellerBusiness, "reseller");
+      } else {
+        setCurrentBusinessState(null);
+        setMode("business");
+      }
+
       setCurrentRole(null);
       setFetchedForUserId(user.id);
       setLoading(false);
@@ -134,10 +168,29 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
     setBusinesses(typedBusinesses);
 
-    // Set first business as current if none selected and not in reseller mode
-    if (typedBusinesses.length > 0 && !currentBusiness && mode !== "reseller") {
-      setCurrentBusinessState(typedBusinesses[0]);
-      const role = roles.find((r) => r.business_id === typedBusinesses[0].id);
+    const remembered = getRememberedSelection();
+    const rememberedOwnBusiness = typedBusinesses.find((business) => business.id === remembered.businessId);
+    const rememberedClientBusiness = clientBusinesses.find((business) => business.id === remembered.businessId);
+
+    // Restore the last managed business after login/refresh, including reseller client businesses.
+    if (!currentBusiness) {
+      if (remembered.mode === "reseller" && rememberedClientBusiness) {
+        setMode("reseller");
+        setCurrentBusinessState(rememberedClientBusiness);
+        setCurrentRole(null);
+      } else {
+        const selectedBusiness = rememberedOwnBusiness || typedBusinesses[0];
+        setMode("business");
+        setCurrentBusinessState(selectedBusiness);
+        rememberBusinessSelection(selectedBusiness, "business");
+
+        const role = roles.find((r) => r.business_id === selectedBusiness.id);
+        if (role) {
+          setCurrentRole(role as UserRole);
+        }
+      }
+    } else if (mode === "business") {
+      const role = roles.find((r) => r.business_id === currentBusiness.id);
       if (role) {
         setCurrentRole(role as UserRole);
       }
@@ -154,6 +207,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       setMode("reseller");
       setCurrentBusinessState(clientBusiness);
       setCurrentRole(null); // Resellers don't have user_roles for client businesses
+      rememberBusinessSelection(clientBusiness, "reseller");
     }
   }, [resellerClientBusinesses]);
 
@@ -163,6 +217,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     // Restore to user's own first business
     if (businesses.length > 0) {
       setCurrentBusinessState(businesses[0]);
+      rememberBusinessSelection(businesses[0], "business");
     } else {
       setCurrentBusinessState(null);
     }
@@ -173,6 +228,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     // If setting to a user's own business, ensure we're in business mode
     if (business && businesses.some(b => b.id === business.id)) {
       setMode("business");
+      rememberBusinessSelection(business, "business");
     }
   }, [businesses]);
 

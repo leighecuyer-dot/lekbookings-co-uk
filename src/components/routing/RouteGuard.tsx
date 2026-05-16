@@ -66,7 +66,8 @@ export function RouteGuard({
 
   // Redirect authenticated users away from public pages (like /auth)
   if (redirectAuthenticated && user) {
-    const destination = businesses.length === 0 ? "/onboarding" : "/dashboard";
+    const hasBusinessAccess = businesses.length > 0 || currentBusiness !== null;
+    const destination = hasBusinessAccess ? "/dashboard" : "/onboarding";
     return <Navigate to={fallbackPath || destination} replace />;
   }
 
