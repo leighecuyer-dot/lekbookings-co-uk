@@ -114,8 +114,8 @@ export function ThemeCustomization() {
     e.target.value = ""; // allow re-selecting same file later
     if (!file || !currentBusiness) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB");
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File size must be less than 20MB");
       return;
     }
 
@@ -268,7 +268,7 @@ export function ThemeCustomization() {
                 disabled={uploadingLogo}
               />
               <p className="text-xs text-muted-foreground">
-                PNG, JPG up to 5MB. You can crop after upload.
+                PNG, JPG up to 20MB. You can crop after upload.
               </p>
             </div>
           </div>
