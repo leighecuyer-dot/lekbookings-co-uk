@@ -80,6 +80,32 @@ export function BookingContact({ business, theme }: BookingContactProps) {
     return `https://wa.me/${cleaned}`;
   };
 
+  // Extract a handle/username from a profile URL or raw handle
+  const extractHandle = (input: string): string | null => {
+    if (!input) return null;
+    let s = input.trim().replace(/^@/, '');
+    try {
+      if (/^https?:\/\//i.test(s)) {
+        const u = new URL(s);
+        const parts = u.pathname.split('/').filter(Boolean);
+        // ignore common non-handle prefixes
+        const skip = new Set(['p', 'reel', 'reels', 'tv', 'stories', 'explore', 'pages', 'profile.php']);
+        const handle = parts.find(p => !skip.has(p.toLowerCase()));
+        s = handle || '';
+      }
+    } catch {
+      // not a URL — treat as handle
+    }
+    s = s.split('?')[0].split('#')[0].replace(/\/$/, '');
+    return s || null;
+  };
+
+  const igHandle = socialLinks?.instagram ? extractHandle(socialLinks.instagram) : null;
+  const fbHandle = socialLinks?.facebook ? extractHandle(socialLinks.facebook) : null;
+  const instagramDmUrl = igHandle ? `https://ig.me/m/${igHandle}` : null;
+  const facebookMsgUrl = fbHandle ? `https://m.me/${fbHandle}` : null;
+  const hasMessageLinks = !!(instagramDmUrl || facebookMsgUrl);
+
   return (
     <section className="py-16 sm:py-20 bg-background">
       <div className="max-w-4xl mx-auto px-4">
@@ -175,6 +201,50 @@ export function BookingContact({ business, theme }: BookingContactProps) {
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+
+        {/* Direct Message Buttons */}
+        {hasMessageLinks && (
+          <div className="flex flex-col items-center mb-10">
+            <p
+              className="text-muted-foreground text-sm mb-4"
+              style={{ fontFamily: fontBody }}
+            >
+              Send us a message
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {instagramDmUrl && (
+                <a
+                  href={instagramDmUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-medium shadow-md hover:shadow-lg hover:opacity-95 transition-all"
+                  style={{
+                    background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+                    fontFamily: fontBody,
+                  }}
+                  aria-label="Message us on Instagram"
+                >
+                  <InstagramIcon className="w-5 h-5" />
+                  Message on Instagram
+                </a>
+              )}
+              {facebookMsgUrl && (
+                <a
+                  href={facebookMsgUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-medium shadow-md hover:shadow-lg hover:opacity-95 transition-all"
+                  style={{ backgroundColor: '#0866FF', fontFamily: fontBody }}
+                  aria-label="Message us on Facebook Messenger"
+                >
+                  <FacebookIcon className="w-5 h-5" />
+                  Message on Facebook
+                </a>
+              )}
+            </div>
           </div>
         )}
 
