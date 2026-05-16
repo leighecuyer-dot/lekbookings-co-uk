@@ -298,6 +298,8 @@ export default function PublicBookingPage() {
         business={business}
         logoUrl={logoUrl}
         theme={theme}
+        isLoading={loading}
+        ctaDisabled={services.length === 0}
       />
       
       {services.length > 0 && (
