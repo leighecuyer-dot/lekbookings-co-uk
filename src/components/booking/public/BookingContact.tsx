@@ -204,6 +204,51 @@ export function BookingContact({ business, theme }: BookingContactProps) {
           </div>
         )}
 
+        )}
+
+        {/* Direct Message Buttons */}
+        {hasMessageLinks && (
+          <div className="flex flex-col items-center mb-10">
+            <p
+              className="text-muted-foreground text-sm mb-4"
+              style={{ fontFamily: fontBody }}
+            >
+              Send us a message
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {instagramDmUrl && (
+                <a
+                  href={instagramDmUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-medium shadow-md hover:shadow-lg hover:opacity-95 transition-all"
+                  style={{
+                    background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+                    fontFamily: fontBody,
+                  }}
+                  aria-label="Message us on Instagram"
+                >
+                  <InstagramIcon className="w-5 h-5" />
+                  Message on Instagram
+                </a>
+              )}
+              {facebookMsgUrl && (
+                <a
+                  href={facebookMsgUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-medium shadow-md hover:shadow-lg hover:opacity-95 transition-all"
+                  style={{ backgroundColor: '#0866FF', fontFamily: fontBody }}
+                  aria-label="Message us on Facebook Messenger"
+                >
+                  <FacebookIcon className="w-5 h-5" />
+                  Message on Facebook
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Social Media Links */}
         {hasSocialLinks && (
           <div className="flex flex-col items-center">
