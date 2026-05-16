@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper, { Area } from "react-easy-crop";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -72,18 +72,55 @@ export function ImageCropDialog({
   const [zoom, setZoom] = useState(1);
   const [areaPixels, setAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewTimer = useRef<number | null>(null);
 
   useEffect(() => {
     if (open) {
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       setAreaPixels(null);
+      setPreviewUrl(null);
     }
   }, [open, imageSrc]);
 
   const onCrop = useCallback((_: Area, pixels: Area) => {
     setAreaPixels(pixels);
   }, []);
+
+  // Generate a live preview (debounced) whenever the crop area changes
+  useEffect(() => {
+    if (!imageSrc || !areaPixels) return;
+    if (previewTimer.current) window.clearTimeout(previewTimer.current);
+    previewTimer.current = window.setTimeout(async () => {
+      try {
+        const image = await loadImage(imageSrc);
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(
+          image,
+          areaPixels.x,
+          areaPixels.y,
+          areaPixels.width,
+          areaPixels.height,
+          0,
+          0,
+          size,
+          size
+        );
+        setPreviewUrl(canvas.toDataURL("image/png"));
+      } catch (e) {
+        console.warn("Preview render failed", e);
+      }
+    }, 80);
+    return () => {
+      if (previewTimer.current) window.clearTimeout(previewTimer.current);
+    };
+  }, [imageSrc, areaPixels]);
 
   const handleSave = async () => {
     if (!imageSrc || !areaPixels) return;
@@ -138,6 +175,37 @@ export function ImageCropDialog({
             value={[zoom]}
             onValueChange={(v) => setZoom(v[0])}
           />
+        </div>
+
+        {/* Live preview at target sizes */}
+        <div className="space-y-2">
+          <Label className="text-xs">Preview</Label>
+          <div className="flex items-end justify-around gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+            <div className="flex flex-col items-center gap-1.5">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Favicon preview" className="w-8 h-8 rounded-sm object-cover border border-border" />
+              ) : (
+                <div className="w-8 h-8 rounded-sm bg-muted" />
+              )}
+              <span className="text-[10px] text-muted-foreground">Favicon · 32px</span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Header preview" className="w-16 h-16 rounded-lg object-cover border border-border" />
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-muted" />
+              )}
+              <span className="text-[10px] text-muted-foreground">Header · 64px</span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Full preview" className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover border border-border" />
+              ) : (
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl bg-muted" />
+              )}
+              <span className="text-[10px] text-muted-foreground">Full · 128px</span>
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
