@@ -212,24 +212,38 @@ export function ThemeCustomization() {
                 <Building2 className="h-8 w-8 text-muted-foreground/50" />
               </div>
             )}
-            <div>
-              <Label
-                htmlFor="business-logo-upload"
-                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-              >
-                <Upload className="h-4 w-4" />
-                {uploadingLogo ? "Uploading..." : formData.logo_url ? "Change Logo" : "Upload Logo"}
-              </Label>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <Label
+                  htmlFor="business-logo-upload"
+                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploadingLogo ? "Uploading..." : formData.logo_url ? "Change" : "Upload"}
+                </Label>
+                {formData.logo_url && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditExisting}
+                    disabled={uploadingLogo}
+                  >
+                    <Crop className="h-4 w-4 mr-1.5" />
+                    Edit / Crop
+                  </Button>
+                )}
+              </div>
               <input
                 id="business-logo-upload"
                 type="file"
                 accept="image/*"
-                onChange={handleLogoUpload}
+                onChange={handleFileSelected}
                 className="hidden"
                 disabled={uploadingLogo}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                PNG, JPG up to 2MB
+              <p className="text-xs text-muted-foreground">
+                PNG, JPG up to 5MB. You can crop after upload.
               </p>
             </div>
           </div>
