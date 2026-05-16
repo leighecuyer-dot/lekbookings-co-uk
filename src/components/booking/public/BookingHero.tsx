@@ -1,4 +1,4 @@
-import { Building2, MapPin, Phone, Mail } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, Loader2 } from "lucide-react";
 
 interface Business {
   id: string;
@@ -20,6 +20,8 @@ interface BookingHeroProps {
   business: Business;
   logoUrl: string | null;
   theme: PageTheme | null;
+  isLoading?: boolean;
+  ctaDisabled?: boolean;
 }
 
 export function BookingHero({ business, logoUrl, theme }: BookingHeroProps) {
