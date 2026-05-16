@@ -636,15 +636,17 @@ export default function CalendarPage() {
               )}
 
               {viewMode === "kanban" && (
-                <div className="h-full">
-                  <KanbanView
-                    bookings={filteredBookings}
-                    services={services}
-                    staffList={staffList}
-                    onStatusChange={handleStatusChange}
-                    onBookingClick={handleBookingClick}
-                    loading={loading}
-                  />
+                <div className="h-full overflow-auto">
+                  <PinchZoomWrapper storageKey="lek-calendar-zoom-kanban">
+                    <KanbanView
+                      bookings={filteredBookings}
+                      services={services}
+                      staffList={staffList}
+                      onStatusChange={handleStatusChange}
+                      onBookingClick={handleBookingClick}
+                      loading={loading}
+                    />
+                  </PinchZoomWrapper>
                 </div>
               )}
             </CardContent>
