@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link2, Loader2 } from "lucide-react";
+import { Copy, Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,11 +104,23 @@ export function SlugEditor() {
           </p>
         </div>
 
-        {changed && (
-          <p className="text-xs text-muted-foreground">
-            Preview: <span className="font-mono text-foreground">{origin}/book/{previewSlug}</span>
-          </p>
-        )}
+        <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
+          <span className="font-mono text-xs sm:text-sm text-foreground truncate flex-1">
+            {origin}/book/{previewSlug}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(`${origin}/book/${previewSlug}`);
+              toast.success("Link copied!");
+            }}
+          >
+            <Copy className="w-3.5 h-3.5 mr-1.5" />
+            Copy
+          </Button>
+        </div>
 
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={saving || !changed}>
