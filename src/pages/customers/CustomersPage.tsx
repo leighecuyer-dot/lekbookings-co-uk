@@ -84,6 +84,7 @@ export default function CustomersPage() {
   useEffect(() => {
     if (currentBusiness) {
       fetchCustomers();
+      fetchAssignments();
     }
   }, [currentBusiness]);
 
@@ -103,6 +104,36 @@ export default function CustomersPage() {
       setCustomers(data || []);
     }
     setLoading(false);
+  };
+
+  const fetchAssignments = async () => {
+    if (!currentBusiness) return;
+    // Find current user's staff record for this business
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id;
+    if (uid) {
+      const { data: me } = await supabase
+        .from("staff")
+        .select("id")
+        .eq("business_id", currentBusiness.id)
+        .eq("user_id", uid)
+        .maybeSingle();
+      setCurrentStaffId(me?.id ?? null);
+    }
+
+    // Load all staff_customers + staff names for this business
+    const { data: rows } = await supabase
+      .from("staff_customers")
+      .select("customer_id, staff_id, staff:staff_id(id, name)")
+      .eq("business_id", currentBusiness.id);
+
+    const map: Record<string, { id: string; name: string }[]> = {};
+    (rows || []).forEach((r: { customer_id: string; staff_id: string; staff: { id: string; name: string } | null }) => {
+      if (!r.staff) return;
+      if (!map[r.customer_id]) map[r.customer_id] = [];
+      map[r.customer_id].push({ id: r.staff.id, name: r.staff.name });
+    });
+    setAssignments(map);
   };
 
   const handleCreateCustomer = async () => {
