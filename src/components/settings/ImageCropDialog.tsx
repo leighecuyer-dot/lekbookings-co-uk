@@ -233,7 +233,27 @@ export function ImageCropDialog({
           </div>
         </div>
 
+        {showLowResWarning && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium">This image may look blurry after cropping.</p>
+              {sourceTooSmall && sourceDims && (
+                <p>
+                  Your file is only {sourceDims.w}×{sourceDims.h}px. For sharp results, upload an image at least {MIN_SOURCE}px on the shortest side (1000px+ recommended).
+                </p>
+              )}
+              {cropTooSmall && !sourceTooSmall && areaPixels && (
+                <p>
+                  Your crop area is {Math.round(areaPixels.width)}×{Math.round(areaPixels.height)}px. Zoom out or pick a larger area to keep it crisp (aim for {RECOMMENDED_CROP}px+).
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="relative w-full h-[55vh] sm:h-[480px] bg-muted rounded-lg overflow-hidden">
+
           {imageSrc && (
             <Cropper
               image={imageSrc}
