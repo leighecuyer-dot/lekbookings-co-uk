@@ -29,26 +29,31 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
 async function getCroppedBlob(
   imageSrc: string,
   pixelCrop: Area,
-  outputSize: number
+  maxOutputSize: number,
+  forceSquare: boolean
 ): Promise<Blob> {
   const image = await loadImage(imageSrc);
+  const srcW = Math.max(1, Math.round(pixelCrop.width));
+  const srcH = Math.max(1, Math.round(pixelCrop.height));
+
+  let outW: number;
+  let outH: number;
+  if (forceSquare) {
+    outW = maxOutputSize;
+    outH = maxOutputSize;
+  } else {
+    const scale = Math.min(1, maxOutputSize / Math.max(srcW, srcH));
+    outW = Math.max(1, Math.round(srcW * scale));
+    outH = Math.max(1, Math.round(srcH * scale));
+  }
+
   const canvas = document.createElement("canvas");
-  canvas.width = outputSize;
-  canvas.height = outputSize;
+  canvas.width = outW;
+  canvas.height = outH;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No canvas context");
 
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    outputSize,
-    outputSize
-  );
+  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, srcW, srcH, 0, 0, outW, outH);
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -58,6 +63,7 @@ async function getCroppedBlob(
     );
   });
 }
+
 
 export function ImageCropDialog({
   open,
