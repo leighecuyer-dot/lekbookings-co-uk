@@ -291,16 +291,40 @@ export default function CustomersPage() {
       }
     >
       <div className="space-y-6">
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search customers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Scope filter + search */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <Tabs value={scope} onValueChange={(v) => setScope(v as "all" | "mine")}>
+            <TabsList>
+              <TabsTrigger value="all">
+                <Users className="w-4 h-4 mr-1.5" />
+                All contacts
+              </TabsTrigger>
+              <TabsTrigger value="mine" disabled={!currentStaffId}>
+                <UserCheck className="w-4 h-4 mr-1.5" />
+                My contacts
+                {currentStaffId && (
+                  <span className="ml-1.5 text-xs opacity-70">({myCustomerIds.size})</span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search contacts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
+
+        {scope === "all" && (
+          <p className="text-xs text-muted-foreground -mt-2">
+            All contacts are visible to every team member so anyone can reach a customer in an emergency.
+          </p>
+        )}
+
 
         {/* Customer List */}
         {loading ? (
