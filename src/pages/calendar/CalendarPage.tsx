@@ -98,6 +98,7 @@ export default function CalendarPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [staffFilter, setStaffFilter] = useState<string>("all");
   
   // Swipe gestures for mobile day navigation
   const swipeHandlers = useSwipeGesture({
