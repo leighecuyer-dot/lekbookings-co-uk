@@ -87,16 +87,24 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
 
     setLoading(true);
-    
-    // Get user's roles
-    const { data: roles, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("*")
-      .eq("user_id", user.id);
+
+    // Get user's roles — retry on transient failures (auth race right after sign-in)
+    let roles: Array<{ id: string; business_id: string; role: string; user_id: string }> | null = null;
+    let rolesError: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await supabase.from("user_roles").select("*").eq("user_id", user.id);
+      if (!res.error) {
+        roles = res.data as typeof roles;
+        rolesError = null;
+        break;
+      }
+      rolesError = res.error;
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    }
 
     if (rolesError) {
       console.error("Error fetching roles:", rolesError);
-      setFetchedForUserId(user.id);
+      // Don't mark as fetched so a subsequent re-render can retry
       setLoading(false);
       return;
     }
