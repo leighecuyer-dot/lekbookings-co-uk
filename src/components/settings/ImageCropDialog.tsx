@@ -180,27 +180,43 @@ export function ImageCropDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Pick a shape, then drag to reposition. Zoom out to fit a wide logo, or zoom in to crop closer.
+            We've picked the best shape for your image. Drag to reposition, use the slider to zoom, then Save.
           </DialogDescription>
         </DialogHeader>
 
+        {/* Helper tip */}
+        <div className="flex items-start gap-2 rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+          <Info className="w-4 h-4 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p><strong className="text-foreground">Square</strong> — best for icons, badges, and circular logos.</p>
+            <p><strong className="text-foreground">Wide (16:9)</strong> — best for horizontal logos and wordmarks; fills the mobile booking banner.</p>
+            <p><strong className="text-foreground">Free</strong> — keep the image's original proportions.</p>
+          </div>
+        </div>
+
         {/* Shape selector */}
-        <div className="flex flex-wrap gap-2">
-          {([
-            { id: "square", label: "Square" },
-            { id: "wide", label: "Wide (16:9)" },
-            { id: "free", label: "Free" },
-          ] as const).map((opt) => (
-            <Button
-              key={opt.id}
-              type="button"
-              size="sm"
-              variant={shape === opt.id ? "default" : "outline"}
-              onClick={() => setShape(opt.id)}
-            >
-              {opt.label}
-            </Button>
-          ))}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Shape</Label>
+          <div className="flex flex-wrap gap-2">
+            {([
+              { id: "square", label: "Square (1:1)" },
+              { id: "wide", label: "Wide (16:9)" },
+              { id: "free", label: "Free" },
+            ] as const).map((opt) => (
+              <Button
+                key={opt.id}
+                type="button"
+                size="sm"
+                variant={shape === opt.id ? "default" : "outline"}
+                onClick={() => setShape(opt.id)}
+              >
+                {opt.label}
+                {autoDetected === opt.id && shape === opt.id && (
+                  <span className="ml-1.5 text-[10px] opacity-70">· auto</span>
+                )}
+              </Button>
+            ))}
+          </div>
         </div>
 
         <div className="relative w-full h-[55vh] sm:h-[480px] bg-muted rounded-lg overflow-hidden">
@@ -222,6 +238,7 @@ export function ImageCropDialog({
             />
           )}
         </div>
+
 
         <div className="space-y-2">
           <Label className="text-xs">Zoom</Label>
