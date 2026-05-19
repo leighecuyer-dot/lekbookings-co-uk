@@ -432,6 +432,20 @@ export default function CustomersPage() {
                           </>
                         );
                       })()}
+                      {assignments[customer.id]?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {assignments[customer.id].map((s) => (
+                            <Badge
+                              key={s.id}
+                              variant={s.id === currentStaffId ? "default" : "secondary"}
+                              className="text-[10px] gap-1"
+                            >
+                              <UserCheck className="w-3 h-3" />
+                              {s.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground mt-2">
                         Added {format(new Date(customer.created_at), "MMM d, yyyy")}
                       </p>
