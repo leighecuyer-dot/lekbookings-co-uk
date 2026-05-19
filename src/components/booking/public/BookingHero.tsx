@@ -36,8 +36,19 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
         background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
       }}
     >
+      {/* Full-width mobile logo banner */}
+      {logoUrl && (
+        <div className="sm:hidden w-full bg-white/95 flex items-center justify-center overflow-hidden">
+          <img
+            src={logoUrl}
+            alt={`${business.name} logo`}
+            className="w-full h-auto object-contain"
+          />
+        </div>
+      )}
+
       {/* Decorative background elements */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
           className="absolute -top-1/2 -right-1/4 w-96 h-96 rounded-full opacity-10"
           style={{ backgroundColor: "#fff" }}
@@ -48,15 +59,15 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
         />
       </div>
 
-      <div className="relative max-w-6xl mx-auto px-4 py-16 sm:py-24">
+      <div className="relative max-w-6xl mx-auto px-4 py-12 sm:py-24">
         <div className="flex flex-col items-center text-center text-white">
-          {/* Logo */}
+          {/* Desktop logo */}
           {logoUrl ? (
-            <div className="w-full sm:w-auto sm:max-w-md mb-6 rounded-2xl shadow-2xl border-4 border-white/20 bg-white/95 p-3 flex items-center justify-center overflow-hidden">
+            <div className="hidden sm:flex sm:w-auto sm:max-w-md mb-6 rounded-2xl shadow-2xl border-4 border-white/20 bg-white/95 p-3 items-center justify-center overflow-hidden">
               <img
                 src={logoUrl}
                 alt={`${business.name} logo`}
-                className="w-full h-auto max-h-[60vw] sm:max-h-56 object-contain"
+                className="w-full h-auto max-h-56 object-contain"
               />
             </div>
           ) : (
