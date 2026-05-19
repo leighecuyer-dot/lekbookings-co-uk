@@ -306,10 +306,13 @@ export default function CalendarPage() {
     return `${hour.toString().padStart(2, "0")}:${minute}`;
   });
 
-  // Filter bookings by status
-  const filteredBookings = statusFilter.length === 0
-    ? bookings
-    : bookings.filter((b) => statusFilter.includes(b.status));
+  // Filter bookings by status and staff
+  const filteredBookings = bookings.filter((b) => {
+    if (statusFilter.length > 0 && !statusFilter.includes(b.status)) return false;
+    if (staffFilter === "unassigned") return !b.staff_id;
+    if (staffFilter !== "all" && b.staff_id !== staffFilter) return false;
+    return true;
+  });
 
   // For day view, also filter by selected day
   const dayBookings = filteredBookings.filter((b) =>
