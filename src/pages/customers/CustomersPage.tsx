@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2, Upload, Users } from "lucide-react";
+import { Plus, Search, Mail, Phone, User, MoreHorizontal, Lock, Settings2, Upload, Users, UserCheck } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -60,6 +61,9 @@ export default function CustomersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [preferencesCustomer, setPreferencesCustomer] = useState<Customer | null>(null);
   const [assignStaffCustomer, setAssignStaffCustomer] = useState<Customer | null>(null);
+  const [assignments, setAssignments] = useState<Record<string, { id: string; name: string }[]>>({});
+  const [currentStaffId, setCurrentStaffId] = useState<string | null>(null);
+  const [scope, setScope] = useState<"all" | "mine">("all");
   
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -80,6 +84,7 @@ export default function CustomersPage() {
   useEffect(() => {
     if (currentBusiness) {
       fetchCustomers();
+      fetchAssignments();
     }
   }, [currentBusiness]);
 
@@ -99,6 +104,36 @@ export default function CustomersPage() {
       setCustomers(data || []);
     }
     setLoading(false);
+  };
+
+  const fetchAssignments = async () => {
+    if (!currentBusiness) return;
+    // Find current user's staff record for this business
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id;
+    if (uid) {
+      const { data: me } = await supabase
+        .from("staff")
+        .select("id")
+        .eq("business_id", currentBusiness.id)
+        .eq("user_id", uid)
+        .maybeSingle();
+      setCurrentStaffId(me?.id ?? null);
+    }
+
+    // Load all staff_customers + staff names for this business
+    const { data: rows } = await supabase
+      .from("staff_customers")
+      .select("customer_id, staff_id, staff:staff_id(id, name)")
+      .eq("business_id", currentBusiness.id);
+
+    const map: Record<string, { id: string; name: string }[]> = {};
+    (rows || []).forEach((r: { customer_id: string; staff_id: string; staff: { id: string; name: string } | null }) => {
+      if (!r.staff) return;
+      if (!map[r.customer_id]) map[r.customer_id] = [];
+      map[r.customer_id].push({ id: r.staff.id, name: r.staff.name });
+    });
+    setAssignments(map);
   };
 
   const handleCreateCustomer = async () => {
@@ -152,12 +187,22 @@ export default function CustomersPage() {
     }
   };
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone?.includes(searchQuery)
+  const myCustomerIds = new Set(
+    Object.entries(assignments)
+      .filter(([, list]) => currentStaffId && list.some((s) => s.id === currentStaffId))
+      .map(([cid]) => cid)
   );
+
+  const filteredCustomers = customers.filter((c) => {
+    if (scope === "mine" && !myCustomerIds.has(c.id)) return false;
+    const q = searchQuery.toLowerCase();
+    if (!q) return true;
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q) ||
+      c.phone?.includes(searchQuery)
+    );
+  });
 
   const getInitials = (name: string) =>
     name
@@ -246,16 +291,40 @@ export default function CustomersPage() {
       }
     >
       <div className="space-y-6">
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search customers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Scope filter + search */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <Tabs value={scope} onValueChange={(v) => setScope(v as "all" | "mine")}>
+            <TabsList>
+              <TabsTrigger value="all">
+                <Users className="w-4 h-4 mr-1.5" />
+                All contacts
+              </TabsTrigger>
+              <TabsTrigger value="mine" disabled={!currentStaffId}>
+                <UserCheck className="w-4 h-4 mr-1.5" />
+                My contacts
+                {currentStaffId && (
+                  <span className="ml-1.5 text-xs opacity-70">({myCustomerIds.size})</span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search contacts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
+
+        {scope === "all" && (
+          <p className="text-xs text-muted-foreground -mt-2">
+            All contacts are visible to every team member so anyone can reach a customer in an emergency.
+          </p>
+        )}
+
 
         {/* Customer List */}
         {loading ? (
@@ -363,6 +432,20 @@ export default function CustomersPage() {
                           </>
                         );
                       })()}
+                      {assignments[customer.id]?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {assignments[customer.id].map((s) => (
+                            <Badge
+                              key={s.id}
+                              variant={s.id === currentStaffId ? "default" : "secondary"}
+                              className="text-[10px] gap-1"
+                            >
+                              <UserCheck className="w-3 h-3" />
+                              {s.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground mt-2">
                         Added {format(new Date(customer.created_at), "MMM d, yyyy")}
                       </p>
@@ -392,7 +475,12 @@ export default function CustomersPage() {
       {assignStaffCustomer && currentBusiness && (
         <AssignStaffDialog
           open={!!assignStaffCustomer}
-          onOpenChange={(open) => !open && setAssignStaffCustomer(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAssignStaffCustomer(null);
+              fetchAssignments();
+            }
+          }}
           customerId={assignStaffCustomer.id}
           customerName={assignStaffCustomer.name}
           businessId={currentBusiness.id}
