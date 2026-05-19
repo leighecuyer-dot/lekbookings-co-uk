@@ -475,7 +475,12 @@ export default function CustomersPage() {
       {assignStaffCustomer && currentBusiness && (
         <AssignStaffDialog
           open={!!assignStaffCustomer}
-          onOpenChange={(open) => !open && setAssignStaffCustomer(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAssignStaffCustomer(null);
+              fetchAssignments();
+            }
+          }}
           customerId={assignStaffCustomer.id}
           customerName={assignStaffCustomer.name}
           businessId={currentBusiness.id}
