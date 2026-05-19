@@ -81,11 +81,32 @@ export function ImageCropDialog({
   const [saving, setSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [shape, setShape] = useState<"square" | "wide" | "free">("square");
+  const [autoDetected, setAutoDetected] = useState<"square" | "wide" | null>(null);
   const previewTimer = useRef<number | null>(null);
 
   const activeAspect =
     shape === "square" ? aspect : shape === "wide" ? 16 / 9 : undefined;
   const forceSquare = shape === "square" && aspect === 1;
+
+  // Auto-detect best crop shape based on the source image aspect ratio
+  useEffect(() => {
+    if (!open || !imageSrc) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const img = await loadImage(imageSrc);
+        if (cancelled) return;
+        const ratio = img.naturalWidth / Math.max(1, img.naturalHeight);
+        // Wide logos (ratio > 1.4) → default to 16:9, otherwise square
+        const next = ratio > 1.4 ? "wide" : "square";
+        setShape(next);
+        setAutoDetected(next);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, imageSrc]);
 
   useEffect(() => {
     if (open) {
@@ -93,9 +114,10 @@ export function ImageCropDialog({
       setZoom(1);
       setAreaPixels(null);
       setPreviewUrl(null);
-      setShape("square");
+      setAutoDetected(null);
     }
   }, [open, imageSrc]);
+
 
   const onCrop = useCallback((_: Area, pixels: Area) => {
     setAreaPixels(pixels);
