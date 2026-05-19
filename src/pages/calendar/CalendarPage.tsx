@@ -98,6 +98,7 @@ export default function CalendarPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [staffFilter, setStaffFilter] = useState<string>("all");
   
   // Swipe gestures for mobile day navigation
   const swipeHandlers = useSwipeGesture({
@@ -305,10 +306,13 @@ export default function CalendarPage() {
     return `${hour.toString().padStart(2, "0")}:${minute}`;
   });
 
-  // Filter bookings by status
-  const filteredBookings = statusFilter.length === 0
-    ? bookings
-    : bookings.filter((b) => statusFilter.includes(b.status));
+  // Filter bookings by status and staff
+  const filteredBookings = bookings.filter((b) => {
+    if (statusFilter.length > 0 && !statusFilter.includes(b.status)) return false;
+    if (staffFilter === "unassigned") return !b.staff_id;
+    if (staffFilter !== "all" && b.staff_id !== staffFilter) return false;
+    return true;
+  });
 
   // For day view, also filter by selected day
   const dayBookings = filteredBookings.filter((b) =>
@@ -534,10 +538,27 @@ export default function CalendarPage() {
               <span className="hidden sm:inline">Kanban</span>
             </Button>
           </div>
-          <StatusFilter
-            selectedStatuses={statusFilter}
-            onStatusChange={setStatusFilter}
-          />
+          <div className="flex items-center gap-2">
+            <Select value={staffFilter} onValueChange={setStaffFilter}>
+              <SelectTrigger className="h-8 w-[140px] sm:w-[180px] text-xs sm:text-sm">
+                <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All staff</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {staffList.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <StatusFilter
+              selectedStatuses={statusFilter}
+              onStatusChange={setStatusFilter}
+            />
+          </div>
         </div>
 
         <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[280px_1fr] gap-3 sm:gap-6 min-h-0">
