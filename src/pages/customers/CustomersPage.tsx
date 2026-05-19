@@ -187,12 +187,22 @@ export default function CustomersPage() {
     }
   };
 
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone?.includes(searchQuery)
+  const myCustomerIds = new Set(
+    Object.entries(assignments)
+      .filter(([, list]) => currentStaffId && list.some((s) => s.id === currentStaffId))
+      .map(([cid]) => cid)
   );
+
+  const filteredCustomers = customers.filter((c) => {
+    if (scope === "mine" && !myCustomerIds.has(c.id)) return false;
+    const q = searchQuery.toLowerCase();
+    if (!q) return true;
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q) ||
+      c.phone?.includes(searchQuery)
+    );
+  });
 
   const getInitials = (name: string) =>
     name
