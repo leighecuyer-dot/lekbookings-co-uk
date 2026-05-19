@@ -538,10 +538,27 @@ export default function CalendarPage() {
               <span className="hidden sm:inline">Kanban</span>
             </Button>
           </div>
-          <StatusFilter
-            selectedStatuses={statusFilter}
-            onStatusChange={setStatusFilter}
-          />
+          <div className="flex items-center gap-2">
+            <Select value={staffFilter} onValueChange={setStaffFilter}>
+              <SelectTrigger className="h-8 w-[140px] sm:w-[180px] text-xs sm:text-sm">
+                <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All staff</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {staffList.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <StatusFilter
+              selectedStatuses={statusFilter}
+              onStatusChange={setStatusFilter}
+            />
+          </div>
         </div>
 
         <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[280px_1fr] gap-3 sm:gap-6 min-h-0">
