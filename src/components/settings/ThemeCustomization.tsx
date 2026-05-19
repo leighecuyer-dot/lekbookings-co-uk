@@ -441,7 +441,7 @@ export function ThemeCustomization() {
         onOpenChange={setCropOpen}
         imageSrc={cropSrc}
         aspect={1}
-        outputSize={512}
+        outputSize={1024}
         title="Crop Your Logo"
         onCropComplete={uploadCroppedBlob}
       />
