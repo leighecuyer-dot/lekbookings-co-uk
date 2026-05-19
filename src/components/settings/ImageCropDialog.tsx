@@ -79,7 +79,12 @@ export function ImageCropDialog({
   const [areaPixels, setAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [shape, setShape] = useState<"square" | "wide" | "free">("square");
   const previewTimer = useRef<number | null>(null);
+
+  const activeAspect =
+    shape === "square" ? aspect : shape === "wide" ? 16 / 9 : undefined;
+  const forceSquare = shape === "square" && aspect === 1;
 
   useEffect(() => {
     if (open) {
@@ -87,6 +92,7 @@ export function ImageCropDialog({
       setZoom(1);
       setAreaPixels(null);
       setPreviewUrl(null);
+      setShape("square");
     }
   }, [open, imageSrc]);
 
@@ -101,10 +107,13 @@ export function ImageCropDialog({
     previewTimer.current = window.setTimeout(async () => {
       try {
         const image = await loadImage(imageSrc);
-        const size = 256;
+        const maxSide = 256;
+        const scale = Math.min(1, maxSide / Math.max(areaPixels.width, areaPixels.height));
+        const w = Math.max(1, Math.round(areaPixels.width * scale));
+        const h = Math.max(1, Math.round(areaPixels.height * scale));
         const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
         ctx.drawImage(
@@ -115,8 +124,8 @@ export function ImageCropDialog({
           areaPixels.height,
           0,
           0,
-          size,
-          size
+          w,
+          h
         );
         setPreviewUrl(canvas.toDataURL("image/png"));
       } catch (e) {
@@ -132,7 +141,7 @@ export function ImageCropDialog({
     if (!imageSrc || !areaPixels) return;
     setSaving(true);
     try {
-      const blob = await getCroppedBlob(imageSrc, areaPixels, outputSize);
+      const blob = await getCroppedBlob(imageSrc, areaPixels, outputSize, forceSquare);
       await onCropComplete(blob);
       onOpenChange(false);
     } catch (err) {
@@ -148,9 +157,28 @@ export function ImageCropDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Drag to reposition. Zoom out to fit the whole logo, or zoom in to crop closer.
+            Pick a shape, then drag to reposition. Zoom out to fit a wide logo, or zoom in to crop closer.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Shape selector */}
+        <div className="flex flex-wrap gap-2">
+          {([
+            { id: "square", label: "Square" },
+            { id: "wide", label: "Wide (16:9)" },
+            { id: "free", label: "Free" },
+          ] as const).map((opt) => (
+            <Button
+              key={opt.id}
+              type="button"
+              size="sm"
+              variant={shape === opt.id ? "default" : "outline"}
+              onClick={() => setShape(opt.id)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
 
         <div className="relative w-full h-[55vh] sm:h-[480px] bg-muted rounded-lg overflow-hidden">
           {imageSrc && (
@@ -161,7 +189,7 @@ export function ImageCropDialog({
               minZoom={0.3}
               maxZoom={3}
               restrictPosition={false}
-              aspect={aspect}
+              aspect={activeAspect}
               cropShape="rect"
               showGrid
               objectFit="contain"
