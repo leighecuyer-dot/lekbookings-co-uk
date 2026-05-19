@@ -61,6 +61,9 @@ export default function CustomersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [preferencesCustomer, setPreferencesCustomer] = useState<Customer | null>(null);
   const [assignStaffCustomer, setAssignStaffCustomer] = useState<Customer | null>(null);
+  const [assignments, setAssignments] = useState<Record<string, { id: string; name: string }[]>>({});
+  const [currentStaffId, setCurrentStaffId] = useState<string | null>(null);
+  const [scope, setScope] = useState<"all" | "mine">("all");
   
   const [newCustomer, setNewCustomer] = useState({
     name: "",
