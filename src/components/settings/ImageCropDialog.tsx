@@ -82,6 +82,7 @@ export function ImageCropDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [shape, setShape] = useState<"square" | "wide" | "free">("square");
   const [autoDetected, setAutoDetected] = useState<"square" | "wide" | null>(null);
+  const [sourceDims, setSourceDims] = useState<{ w: number; h: number } | null>(null);
   const previewTimer = useRef<number | null>(null);
 
   const activeAspect =
@@ -96,6 +97,7 @@ export function ImageCropDialog({
       try {
         const img = await loadImage(imageSrc);
         if (cancelled) return;
+        setSourceDims({ w: img.naturalWidth, h: img.naturalHeight });
         const ratio = img.naturalWidth / Math.max(1, img.naturalHeight);
         // Wide logos (ratio > 1.4) → default to 16:9, otherwise square
         const next = ratio > 1.4 ? "wide" : "square";
@@ -115,8 +117,20 @@ export function ImageCropDialog({
       setAreaPixels(null);
       setPreviewUrl(null);
       setAutoDetected(null);
+      setSourceDims(null);
     }
   }, [open, imageSrc]);
+
+  // Resolution warnings based on source image + current crop area
+  const MIN_SOURCE = 400; // minimum recommended shortest side of the source
+  const RECOMMENDED_CROP = Math.min(outputSize, 512); // crop area shortest side
+  const sourceTooSmall =
+    !!sourceDims && Math.min(sourceDims.w, sourceDims.h) < MIN_SOURCE;
+  const cropTooSmall =
+    !!areaPixels &&
+    Math.min(areaPixels.width, areaPixels.height) < RECOMMENDED_CROP;
+  const showLowResWarning = sourceTooSmall || cropTooSmall;
+
 
 
   const onCrop = useCallback((_: Area, pixels: Area) => {
