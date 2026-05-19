@@ -52,7 +52,7 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
         <div className="flex flex-col items-center text-center text-white">
           {/* Logo */}
           {logoUrl ? (
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl mb-6 shadow-2xl border-4 border-white/20 bg-white/95 p-2 flex items-center justify-center overflow-hidden">
+            <div className="w-full max-w-[420px] sm:max-w-none sm:w-40 aspect-square sm:aspect-square sm:h-40 rounded-2xl mb-6 shadow-2xl border-4 border-white/20 bg-white/95 p-3 flex items-center justify-center overflow-hidden">
               <img
                 src={logoUrl}
                 alt={`${business.name} logo`}
@@ -61,10 +61,10 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
             </div>
           ) : (
             <div
-              className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl flex items-center justify-center mb-6 shadow-2xl border-4 border-white/20"
+              className="w-full max-w-[420px] sm:max-w-none sm:w-40 aspect-square sm:h-40 rounded-2xl flex items-center justify-center mb-6 shadow-2xl border-4 border-white/20"
               style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
             >
-              <Building2 className="w-12 h-12 sm:w-16 sm:h-16 text-white/80" />
+              <Building2 className="w-24 h-24 sm:w-20 sm:h-20 text-white/80" />
             </div>
           )}
 
