@@ -19,7 +19,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Maximize2, Minimize2, Move } from "lucide-react";
+import { GripVertical, Maximize2, Minimize2, Move, ChevronDown, ChevronUp, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +48,7 @@ interface Widget {
   id: WidgetId;
   render: () => ReactNode;
   visible: boolean;
+  label?: string;
 }
 
 interface SortableWidgetProps {
@@ -58,9 +59,13 @@ interface SortableWidgetProps {
   onResize: (size: WidgetSize) => void;
   maxSize?: WidgetSize;
   isDragOverlay?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+  onHide?: () => void;
+  label?: string;
 }
 
-function SortableWidget({ id, children, className, size, onResize, maxSize = 3, isDragOverlay = false }: SortableWidgetProps) {
+function SortableWidget({ id, children, className, size, onResize, maxSize = 3, isDragOverlay = false, collapsed = false, onToggleCollapse, onHide, label }: SortableWidgetProps) {
   const {
     attributes,
     listeners,
@@ -149,50 +154,86 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
         <Move className="w-4 h-4 text-muted-foreground" />
       </button>
 
-      {/* Resize controls - hidden on mobile and while dragging */}
+      {/* Resize / collapse / hide controls */}
       <div className={cn(
-        "absolute top-2 right-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 hidden sm:flex",
-        isDragging && "sm:hidden"
+        "absolute top-2 right-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex",
+        isDragging && "hidden"
       )}>
         <TooltipProvider delayDuration={300}>
-          {canShrink && (
+          {canShrink && !collapsed && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm"
+                  className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm hidden sm:inline-flex"
                   onClick={handleShrink}
                 >
                   <Minimize2 className="h-3 w-3" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">
-                Shrink widget
-              </TooltipContent>
+              <TooltipContent side="bottom" className="text-xs">Shrink widget</TooltipContent>
             </Tooltip>
           )}
-          {canExpand && (
+          {canExpand && !collapsed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm hidden sm:inline-flex"
+                  onClick={handleExpand}
+                >
+                  <Maximize2 className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Expand widget</TooltipContent>
+            </Tooltip>
+          )}
+          {onToggleCollapse && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="secondary"
                   size="icon"
                   className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm"
-                  onClick={handleExpand}
+                  onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}
                 >
-                  <Maximize2 className="h-3 w-3" />
+                  {collapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
-                Expand widget
+                {collapsed ? "Expand" : "Collapse"}
               </TooltipContent>
+            </Tooltip>
+          )}
+          {onHide && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm"
+                  onClick={(e) => { e.stopPropagation(); onHide(); }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Hide widget</TooltipContent>
             </Tooltip>
           )}
         </TooltipProvider>
       </div>
 
-      {children}
+      {collapsed ? (
+        <div className="rounded-xl border bg-card p-3 sm:p-4 flex items-center justify-between min-h-[56px]">
+          <span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+            {label || id} (collapsed)
+          </span>
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }
@@ -271,8 +312,11 @@ interface DraggableWidgetGridProps {
   onReorder: (activeId: WidgetId, overId: WidgetId) => void;
   sizes: Record<WidgetId, WidgetSize>;
   onResize: (id: WidgetId, size: WidgetSize) => void;
+  onHide?: (id: WidgetId) => void;
   className?: string;
 }
+
+const COLLAPSED_KEY = "dashboard-widget-collapsed";
 
 export function DraggableWidgetGrid({
   widgets,
@@ -280,9 +324,26 @@ export function DraggableWidgetGrid({
   onReorder,
   sizes,
   onResize,
+  onHide,
   className,
 }: DraggableWidgetGridProps) {
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSED_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleCollapsed = (id: WidgetId) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
   
   // Configure sensors for both desktop and mobile
   const sensors = useSensors(
@@ -351,6 +412,10 @@ export function DraggableWidgetGrid({
                 size={sizes[widget.id] || 1}
                 onResize={(size) => onResize(widget.id, size)}
                 maxSize={3}
+                collapsed={!!collapsed[widget.id]}
+                onToggleCollapse={() => toggleCollapsed(widget.id)}
+                onHide={onHide ? () => onHide(widget.id) : undefined}
+                label={widget.label}
               >
                 {widget.render()}
               </SortableWidget>
@@ -366,6 +431,10 @@ export function DraggableWidgetGrid({
             size={sizes[trendsWidget.id] || 3}
             onResize={(size) => onResize(trendsWidget.id, size)}
             maxSize={3}
+            collapsed={!!collapsed[trendsWidget.id]}
+            onToggleCollapse={() => toggleCollapsed(trendsWidget.id)}
+            onHide={onHide ? () => onHide(trendsWidget.id) : undefined}
+            label={trendsWidget.label}
           >
             {trendsWidget.render()}
           </SortableWidget>

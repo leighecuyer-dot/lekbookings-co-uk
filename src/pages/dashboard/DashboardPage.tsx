@@ -384,10 +384,21 @@ export default function DashboardPage() {
             onReorder={reorderWidgets}
             sizes={widgetSizes}
             onResize={setWidgetSize}
+            onHide={(id) => {
+              const map: Record<WidgetId, keyof typeof widgetSettings> = {
+                availability: "showAvailabilityTile",
+                performance: "showPerformanceTile",
+                revenue: "showRevenueTile",
+                revenueBreakdown: "showRevenueBreakdownTile",
+                trends: "showTrendsChart",
+              };
+              updateWidgetSetting(map[id], false);
+            }}
             widgets={[
               {
                 id: "availability" as WidgetId,
                 visible: widgetSettings.showAvailabilityTile,
+                label: "Available Slots",
                 render: () => (
                   <AvailableSlotsTile 
                     businessId={currentBusiness.id} 
@@ -403,6 +414,7 @@ export default function DashboardPage() {
               {
                 id: "performance" as WidgetId,
                 visible: widgetSettings.showPerformanceTile,
+                label: "Weekly Performance",
                 render: () => {
                   const hideRevenue = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
                   return (
@@ -420,6 +432,7 @@ export default function DashboardPage() {
               {
                 id: "revenue" as WidgetId,
                 visible: widgetSettings.showRevenueTile,
+                label: "Revenue Growth",
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
                   return <RevenueGrowthTile businessId={currentBusiness.id} locked={revenueLocked} />;
@@ -428,6 +441,7 @@ export default function DashboardPage() {
               {
                 id: "revenueBreakdown" as WidgetId,
                 visible: widgetSettings.showRevenueBreakdownTile,
+                label: "Revenue Breakdown",
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
                   const isStaffRole = currentRole?.role === "staff";
@@ -437,6 +451,7 @@ export default function DashboardPage() {
               {
                 id: "trends" as WidgetId,
                 visible: widgetSettings.showTrendsChart,
+                label: "Trends Chart",
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
                   return (
@@ -452,6 +467,7 @@ export default function DashboardPage() {
             ]}
           />
         )}
+
 
         {/* Quick Actions + Setup Grid - Hidden on mobile */}
         <div className="hidden sm:grid gap-6 lg:grid-cols-2">
