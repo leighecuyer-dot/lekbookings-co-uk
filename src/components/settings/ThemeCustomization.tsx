@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ export function ThemeCustomization() {
   const [cropOpen, setCropOpen] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [theme, setTheme] = useState<PageTheme | null>(null);
+  const cropObjectUrlRef = useRef<string | null>(null);
   
   const [formData, setFormData] = useState({
     logo_url: "",
@@ -109,53 +110,95 @@ export function ThemeCustomization() {
     }
   };
 
-  const downscaleImage = (dataUrl: string, maxDim = 2048): Promise<string> =>
-    new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const { width, height } = img;
-        if (width <= maxDim && height <= maxDim) return resolve(dataUrl);
-        const scale = Math.min(maxDim / width, maxDim / height);
-        const w = Math.round(width * scale);
-        const h = Math.round(height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return resolve(dataUrl);
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, w, h);
-        // PNG preserves transparency for logos; quality stays sharp at 2048px
-        resolve(canvas.toDataURL("image/png"));
-      };
-      img.onerror = () => resolve(dataUrl);
-      img.src = dataUrl;
-    });
+  useEffect(() => {
+    return () => {
+      if (cropObjectUrlRef.current) URL.revokeObjectURL(cropObjectUrlRef.current);
+    };
+  }, []);
+
+  const setCropSource = (url: string) => {
+    if (cropObjectUrlRef.current) URL.revokeObjectURL(cropObjectUrlRef.current);
+    cropObjectUrlRef.current = url.startsWith("blob:") ? url : null;
+    setCropSrc(url);
+  };
+
+  const prepareLogoForCrop = async (file: File, maxDim = 1600): Promise<string> => {
+    const originalUrl = URL.createObjectURL(file);
+    try {
+      if (!("createImageBitmap" in window)) return originalUrl;
+
+      const originalBitmap = await createImageBitmap(file);
+      const { width, height } = originalBitmap;
+      if (width <= maxDim && height <= maxDim) {
+        originalBitmap.close();
+        return originalUrl;
+      }
+
+      const scale = Math.min(maxDim / width, maxDim / height);
+      const w = Math.max(1, Math.round(width * scale));
+      const h = Math.max(1, Math.round(height * scale));
+      originalBitmap.close();
+
+      const bitmap = await createImageBitmap(file, {
+        resizeWidth: w,
+        resizeHeight: h,
+        resizeQuality: "high",
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        bitmap.close();
+        return originalUrl;
+      }
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+
+      const mime = file.type === "image/png" ? "image/png" : "image/jpeg";
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.9));
+      if (!blob) return originalUrl;
+
+      URL.revokeObjectURL(originalUrl);
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error("Logo preparation failed:", error);
+      return originalUrl;
+    }
+  };
 
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-selecting same file later
     if (!file || !currentBusiness) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("File size must be less than 20MB");
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const original = reader.result as string;
-      const resized = await downscaleImage(original, 2048);
-      setCropSrc(resized);
-      setCropOpen(true);
-    };
-    reader.readAsDataURL(file);
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Logo must be less than 10MB. Try a smaller PNG or JPG.");
+      return;
+    }
+
+    setUploadingLogo(true);
+    prepareLogoForCrop(file)
+      .then((url) => {
+        setCropSource(url);
+        setCropOpen(true);
+      })
+      .catch(() => {
+        toast.error("Couldn't open that logo. Try a PNG or JPG instead.");
+      })
+      .finally(() => setUploadingLogo(false));
   };
 
   const handleEditExisting = () => {
     if (!formData.logo_url) return;
     // Cache-bust so the cropper always pulls a fresh copy
-    setCropSrc(`${formData.logo_url}?t=${Date.now()}`);
+    setCropSource(`${formData.logo_url}?t=${Date.now()}`);
     setCropOpen(true);
   };
 
