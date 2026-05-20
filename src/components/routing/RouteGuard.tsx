@@ -1,9 +1,10 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useReseller } from "@/contexts/ResellerContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RouteGuardProps {
   children: ReactNode;
@@ -35,6 +36,51 @@ function LoadingState() {
     </div>
   );
 }
+
+/**
+ * Defensive fallback for the requireBusiness check.
+ * If the BusinessContext reports no businesses (which would normally
+ * send the user to /onboarding), double-check directly against
+ * user_roles. Only redirect to onboarding if the user truly has no
+ * business role — otherwise wait and send them to the dashboard.
+ */
+function BusinessFallback({ userId, fallbackPath }: { userId: string; fallbackPath?: string }) {
+  const { refreshBusinesses } = useBusiness();
+  const [decision, setDecision] = useState<"loading" | "onboarding">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("business_id")
+        .eq("user_id", userId)
+        .limit(1);
+      if (cancelled) return;
+      if (!error && data && data.length > 0) {
+        // User has roles — businesses fetch must have failed transiently.
+        // Trigger a refresh and stay in loading state until context updates.
+        try {
+          await refreshBusinesses();
+        } catch {
+          /* ignored */
+        }
+      } else {
+        setDecision("onboarding");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, refreshBusinesses]);
+
+  if (decision === "onboarding") {
+    return <Navigate to={fallbackPath || "/onboarding"} replace />;
+  }
+  return <LoadingState />;
+}
+
+
 
 export function RouteGuard({
   children,
@@ -90,11 +136,12 @@ export function RouteGuard({
   if (requireBusiness && user) {
     const hasOwnBusiness = businesses.length > 0;
     const hasResellerAccess = isResellerMode && currentBusiness !== null;
-    
+
     if (!hasOwnBusiness && !hasResellerAccess) {
-      return <Navigate to={fallbackPath || "/onboarding"} replace />;
+      return <BusinessFallback userId={user.id} fallbackPath={fallbackPath} />;
     }
   }
+
 
   // Require reseller status
   if (requireReseller && !isReseller) {
