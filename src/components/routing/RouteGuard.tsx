@@ -45,7 +45,10 @@ function LoadingState() {
  * business role — otherwise wait and send them to the dashboard.
  */
 function BusinessFallback({ userId, fallbackPath }: { userId: string; fallbackPath?: string }) {
-  const [decision, setDecision] = useState<"loading" | "onboarding" | "dashboard">("loading");
+  const { refreshBusinesses } = useBusiness() as ReturnType<typeof useBusiness> & {
+    refreshBusinesses?: () => Promise<void> | void;
+  };
+  const [decision, setDecision] = useState<"loading" | "onboarding">("loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +60,13 @@ function BusinessFallback({ userId, fallbackPath }: { userId: string; fallbackPa
         .limit(1);
       if (cancelled) return;
       if (!error && data && data.length > 0) {
-        setDecision("dashboard");
+        // User has roles — businesses fetch must have failed transiently.
+        // Trigger a refresh and stay in loading state until context updates.
+        try {
+          await refreshBusinesses?.();
+        } catch {
+          /* ignored */
+        }
       } else {
         setDecision("onboarding");
       }
@@ -65,12 +74,14 @@ function BusinessFallback({ userId, fallbackPath }: { userId: string; fallbackPa
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, refreshBusinesses]);
 
-  if (decision === "loading") return <LoadingState />;
-  if (decision === "dashboard") return <Navigate to="/dashboard" replace />;
-  return <Navigate to={fallbackPath || "/onboarding"} replace />;
+  if (decision === "onboarding") {
+    return <Navigate to={fallbackPath || "/onboarding"} replace />;
+  }
+  return <LoadingState />;
 }
+
 
 
 export function RouteGuard({
