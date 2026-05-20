@@ -312,8 +312,11 @@ interface DraggableWidgetGridProps {
   onReorder: (activeId: WidgetId, overId: WidgetId) => void;
   sizes: Record<WidgetId, WidgetSize>;
   onResize: (id: WidgetId, size: WidgetSize) => void;
+  onHide?: (id: WidgetId) => void;
   className?: string;
 }
+
+const COLLAPSED_KEY = "dashboard-widget-collapsed";
 
 export function DraggableWidgetGrid({
   widgets,
@@ -321,9 +324,26 @@ export function DraggableWidgetGrid({
   onReorder,
   sizes,
   onResize,
+  onHide,
   className,
 }: DraggableWidgetGridProps) {
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSED_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleCollapsed = (id: WidgetId) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
   
   // Configure sensors for both desktop and mobile
   const sensors = useSensors(
