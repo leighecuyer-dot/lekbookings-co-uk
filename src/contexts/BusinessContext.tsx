@@ -155,16 +155,25 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Get businesses for those roles
+    // Get businesses for those roles — retry on transient failures
     const businessIds = roles.map((r) => r.business_id);
-    const { data: businessData, error: businessError } = await supabase
-      .from("businesses")
-      .select("*")
-      .in("id", businessIds);
+    let businessData: Business[] | null = null;
+    let businessError: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await supabase.from("businesses").select("*").in("id", businessIds);
+      if (!res.error) {
+        businessData = (res.data as unknown as Business[]) ?? [];
+        businessError = null;
+        break;
+      }
+      businessError = res.error;
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    }
 
     if (businessError) {
       console.error("Error fetching businesses:", businessError);
-      setFetchedForUserId(user.id);
+      // Don't mark as fetched so RouteGuard keeps the loading state
+      // instead of redirecting the user to /onboarding by mistake.
       setLoading(false);
       return;
     }
