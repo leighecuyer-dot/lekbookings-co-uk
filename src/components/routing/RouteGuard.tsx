@@ -61,7 +61,7 @@ function BusinessFallback({ userId, fallbackPath }: { userId: string; fallbackPa
         // User has roles — businesses fetch must have failed transiently.
         // Trigger a refresh and stay in loading state until context updates.
         try {
-          await refreshBusinesses?.();
+          await refreshBusinesses();
         } catch {
           /* ignored */
         }
