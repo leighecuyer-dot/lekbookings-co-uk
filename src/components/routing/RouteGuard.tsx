@@ -91,11 +91,12 @@ export function RouteGuard({
   if (requireBusiness && user) {
     const hasOwnBusiness = businesses.length > 0;
     const hasResellerAccess = isResellerMode && currentBusiness !== null;
-    
+
     if (!hasOwnBusiness && !hasResellerAccess) {
-      return <Navigate to={fallbackPath || "/onboarding"} replace />;
+      return <BusinessFallback userId={user.id} fallbackPath={fallbackPath} />;
     }
   }
+
 
   // Require reseller status
   if (requireReseller && !isReseller) {
