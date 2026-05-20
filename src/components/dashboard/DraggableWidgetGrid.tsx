@@ -153,50 +153,86 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
         <Move className="w-4 h-4 text-muted-foreground" />
       </button>
 
-      {/* Resize controls - hidden on mobile and while dragging */}
+      {/* Resize / collapse / hide controls */}
       <div className={cn(
-        "absolute top-2 right-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 hidden sm:flex",
-        isDragging && "sm:hidden"
+        "absolute top-2 right-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex",
+        isDragging && "hidden"
       )}>
         <TooltipProvider delayDuration={300}>
-          {canShrink && (
+          {canShrink && !collapsed && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm"
+                  className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm hidden sm:inline-flex"
                   onClick={handleShrink}
                 >
                   <Minimize2 className="h-3 w-3" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">
-                Shrink widget
-              </TooltipContent>
+              <TooltipContent side="bottom" className="text-xs">Shrink widget</TooltipContent>
             </Tooltip>
           )}
-          {canExpand && (
+          {canExpand && !collapsed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm hidden sm:inline-flex"
+                  onClick={handleExpand}
+                >
+                  <Maximize2 className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Expand widget</TooltipContent>
+            </Tooltip>
+          )}
+          {onToggleCollapse && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="secondary"
                   size="icon"
                   className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm"
-                  onClick={handleExpand}
+                  onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}
                 >
-                  <Maximize2 className="h-3 w-3" />
+                  {collapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
-                Expand widget
+                {collapsed ? "Expand" : "Collapse"}
               </TooltipContent>
+            </Tooltip>
+          )}
+          {onHide && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background shadow-sm"
+                  onClick={(e) => { e.stopPropagation(); onHide(); }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Hide widget</TooltipContent>
             </Tooltip>
           )}
         </TooltipProvider>
       </div>
 
-      {children}
+      {collapsed ? (
+        <div className="rounded-xl border bg-card p-3 sm:p-4 flex items-center justify-between min-h-[56px]">
+          <span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+            {label || id} (collapsed)
+          </span>
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }
