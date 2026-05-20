@@ -127,17 +127,17 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
         className
       )}
     >
-      {/* Desktop drag handle - hidden on mobile */}
+      {/* Desktop drag handle - always visible */}
       <button
         {...attributes}
         {...listeners}
         className={cn(
-          "absolute -left-1 top-1/2 -translate-y-1/2 -translate-x-full p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none z-10 hidden sm:flex",
+          "absolute top-2 left-2 p-1.5 rounded-md bg-background/80 backdrop-blur-sm shadow-sm cursor-grab active:cursor-grabbing touch-none z-10 hidden sm:flex",
           isDragging && "opacity-0"
         )}
         aria-label="Drag to reorder"
       >
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
+        <Move className="w-4 h-4 text-muted-foreground" />
       </button>
 
       {/* Mobile drag handle - visible on touch devices */}
@@ -146,7 +146,7 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
         {...listeners}
         className={cn(
           "absolute top-2 left-2 p-1.5 rounded-md bg-background/80 backdrop-blur-sm shadow-sm z-10 sm:hidden touch-none",
-          "opacity-60 active:opacity-100 active:scale-95 transition-all",
+          "opacity-80 active:opacity-100 active:scale-95 transition-all",
           isDragging && "opacity-0"
         )}
         aria-label="Hold and drag to reorder"
@@ -154,11 +154,12 @@ function SortableWidget({ id, children, className, size, onResize, maxSize = 3, 
         <Move className="w-4 h-4 text-muted-foreground" />
       </button>
 
-      {/* Resize / collapse / hide controls */}
+      {/* Resize / collapse / hide controls - always visible */}
       <div className={cn(
-        "absolute top-2 right-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex",
+        "absolute top-2 right-2 gap-1 z-10 flex",
         isDragging && "hidden"
       )}>
+
         <TooltipProvider delayDuration={300}>
           {canShrink && !collapsed && (
             <Tooltip>
