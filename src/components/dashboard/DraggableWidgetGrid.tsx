@@ -48,6 +48,7 @@ interface Widget {
   id: WidgetId;
   render: () => ReactNode;
   visible: boolean;
+  label?: string;
 }
 
 interface SortableWidgetProps {
