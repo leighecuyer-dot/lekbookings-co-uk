@@ -58,9 +58,13 @@ interface SortableWidgetProps {
   onResize: (size: WidgetSize) => void;
   maxSize?: WidgetSize;
   isDragOverlay?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+  onHide?: () => void;
+  label?: string;
 }
 
-function SortableWidget({ id, children, className, size, onResize, maxSize = 3, isDragOverlay = false }: SortableWidgetProps) {
+function SortableWidget({ id, children, className, size, onResize, maxSize = 3, isDragOverlay = false, collapsed = false, onToggleCollapse, onHide, label }: SortableWidgetProps) {
   const {
     attributes,
     listeners,
