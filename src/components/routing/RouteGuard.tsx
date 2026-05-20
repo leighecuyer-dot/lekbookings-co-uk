@@ -45,9 +45,7 @@ function LoadingState() {
  * business role — otherwise wait and send them to the dashboard.
  */
 function BusinessFallback({ userId, fallbackPath }: { userId: string; fallbackPath?: string }) {
-  const { refreshBusinesses } = useBusiness() as ReturnType<typeof useBusiness> & {
-    refreshBusinesses?: () => Promise<void> | void;
-  };
+  const { refreshBusinesses } = useBusiness();
   const [decision, setDecision] = useState<"loading" | "onboarding">("loading");
 
   useEffect(() => {
