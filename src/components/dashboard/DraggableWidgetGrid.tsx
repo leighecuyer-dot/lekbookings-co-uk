@@ -412,6 +412,10 @@ export function DraggableWidgetGrid({
                 size={sizes[widget.id] || 1}
                 onResize={(size) => onResize(widget.id, size)}
                 maxSize={3}
+                collapsed={!!collapsed[widget.id]}
+                onToggleCollapse={() => toggleCollapsed(widget.id)}
+                onHide={onHide ? () => onHide(widget.id) : undefined}
+                label={widget.label}
               >
                 {widget.render()}
               </SortableWidget>
@@ -427,6 +431,10 @@ export function DraggableWidgetGrid({
             size={sizes[trendsWidget.id] || 3}
             onResize={(size) => onResize(trendsWidget.id, size)}
             maxSize={3}
+            collapsed={!!collapsed[trendsWidget.id]}
+            onToggleCollapse={() => toggleCollapsed(trendsWidget.id)}
+            onHide={onHide ? () => onHide(trendsWidget.id) : undefined}
+            label={trendsWidget.label}
           >
             {trendsWidget.render()}
           </SortableWidget>
