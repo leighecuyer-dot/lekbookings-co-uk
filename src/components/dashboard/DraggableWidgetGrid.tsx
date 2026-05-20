@@ -19,7 +19,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Maximize2, Minimize2, Move } from "lucide-react";
+import { GripVertical, Maximize2, Minimize2, Move, ChevronDown, ChevronUp, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
