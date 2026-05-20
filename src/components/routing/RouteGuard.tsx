@@ -37,6 +37,42 @@ function LoadingState() {
   );
 }
 
+/**
+ * Defensive fallback for the requireBusiness check.
+ * If the BusinessContext reports no businesses (which would normally
+ * send the user to /onboarding), double-check directly against
+ * user_roles. Only redirect to onboarding if the user truly has no
+ * business role — otherwise wait and send them to the dashboard.
+ */
+function BusinessFallback({ userId, fallbackPath }: { userId: string; fallbackPath?: string }) {
+  const [decision, setDecision] = useState<"loading" | "onboarding" | "dashboard">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("business_id")
+        .eq("user_id", userId)
+        .limit(1);
+      if (cancelled) return;
+      if (!error && data && data.length > 0) {
+        setDecision("dashboard");
+      } else {
+        setDecision("onboarding");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (decision === "loading") return <LoadingState />;
+  if (decision === "dashboard") return <Navigate to="/dashboard" replace />;
+  return <Navigate to={fallbackPath || "/onboarding"} replace />;
+}
+
+
 export function RouteGuard({
   children,
   requireAuth = false,
