@@ -84,6 +84,7 @@ export function ImageCropDialog({
   const [autoDetected, setAutoDetected] = useState<"square" | "wide" | null>(null);
   const [sourceDims, setSourceDims] = useState<{ w: number; h: number } | null>(null);
   const previewTimer = useRef<number | null>(null);
+  const loadedImageRef = useRef<HTMLImageElement | null>(null);
 
   const activeAspect =
     shape === "square" ? aspect : shape === "wide" ? 16 / 9 : undefined;
@@ -97,6 +98,7 @@ export function ImageCropDialog({
       try {
         const img = await loadImage(imageSrc);
         if (cancelled) return;
+        loadedImageRef.current = img;
         setSourceDims({ w: img.naturalWidth, h: img.naturalHeight });
         const ratio = img.naturalWidth / Math.max(1, img.naturalHeight);
         // Wide logos (ratio > 1.4) → default to 16:9, otherwise square
@@ -118,6 +120,7 @@ export function ImageCropDialog({
       setPreviewUrl(null);
       setAutoDetected(null);
       setSourceDims(null);
+      loadedImageRef.current = null;
     }
   }, [open, imageSrc]);
 
@@ -139,11 +142,12 @@ export function ImageCropDialog({
 
   // Generate a live preview (debounced) whenever the crop area changes
   useEffect(() => {
-    if (!imageSrc || !areaPixels) return;
+    if (!imageSrc || !areaPixels || saving) return;
     if (previewTimer.current) window.clearTimeout(previewTimer.current);
     previewTimer.current = window.setTimeout(async () => {
       try {
-        const image = await loadImage(imageSrc);
+        const image = loadedImageRef.current || await loadImage(imageSrc);
+        loadedImageRef.current = image;
         const maxSide = 256;
         const scale = Math.min(1, maxSide / Math.max(areaPixels.width, areaPixels.height));
         const w = Math.max(1, Math.round(areaPixels.width * scale));
@@ -172,7 +176,7 @@ export function ImageCropDialog({
     return () => {
       if (previewTimer.current) window.clearTimeout(previewTimer.current);
     };
-  }, [imageSrc, areaPixels]);
+  }, [imageSrc, areaPixels, saving]);
 
   const handleSave = async () => {
     if (!imageSrc || !areaPixels) return;
