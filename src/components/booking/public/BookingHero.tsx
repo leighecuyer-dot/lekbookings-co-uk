@@ -136,10 +136,17 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
             onClick={() => {
               const target = document.getElementById("booking-services");
               if (target) {
-                const y = target.getBoundingClientRect().top + window.scrollY - 16;
-                window.scrollTo({ top: y, behavior: "smooth" });
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+                // If only one Book Now button exists, click it after the scroll
+                const bookButtons = target.querySelectorAll<HTMLButtonElement>("button");
+                const bookNows = Array.from(bookButtons).filter(
+                  (b) => b.textContent?.trim().toLowerCase() === "book now"
+                );
+                if (bookNows.length === 1) {
+                  setTimeout(() => bookNows[0].click(), 500);
+                }
               } else {
-                window.scrollBy({ top: window.innerHeight * 0.8, behavior: "smooth" });
+                window.scrollBy({ top: window.innerHeight, behavior: "smooth" });
               }
             }}
             disabled={isLoading || ctaDisabled}
