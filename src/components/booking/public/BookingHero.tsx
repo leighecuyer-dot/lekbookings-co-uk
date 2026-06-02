@@ -36,9 +36,9 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
         background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
       }}
     >
-      {/* Full-width mobile logo banner */}
+      {/* Full-width logo banner (mobile + desktop) */}
       {logoUrl && (
-        <div className="sm:hidden w-full bg-white/95 flex items-center justify-center overflow-hidden">
+        <div className="w-full bg-white/95 flex items-center justify-center overflow-hidden">
           <img
             src={logoUrl}
             alt={`${business.name} logo`}
@@ -61,16 +61,8 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
 
       <div className="relative max-w-6xl mx-auto px-4 py-12 sm:py-24">
         <div className="flex flex-col items-center text-center text-white">
-          {/* Desktop logo */}
-          {logoUrl ? (
-            <div className="hidden sm:flex sm:w-auto sm:max-w-md mb-6 rounded-2xl shadow-2xl border-4 border-white/20 bg-white/95 p-3 items-center justify-center overflow-hidden">
-              <img
-                src={logoUrl}
-                alt={`${business.name} logo`}
-                className="w-full h-auto max-h-56 object-contain"
-              />
-            </div>
-          ) : (
+          {/* Fallback icon when no logo */}
+          {!logoUrl && (
             <div
               className="w-40 h-40 sm:w-40 sm:h-40 rounded-2xl flex items-center justify-center mb-6 shadow-2xl border-4 border-white/20"
               style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
