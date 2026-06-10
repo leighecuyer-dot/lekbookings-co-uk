@@ -11,6 +11,7 @@ import { RouteGuard } from "@/components/routing/RouteGuard";
 // Pages
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/auth/AuthPage";
+import PricingPage from "./pages/PricingPage";
 import AcceptInvitePage from "./pages/invite/AcceptInvitePage";
 import OnboardingPage from "./pages/onboarding/OnboardingPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
@@ -48,6 +49,7 @@ const AppRoutes = () => (
     {/* Public routes */}
     <Route path="/" element={<LandingPage />} />
     <Route path="/auth" element={<AuthPage />} />
+    <Route path="/pricing" element={<PricingPage />} />
     <Route path="/install" element={<InstallPage />} />
     <Route path="/invite/accept" element={<AcceptInvitePage />} />
     <Route path="/welcome" element={
