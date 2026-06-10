@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Check, Minus, Mail, MessageSquare, Phone } from "lucide-react";
+import { Check, Minus, Mail, MessageSquare, Phone, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ interface Tier {
   email: string;
   sms: string;
   whatsapp: string;
+  customers: string;
   staff: string;
   bookings: string;
   txFee: string;
@@ -29,6 +30,7 @@ const tiers: Tier[] = [
     email: "Unlimited",
     sms: "—",
     whatsapp: "Click-to-chat link",
+    customers: "Unlimited",
     staff: "1 staff member",
     bookings: "Up to 30 / month",
     txFee: "2%",
@@ -50,6 +52,7 @@ const tiers: Tier[] = [
     email: "Unlimited",
     sms: "—",
     whatsapp: "Click-to-chat link",
+    customers: "Unlimited",
     staff: "Up to 2 staff",
     bookings: "Up to 100 / month",
     txFee: "1.5%",
@@ -71,6 +74,7 @@ const tiers: Tier[] = [
     email: "Unlimited",
     sms: "50 SMS / month included",
     whatsapp: "Click-to-chat link",
+    customers: "Unlimited",
     staff: "Up to 5 staff",
     bookings: "Unlimited",
     txFee: "1%",
@@ -93,6 +97,7 @@ const tiers: Tier[] = [
     email: "Unlimited",
     sms: "200 SMS / month included",
     whatsapp: "Click-to-chat link",
+    customers: "Unlimited",
     staff: "Unlimited staff",
     bookings: "Unlimited",
     txFee: "0.5%",
@@ -120,9 +125,9 @@ export default function PricingPage() {
             Simple pricing. Clear message limits.
           </h1>
           <p className="mt-6 text-lg text-muted-foreground">
-            Every plan includes unlimited email. SMS is bundled on Pro and Enterprise.
-            WhatsApp is a free click-to-chat link on every plan — your customers tap it
-            and message you directly on their phone.
+            Every plan includes unlimited email and unlimited customers.
+            SMS is bundled on Pro and Enterprise. WhatsApp is a free click-to-chat
+            link on every plan — your customers tap it and message you directly.
           </p>
         </header>
 
@@ -154,6 +159,7 @@ export default function PricingPage() {
               </p>
 
               <div className="mt-6 space-y-3 rounded-2xl border border-border bg-muted/40 p-4">
+                <Row icon={<Users className="h-4 w-4" />} label="Customers" value={t.customers} />
                 <Row icon={<Mail className="h-4 w-4" />} label="Email" value={t.email} />
                 <Row icon={<Phone className="h-4 w-4" />} label="SMS" value={t.sms} />
                 <Row icon={<MessageSquare className="h-4 w-4" />} label="WhatsApp" value={t.whatsapp} />
@@ -186,8 +192,8 @@ export default function PricingPage() {
         </div>
 
         <p className="mt-12 text-center text-sm text-muted-foreground max-w-2xl mx-auto">
-          Need more SMS? Top-ups available at £0.04 per UK SMS. Email and WhatsApp
-          click-to-chat are always unlimited on every paid plan.
+          Need more SMS? Top-ups available at £0.04 per UK SMS. Email, customers,
+          and WhatsApp click-to-chat are always unlimited on every paid plan.
         </p>
       </section>
     </main>
