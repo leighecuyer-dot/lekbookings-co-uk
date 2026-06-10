@@ -192,8 +192,8 @@ export default function PricingPage() {
         </div>
 
         <p className="mt-12 text-center text-sm text-muted-foreground max-w-2xl mx-auto">
-          Need more SMS? Top-ups available at £0.04 per UK SMS. Email and WhatsApp
-          click-to-chat are always unlimited on every paid plan.
+          Need more SMS? Top-ups available at £0.04 per UK SMS. Email, customers,
+          and WhatsApp click-to-chat are always unlimited on every paid plan.
         </p>
       </section>
     </main>
