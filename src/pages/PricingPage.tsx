@@ -159,6 +159,7 @@ export default function PricingPage() {
               </p>
 
               <div className="mt-6 space-y-3 rounded-2xl border border-border bg-muted/40 p-4">
+                <Row icon={<Users className="h-4 w-4" />} label="Customers" value={t.customers} />
                 <Row icon={<Mail className="h-4 w-4" />} label="Email" value={t.email} />
                 <Row icon={<Phone className="h-4 w-4" />} label="SMS" value={t.sms} />
                 <Row icon={<MessageSquare className="h-4 w-4" />} label="WhatsApp" value={t.whatsapp} />
