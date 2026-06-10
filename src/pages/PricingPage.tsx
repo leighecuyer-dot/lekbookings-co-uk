@@ -125,9 +125,9 @@ export default function PricingPage() {
             Simple pricing. Clear message limits.
           </h1>
           <p className="mt-6 text-lg text-muted-foreground">
-            Every plan includes unlimited email. SMS is bundled on Pro and Enterprise.
-            WhatsApp is a free click-to-chat link on every plan — your customers tap it
-            and message you directly on their phone.
+            Every plan includes unlimited email and unlimited customers.
+            SMS is bundled on Pro and Enterprise. WhatsApp is a free click-to-chat
+            link on every plan — your customers tap it and message you directly.
           </p>
         </header>
 
