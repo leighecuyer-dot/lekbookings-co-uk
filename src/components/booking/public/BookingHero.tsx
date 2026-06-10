@@ -36,17 +36,6 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
         background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
       }}
     >
-      {/* Full-width logo banner (mobile + desktop) */}
-      {logoUrl && (
-        <div className="w-full bg-white/95 flex items-center justify-center overflow-hidden">
-          <img
-            src={logoUrl}
-            alt={`${business.name} logo`}
-            className="w-full h-auto object-contain"
-          />
-        </div>
-      )}
-
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
@@ -59,15 +48,24 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
         />
       </div>
 
-      <div className="relative max-w-6xl mx-auto px-4 py-12 sm:py-24">
+      <div className="relative max-w-6xl mx-auto px-4 pt-10 pb-12 sm:pt-16 sm:pb-24">
         <div className="flex flex-col items-center text-center text-white">
-          {/* Fallback icon when no logo */}
-          {!logoUrl && (
+          {/* Logo badge */}
+          {logoUrl ? (
+            <div className="w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border-4 border-white/30 flex items-center justify-center mb-6 overflow-hidden">
+              <img
+                src={logoUrl}
+                alt={`${business.name} logo`}
+                className="w-full h-full object-contain p-2 sm:p-3"
+              />
+            </div>
+          ) : (
+            /* Fallback icon when no logo */
             <div
-              className="w-40 h-40 sm:w-40 sm:h-40 rounded-2xl flex items-center justify-center mb-6 shadow-2xl border-4 border-white/20"
+              className="w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl sm:rounded-3xl flex items-center justify-center mb-6 shadow-2xl border-4 border-white/20"
               style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
             >
-              <Building2 className="w-20 h-20 text-white/80" />
+              <Building2 className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 text-white/80" />
             </div>
           )}
 
