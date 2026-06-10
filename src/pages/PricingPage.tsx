@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Check, Minus, Mail, MessageSquare, Phone } from "lucide-react";
+import { Check, Minus, Mail, MessageSquare, Phone, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
