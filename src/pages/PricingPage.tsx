@@ -11,6 +11,7 @@ interface Tier {
   email: string;
   sms: string;
   whatsapp: string;
+  customers: string;
   staff: string;
   bookings: string;
   txFee: string;
