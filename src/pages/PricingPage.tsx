@@ -29,6 +29,7 @@ const tiers: Tier[] = [
     email: "Unlimited",
     sms: "—",
     whatsapp: "Click-to-chat link",
+    customers: "Unlimited",
     staff: "1 staff member",
     bookings: "Up to 30 / month",
     txFee: "2%",
