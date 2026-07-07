@@ -79,12 +79,14 @@ export function ImageCropDialog({
   const [zoom, setZoom] = useState(1);
   const [areaPixels, setAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [shape, setShape] = useState<"square" | "wide" | "free">("square");
   const [autoDetected, setAutoDetected] = useState<"square" | "wide" | null>(null);
   const [sourceDims, setSourceDims] = useState<{ w: number; h: number } | null>(null);
-  const previewTimer = useRef<number | null>(null);
   const loadedImageRef = useRef<HTMLImageElement | null>(null);
+  const cropFrameRef = useRef<number | null>(null);
+  const zoomFrameRef = useRef<number | null>(null);
+  const pendingCropRef = useRef({ x: 0, y: 0 });
+  const pendingZoomRef = useRef(1);
 
   const activeAspect =
     shape === "square" ? aspect : shape === "wide" ? 16 / 9 : undefined;
@@ -117,10 +119,11 @@ export function ImageCropDialog({
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       setAreaPixels(null);
-      setPreviewUrl(null);
       setAutoDetected(null);
       setSourceDims(null);
       loadedImageRef.current = null;
+      pendingCropRef.current = { x: 0, y: 0 };
+      pendingZoomRef.current = 1;
     }
   }, [open, imageSrc]);
 
@@ -140,45 +143,30 @@ export function ImageCropDialog({
     setAreaPixels(pixels);
   }, []);
 
-  // Generate a live preview (debounced) whenever the crop area changes.
-  // Longer debounce + requestIdleCallback keeps mobile Safari responsive
-  // while the user is actively dragging / zooming.
+  const handleCropChange = useCallback((nextCrop: { x: number; y: number }) => {
+    pendingCropRef.current = nextCrop;
+    if (cropFrameRef.current !== null) return;
+    cropFrameRef.current = window.requestAnimationFrame(() => {
+      cropFrameRef.current = null;
+      setCrop(pendingCropRef.current);
+    });
+  }, []);
+
+  const handleZoomChange = useCallback((nextZoom: number) => {
+    pendingZoomRef.current = nextZoom;
+    if (zoomFrameRef.current !== null) return;
+    zoomFrameRef.current = window.requestAnimationFrame(() => {
+      zoomFrameRef.current = null;
+      setZoom(pendingZoomRef.current);
+    });
+  }, []);
+
   useEffect(() => {
-    if (!imageSrc || !areaPixels || saving) return;
-    if (previewTimer.current) window.clearTimeout(previewTimer.current);
-    previewTimer.current = window.setTimeout(async () => {
-      try {
-        const image = loadedImageRef.current || await loadImage(imageSrc);
-        loadedImageRef.current = image;
-        const maxSide = 192;
-        const scale = Math.min(1, maxSide / Math.max(areaPixels.width, areaPixels.height));
-        const w = Math.max(1, Math.round(areaPixels.width * scale));
-        const h = Math.max(1, Math.round(areaPixels.height * scale));
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(
-          image,
-          areaPixels.x,
-          areaPixels.y,
-          areaPixels.width,
-          areaPixels.height,
-          0,
-          0,
-          w,
-          h
-        );
-        setPreviewUrl(canvas.toDataURL("image/png"));
-      } catch (e) {
-        console.warn("Preview render failed", e);
-      }
-    }, 350);
     return () => {
-      if (previewTimer.current) window.clearTimeout(previewTimer.current);
+      if (cropFrameRef.current !== null) window.cancelAnimationFrame(cropFrameRef.current);
+      if (zoomFrameRef.current !== null) window.cancelAnimationFrame(zoomFrameRef.current);
     };
-  }, [imageSrc, areaPixels, saving]);
+  }, []);
 
   const handleSave = async () => {
     if (!imageSrc || !areaPixels) return;
@@ -272,8 +260,8 @@ export function ImageCropDialog({
               cropShape="rect"
               showGrid
               objectFit="contain"
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
+              onCropChange={handleCropChange}
+              onZoomChange={handleZoomChange}
               onCropComplete={onCrop}
             />
           )}
@@ -287,39 +275,8 @@ export function ImageCropDialog({
             max={3}
             step={0.05}
             value={[zoom]}
-            onValueChange={(v) => setZoom(v[0])}
+            onValueChange={(v) => handleZoomChange(v[0])}
           />
-        </div>
-
-        {/* Live preview at target sizes */}
-        <div className="space-y-2">
-          <Label className="text-xs">Preview</Label>
-          <div className="flex items-end justify-around gap-3 p-3 rounded-lg bg-muted/40 border border-border">
-            <div className="flex flex-col items-center gap-1.5">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Favicon preview" className="w-8 h-8 rounded-sm object-cover border border-border" />
-              ) : (
-                <div className="w-8 h-8 rounded-sm bg-muted" />
-              )}
-              <span className="text-[10px] text-muted-foreground">Favicon · 32px</span>
-            </div>
-            <div className="flex flex-col items-center gap-1.5">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Header preview" className="w-16 h-16 rounded-lg object-cover border border-border" />
-              ) : (
-                <div className="w-16 h-16 rounded-lg bg-muted" />
-              )}
-              <span className="text-[10px] text-muted-foreground">Header · 64px</span>
-            </div>
-            <div className="flex flex-col items-center gap-1.5">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Full preview" className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover border border-border" />
-              ) : (
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl bg-muted" />
-              )}
-              <span className="text-[10px] text-muted-foreground">Full · 128px</span>
-            </div>
-          </div>
         </div>
 
         <DialogFooter>
