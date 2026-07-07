@@ -118,6 +118,7 @@ export function ImageCropDialog({
     if (open) {
       setCrop({ x: 0, y: 0 });
       setZoom(1);
+      setZoomDraft(1);
       setAreaPixels(null);
       setAutoDetected(null);
       setSourceDims(null);
