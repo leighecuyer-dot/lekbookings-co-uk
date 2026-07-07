@@ -76,7 +76,6 @@ export function ImageCropDialog({
 }: ImageCropDialogProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [zoomDraft, setZoomDraft] = useState(1);
   const [areaPixels, setAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
   const [shape, setShape] = useState<"square" | "wide" | "free">("square");
@@ -87,6 +86,7 @@ export function ImageCropDialog({
   const zoomFrameRef = useRef<number | null>(null);
   const pendingCropRef = useRef({ x: 0, y: 0 });
   const pendingZoomRef = useRef(1);
+  const zoomInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeAspect =
     shape === "square" ? aspect : shape === "wide" ? 16 / 9 : undefined;
@@ -118,7 +118,7 @@ export function ImageCropDialog({
     if (open) {
       setCrop({ x: 0, y: 0 });
       setZoom(1);
-      setZoomDraft(1);
+      if (zoomInputRef.current) zoomInputRef.current.value = "1";
       setAreaPixels(null);
       setAutoDetected(null);
       setSourceDims(null);
@@ -162,11 +162,12 @@ export function ImageCropDialog({
     });
   }, []);
 
-  const commitZoom = useCallback((nextZoom = zoomDraft) => {
-    const safeZoom = Math.min(3, Math.max(0.3, nextZoom));
-    setZoomDraft(safeZoom);
+  const commitZoom = useCallback((nextZoom?: number) => {
+    const rawZoom = nextZoom ?? Number(zoomInputRef.current?.value ?? zoom);
+    const safeZoom = Math.min(3, Math.max(0.3, rawZoom));
+    if (zoomInputRef.current) zoomInputRef.current.value = String(safeZoom);
     handleZoomChange(safeZoom);
-  }, [handleZoomChange, zoomDraft]);
+  }, [handleZoomChange, zoom]);
 
   useEffect(() => {
     return () => {
@@ -289,12 +290,12 @@ export function ImageCropDialog({
               Smaller
             </Button>
             <input
+              ref={zoomInputRef}
               type="range"
               min="0.3"
               max="3"
               step="0.05"
-              value={zoomDraft}
-              onChange={(event) => setZoomDraft(Number(event.target.value))}
+              defaultValue="1"
               onPointerUp={() => commitZoom()}
               onMouseUp={() => commitZoom()}
               onTouchEnd={() => commitZoom()}
