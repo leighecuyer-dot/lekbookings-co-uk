@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Palette, Upload, Building2, Crop } from "lucide-react";
-import { ImageCropDialog } from "./ImageCropDialog";
+import { Palette, Upload, Building2 } from "lucide-react";
 
 const FONT_OPTIONS = [
   { value: "Inter", label: "Inter" },
@@ -34,17 +33,41 @@ interface PageTheme {
   custom_css: string | null;
 }
 
+type LogoSize = "small" | "medium" | "large";
+
+const LOGO_SIZE_OPTIONS: Array<{ value: LogoSize; label: string; className: string }> = [
+  { value: "small", label: "Small", className: "w-8 h-8" },
+  { value: "medium", label: "Medium", className: "w-10 h-10" },
+  { value: "large", label: "Large", className: "w-12 h-12" },
+];
+
+const ACCEPTED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+const getLogoSizeFromCustomCss = (customCss?: string | null): LogoSize => {
+  const match = customCss?.match(/logo-size:(small|medium|large)/i);
+  return (match?.[1]?.toLowerCase() as LogoSize | undefined) || "medium";
+};
+
+const setLogoSizeInCustomCss = (customCss: string | null | undefined, size: LogoSize) => {
+  const withoutOldSize = (customCss || "").replace(/\s*\/\*\s*logo-size:(small|medium|large)\s*\*\//gi, "").trim();
+  return `${withoutOldSize}${withoutOldSize ? "\n" : ""}/* logo-size:${size} */`;
+};
+
+const getLogoFileMeta = (file: File) => {
+  if (file.type === "image/jpeg") return { contentType: "image/jpeg", extension: "jpg" };
+  if (file.type === "image/webp") return { contentType: "image/webp", extension: "webp" };
+  return { contentType: "image/png", extension: "png" };
+};
+
 export function ThemeCustomization() {
   const { currentBusiness } = useBusiness();
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [cropOpen, setCropOpen] = useState(false);
-  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [theme, setTheme] = useState<PageTheme | null>(null);
-  const cropObjectUrlRef = useRef<string | null>(null);
   
   const [formData, setFormData] = useState({
     logo_url: "",
+    logo_size: "medium" as LogoSize,
     primary_color: "#4F46E5",
     secondary_color: "#06B6D4",
     accent_color: "#F59E0B",
@@ -101,6 +124,7 @@ export function ThemeCustomization() {
       setTheme(data);
       setFormData({
         logo_url: data.logo_url || "",
+        logo_size: getLogoSizeFromCustomCss(data.custom_css),
         primary_color: data.primary_color || "#4F46E5",
         secondary_color: data.secondary_color || "#06B6D4",
         accent_color: data.accent_color || "#F59E0B",
@@ -110,22 +134,8 @@ export function ThemeCustomization() {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (cropObjectUrlRef.current) URL.revokeObjectURL(cropObjectUrlRef.current);
-    };
-  }, []);
-
-  const setCropSource = (url: string) => {
-    if (cropObjectUrlRef.current) URL.revokeObjectURL(cropObjectUrlRef.current);
-    cropObjectUrlRef.current = url.startsWith("blob:") ? url : null;
-    setCropSrc(url);
-  };
-
-  const prepareLogoForCrop = async (file: File, maxDim = 1200): Promise<string> => {
+  const prepareLogoForUpload = async (file: File, maxDim = 1200): Promise<{ blob: Blob; contentType: string; extension: string }> => {
     const originalUrl = URL.createObjectURL(file);
-    // Use HTMLImageElement + canvas — works reliably across mobile Safari,
-    // where createImageBitmap with resize options can hang on large images.
     try {
       const img: HTMLImageElement = await new Promise((resolve, reject) => {
         const el = new Image();
@@ -135,8 +145,13 @@ export function ThemeCustomization() {
       });
 
       const { naturalWidth: width, naturalHeight: height } = img;
-      if (!width || !height) return originalUrl;
-      if (width <= maxDim && height <= maxDim) return originalUrl;
+      const originalMeta = getLogoFileMeta(file);
+      if (!width || !height || (width <= maxDim && height <= maxDim)) {
+        return {
+          blob: file,
+          ...originalMeta,
+        };
+      }
 
       const scale = Math.min(maxDim / width, maxDim / height);
       const w = Math.max(1, Math.round(width * scale));
@@ -146,7 +161,12 @@ export function ThemeCustomization() {
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return originalUrl;
+      if (!ctx) {
+        return {
+          blob: file,
+          ...originalMeta,
+        };
+      }
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, w, h);
 
@@ -154,14 +174,47 @@ export function ThemeCustomization() {
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, mime, 0.9)
       );
-      if (!blob) return originalUrl;
+      if (!blob) {
+        return {
+          blob: file,
+          ...originalMeta,
+        };
+      }
 
-      URL.revokeObjectURL(originalUrl);
-      return URL.createObjectURL(blob);
+      return {
+        blob,
+        contentType: mime,
+        extension: mime === "image/jpeg" ? "jpg" : "png",
+      };
     } catch (error) {
       console.error("Logo preparation failed:", error);
-      return originalUrl;
+      const originalMeta = getLogoFileMeta(file);
+      return {
+        blob: file,
+        ...originalMeta,
+      };
+    } finally {
+      URL.revokeObjectURL(originalUrl);
     }
+  };
+
+  const uploadLogoBlob = async (blob: Blob, contentType: string, extension: string) => {
+    if (!currentBusiness) return;
+
+    const filePath = `${currentBusiness.id}/logos/${Date.now()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("business-assets")
+      .upload(filePath, blob, { contentType, upsert: false });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from("business-assets")
+      .getPublicUrl(filePath);
+
+    setFormData((current) => ({ ...current, logo_url: urlData.publicUrl }));
+    toast.success("Logo uploaded — don't forget to Save");
   };
 
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,59 +222,25 @@ export function ThemeCustomization() {
     e.target.value = ""; // allow re-selecting same file later
     if (!file || !currentBusiness) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file");
+    if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
+      toast.error("Please choose a PNG, JPG or WebP logo");
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Logo must be less than 10MB. Try a smaller PNG or JPG.");
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Logo must be less than 20MB. Try a smaller PNG or JPG.");
       return;
     }
 
     setUploadingLogo(true);
-    prepareLogoForCrop(file)
-      .then((url) => {
-        setCropSource(url);
-        setCropOpen(true);
+    prepareLogoForUpload(file)
+      .then(({ blob, contentType, extension }) => {
+        return uploadLogoBlob(blob, contentType, extension);
       })
       .catch(() => {
-        toast.error("Couldn't open that logo. Try a PNG or JPG instead.");
+        toast.error("Couldn't upload that logo. Try a PNG or JPG instead.");
       })
       .finally(() => setUploadingLogo(false));
-  };
-
-  const handleEditExisting = () => {
-    if (!formData.logo_url) return;
-    // Cache-bust so the cropper always pulls a fresh copy
-    setCropSource(`${formData.logo_url}?t=${Date.now()}`);
-    setCropOpen(true);
-  };
-
-  const uploadCroppedBlob = async (blob: Blob) => {
-    if (!currentBusiness) return;
-    setUploadingLogo(true);
-    try {
-      const filePath = `${currentBusiness.id}/logos/${Date.now()}.png`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("business-assets")
-        .upload(filePath, blob, { contentType: "image/png", upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from("business-assets")
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, logo_url: urlData.publicUrl });
-      toast.success("Logo updated — don't forget to Save");
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload logo");
-    } finally {
-      setUploadingLogo(false);
-    }
   };
 
   const handleSave = async () => {
@@ -240,6 +259,7 @@ export function ThemeCustomization() {
             accent_color: formData.accent_color,
             font_heading: formData.font_heading,
             font_body: formData.font_body,
+            custom_css: setLogoSizeInCustomCss(theme.custom_css, formData.logo_size),
           })
           .eq("id", theme.id);
 
@@ -256,6 +276,7 @@ export function ThemeCustomization() {
             accent_color: formData.accent_color,
             font_heading: formData.font_heading,
             font_body: formData.font_body,
+            custom_css: setLogoSizeInCustomCss(null, formData.logo_size),
           });
 
         if (error) throw error;
@@ -305,36 +326,42 @@ export function ThemeCustomization() {
               <div className="flex flex-wrap gap-2">
                 <Label
                   htmlFor="business-logo-upload"
-                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors aria-disabled:pointer-events-none aria-disabled:opacity-60"
+                  aria-disabled={uploadingLogo}
                 >
                   <Upload className="h-4 w-4" />
                   {uploadingLogo ? "Uploading..." : formData.logo_url ? "Change" : "Upload"}
                 </Label>
-                {formData.logo_url && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleEditExisting}
-                    disabled={uploadingLogo}
-                  >
-                    <Crop className="h-4 w-4 mr-1.5" />
-                    Edit / Crop
-                  </Button>
-                )}
               </div>
               <input
                 id="business-logo-upload"
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={handleFileSelected}
                 className="hidden"
                 disabled={uploadingLogo}
               />
               <p className="text-xs text-muted-foreground">
-                PNG, JPG up to 20MB. You can crop after upload.
+                PNG, JPG or WebP up to 20MB.
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Logo Size</Label>
+          <div className="grid grid-cols-3 gap-2 sm:max-w-sm">
+            {LOGO_SIZE_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={formData.logo_size === option.value ? "default" : "outline"}
+                onClick={() => setFormData({ ...formData, logo_size: option.value })}
+                disabled={uploadingLogo}
+              >
+                {option.label}
+              </Button>
+            ))}
           </div>
         </div>
 
@@ -435,7 +462,11 @@ export function ThemeCustomization() {
           <p className="text-xs text-muted-foreground mb-3">Theme Preview:</p>
           <div className="flex items-center gap-4 mb-4">
             {formData.logo_url ? (
-              <img src={formData.logo_url} alt="Logo" className="w-10 h-10 rounded object-cover" />
+              <img
+                src={formData.logo_url}
+                alt="Logo"
+                className={`${LOGO_SIZE_OPTIONS.find((option) => option.value === formData.logo_size)?.className || "w-10 h-10"} rounded object-contain bg-background`}
+              />
             ) : (
               <div
                 className="w-10 h-10 rounded flex items-center justify-center text-white font-bold"
@@ -474,16 +505,6 @@ export function ThemeCustomization() {
           {loading ? "Saving..." : "Save Theme Settings"}
         </Button>
       </CardContent>
-
-      <ImageCropDialog
-        open={cropOpen}
-        onOpenChange={setCropOpen}
-        imageSrc={cropSrc}
-        aspect={1}
-        outputSize={1024}
-        title="Crop Your Logo"
-        onCropComplete={uploadCroppedBlob}
-      />
     </Card>
   );
 }

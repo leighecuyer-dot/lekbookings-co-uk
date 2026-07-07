@@ -14,7 +14,21 @@ interface PageTheme {
   secondary_color: string | null;
   font_heading: string | null;
   font_body: string | null;
+  custom_css: string | null;
 }
+
+type LogoSize = "small" | "medium" | "large";
+
+const getLogoSize = (customCss?: string | null): LogoSize => {
+  const match = customCss?.match(/logo-size:(small|medium|large)/i);
+  return (match?.[1]?.toLowerCase() as LogoSize | undefined) || "medium";
+};
+
+const logoSizeClasses: Record<LogoSize, string> = {
+  small: "w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32",
+  medium: "w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44",
+  large: "w-32 h-32 sm:w-44 sm:h-44 md:w-56 md:h-56",
+};
 
 interface BookingHeroProps {
   business: Business;
@@ -28,6 +42,7 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
   const primaryColor = theme?.primary_color || "#4F46E5";
   const fontHeading = theme?.font_heading || "Plus Jakarta Sans";
   const fontBody = theme?.font_body || "Inter";
+  const logoSize = getLogoSize(theme?.custom_css);
 
   return (
     <header
@@ -52,7 +67,7 @@ export function BookingHero({ business, logoUrl, theme, isLoading = false, ctaDi
         <div className="flex flex-col items-center text-center text-white">
           {/* Logo badge */}
           {logoUrl ? (
-            <div className="w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl sm:rounded-3xl bg-white shadow-2xl border-4 border-white/30 flex items-center justify-center mb-6 overflow-hidden">
+            <div className={`${logoSizeClasses[logoSize]} rounded-2xl sm:rounded-3xl bg-white shadow-2xl border-4 border-white/30 flex items-center justify-center mb-6 overflow-hidden`}>
               <img
                 src={logoUrl}
                 alt={`${business.name} logo`}
