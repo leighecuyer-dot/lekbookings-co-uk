@@ -357,11 +357,12 @@ export function BookingFormModal({
       setStep("success");
       // Trigger email notification (fire and forget). Only bookingId is sent —
       // the edge function looks up the verified customer email server-side.
-      if (created?.id) {
+      if (created?.id && formData.email && isValidEmail(formData.email)) {
         try {
-          await supabase.functions.invoke("send-booking-confirmation", {
+          const { error: emailErr } = await supabase.functions.invoke("send-booking-confirmation", {
             body: { bookingId: created.id },
           });
+          if (!emailErr) setConfirmationSent(true);
         } catch (e) {
           console.log("Email notification skipped:", e);
         }
