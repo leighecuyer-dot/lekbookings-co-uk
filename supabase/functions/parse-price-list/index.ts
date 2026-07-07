@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { requireUser } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,14 +13,61 @@ function jsonResponse(data: unknown, status: number): Response {
   });
 }
 
-async function fetchWebsiteContent(url: string): Promise<string> {
+// Blocks SSRF against private/internal ranges + non-http(s) schemes.
+function isSafePublicUrl(rawUrl: string): { ok: true; url: URL } | { ok: false; reason: string } {
+  let parsed: URL;
   try {
-    const response = await fetch(url, {
+    parsed = new URL(rawUrl);
+  } catch {
+    return { ok: false, reason: "Invalid URL" };
+  }
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    return { ok: false, reason: "Only http(s) URLs are allowed" };
+  }
+  const host = parsed.hostname.toLowerCase();
+  // Reject empty, localhost, IPv6 loopback/link-local, private/reserved IPv4 ranges,
+  // AWS/GCP metadata endpoints, .internal / .local suffixes.
+  if (!host) return { ok: false, reason: "Missing host" };
+  if (host === "localhost" || host === "0.0.0.0") return { ok: false, reason: "Blocked host" };
+  if (host.endsWith(".internal") || host.endsWith(".local")) return { ok: false, reason: "Blocked host" };
+  if (host === "::1" || host.startsWith("[::") || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80")) {
+    return { ok: false, reason: "Blocked host" };
+  }
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const [a, b] = [parseInt(ipv4[1], 10), parseInt(ipv4[2], 10)];
+    if (
+      a === 10 ||
+      a === 127 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      a === 0 ||
+      a >= 224
+    ) {
+      return { ok: false, reason: "Blocked IP range" };
+    }
+  }
+  return { ok: true, url: parsed };
+}
+
+async function fetchWebsiteContent(url: string): Promise<string> {
+  const safety = isSafePublicUrl(url);
+  if (!safety.ok) {
+    throw new Error(safety.reason);
+  }
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    const response = await fetch(safety.url.toString(), {
+      redirect: "error",
+      signal: controller.signal,
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; PriceListBot/1.0)",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
     });
+    clearTimeout(timer);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch URL: ${response.status}`);

@@ -57,8 +57,8 @@ const handler = async (req: Request): Promise<Response> => {
   // Require authenticated caller (blocks anonymous credential abuse).
   const authResult = await requireUser(req);
   if ("error" in authResult) {
-    return new Response(authResult.error.body, {
-      status: authResult.error.status,
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
