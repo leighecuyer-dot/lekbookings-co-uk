@@ -418,7 +418,7 @@ export default function DashboardPage() {
                 visible: widgetSettings.showPerformanceTile,
                 label: "Weekly Performance",
                 render: () => {
-                  const hideRevenue = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
+                  const hideRevenue = !canViewFinancials || (isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true));
                   return (
                     <WeeklyPerformanceTile
                       businessId={currentBusiness.id}

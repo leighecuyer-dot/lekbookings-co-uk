@@ -31,6 +31,7 @@ import { StaffRevenueSettingsModal } from "@/components/staff/StaffRevenueSettin
 import { useSubscriptionTier } from "@/hooks/subscription/useSubscriptionTier";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUserPermissions } from "@/hooks/permissions/useUserPermissions";
 
 interface WorkingHours {
   monday: { enabled: boolean; start: string; end: string };
@@ -55,6 +56,7 @@ interface Staff {
 
 export default function StaffPage() {
   const { currentBusiness } = useBusiness();
+  const { canViewFinancials } = useUserPermissions(currentBusiness?.id);
   const { tier, limits, canAddStaff, loading: tierLoading } = useSubscriptionTier(currentBusiness?.id ?? null);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
