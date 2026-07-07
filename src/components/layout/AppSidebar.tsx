@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useReseller } from "@/contexts/ResellerContext";
+import { useUserPermissions, PageKey } from "@/hooks/permissions/useUserPermissions";
 import {
   Sidebar,
   SidebarContent,
@@ -54,21 +55,21 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 
-const mainNavItems = [
+const mainNavItems: { title: string; href: string; icon: typeof Calendar; pageKey?: PageKey }[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Calendar", href: "/calendar", icon: Calendar },
   { title: "Week View", href: "/week", icon: CalendarDays },
   { title: "Kanban Board", href: "/kanban", icon: Columns3 },
-  { title: "Waitlist", href: "/waitlist", icon: ClipboardList },
-  { title: "Customers", href: "/customers", icon: Users },
-  { title: "Staff", href: "/staff", icon: UserCircle },
-  { title: "Services", href: "/services", icon: Briefcase },
+  { title: "Waitlist", href: "/waitlist", icon: ClipboardList, pageKey: "waitlist" },
+  { title: "Customers", href: "/customers", icon: Users, pageKey: "customers" },
+  { title: "Staff", href: "/staff", icon: UserCircle, pageKey: "staff" },
+  { title: "Services", href: "/services", icon: Briefcase, pageKey: "services" },
   { title: "Import", href: "/import", icon: Upload },
 ];
 
-const reportNavItems = [
-  { title: "Campaign Reports", href: "/reports/campaigns", icon: BarChart3 },
-  { title: "Message History", href: "/reports/messages", icon: MessageSquare },
+const reportNavItems: { title: string; href: string; icon: typeof Calendar; pageKey: PageKey }[] = [
+  { title: "Campaign Reports", href: "/reports/campaigns", icon: BarChart3, pageKey: "reports" },
+  { title: "Message History", href: "/reports/messages", icon: MessageSquare, pageKey: "messaging" },
 ];
 
 const integrationNavItems = [
@@ -90,6 +91,11 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const { currentBusiness, businesses, setCurrentBusiness } = useBusiness();
   const { isReseller } = useReseller();
+  const { pages } = useUserPermissions(currentBusiness?.id);
+
+  const visibleMain = mainNavItems.filter(i => !i.pageKey || pages[i.pageKey]);
+  const visibleReports = reportNavItems.filter(i => pages[i.pageKey]);
+  const canSeeSettings = pages.settings;
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
