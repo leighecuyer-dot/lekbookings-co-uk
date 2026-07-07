@@ -3,7 +3,6 @@ import Cropper, { Area } from "react-easy-crop";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Loader2, Info, AlertTriangle } from "lucide-react";
 
 
@@ -77,6 +76,7 @@ export function ImageCropDialog({
 }: ImageCropDialogProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [zoomDraft, setZoomDraft] = useState(1);
   const [areaPixels, setAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
   const [shape, setShape] = useState<"square" | "wide" | "free">("square");
@@ -160,6 +160,12 @@ export function ImageCropDialog({
       setZoom(pendingZoomRef.current);
     });
   }, []);
+
+  const commitZoom = useCallback((nextZoom = zoomDraft) => {
+    const safeZoom = Math.min(3, Math.max(0.3, nextZoom));
+    setZoomDraft(safeZoom);
+    handleZoomChange(safeZoom);
+  }, [handleZoomChange, zoomDraft]);
 
   useEffect(() => {
     return () => {
@@ -255,13 +261,14 @@ export function ImageCropDialog({
               zoom={zoom}
               minZoom={0.3}
               maxZoom={3}
+              zoomWithScroll={false}
               restrictPosition={false}
               aspect={activeAspect}
               cropShape="rect"
               showGrid
               objectFit="contain"
               onCropChange={handleCropChange}
-              onZoomChange={handleZoomChange}
+              onTouchRequest={(event) => event.touches.length < 2}
               onCropComplete={onCrop}
             />
           )}
@@ -270,13 +277,40 @@ export function ImageCropDialog({
 
         <div className="space-y-2">
           <Label className="text-xs">Zoom</Label>
-          <Slider
-            min={0.3}
-            max={3}
-            step={0.05}
-            value={[zoom]}
-            onValueChange={(v) => handleZoomChange(v[0])}
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => commitZoom(zoom - 0.1)}
+              disabled={saving || zoom <= 0.3}
+            >
+              Smaller
+            </Button>
+            <input
+              type="range"
+              min="0.3"
+              max="3"
+              step="0.05"
+              value={zoomDraft}
+              onChange={(event) => setZoomDraft(Number(event.target.value))}
+              onPointerUp={() => commitZoom()}
+              onTouchEnd={() => commitZoom()}
+              onKeyUp={() => commitZoom()}
+              className="h-8 min-w-0 flex-1 cursor-pointer accent-primary"
+              aria-label="Logo zoom"
+              disabled={saving}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => commitZoom(zoom + 0.1)}
+              disabled={saving || zoom >= 3}
+            >
+              Larger
+            </Button>
+          </div>
         </div>
 
         <DialogFooter>
