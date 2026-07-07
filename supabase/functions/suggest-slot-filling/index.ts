@@ -6,6 +6,65 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Single point to swap model if needed.
+const MODEL = "google/gemini-2.5-flash";
+const MAX_TOKENS_INITIAL = 1200;
+const MAX_TOKENS_RETRY = 2000;
+
+// Trim a response so we never render a mid-word/mid-bullet cutoff.
+function trimToLastComplete(text: string): string {
+  const trimmed = text.trimEnd();
+  // Prefer ending on a full sentence or list item.
+  const lastTerminator = Math.max(
+    trimmed.lastIndexOf("."),
+    trimmed.lastIndexOf("!"),
+    trimmed.lastIndexOf("?"),
+    trimmed.lastIndexOf("\n- "),
+    trimmed.lastIndexOf("\n* "),
+    trimmed.lastIndexOf("\n\n"),
+  );
+  if (lastTerminator > trimmed.length * 0.5) {
+    // Include the terminator character when it's punctuation.
+    const ch = trimmed[lastTerminator];
+    return trimmed.slice(0, lastTerminator + (/[.!?]/.test(ch) ? 1 : 0)).trimEnd();
+  }
+  return trimmed;
+}
+
+async function callModel(
+  apiKey: string,
+  systemPrompt: string,
+  userPrompt: string,
+  maxTokens: number,
+): Promise<{ ok: boolean; status: number; content: string; finishReason: string; raw?: string }> {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return { ok: false, status: response.status, content: "", finishReason: "", raw: errorText };
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content ?? "";
+  const finishReason = data.choices?.[0]?.finish_reason ?? "";
+  return { ok: true, status: 200, content, finishReason };
+}
+
+
 // Industry-specific prompts for tailored suggestions
 const industryPrompts: Record<string, string> = {
   barbershop: "You specialize in barbershops and men's grooming. Consider walk-in promotions, loyalty programs, group bookings for sports teams, and social media campaigns showcasing fresh cuts.",
@@ -56,10 +115,10 @@ serve(async (req) => {
     // Get industry-specific guidance
     const industryGuidance = industryPrompts[industry] || industryPrompts.other;
 
-    // Build system prompt with industry context
+    // Build system prompt with industry context. Kept tight to fit within MAX_TOKENS_INITIAL.
     let systemPrompt = `You are a business advisor helping a booking-based business fill their empty appointment slots. ${industryGuidance}
 
-Be concise, friendly, and business-focused. Give 3-4 specific actionable ideas. Format your response with clear headers and bullet points. Keep the total response under 300 words.`;
+Be concise, friendly, and business-focused. Give exactly 3 ideas, each 2-3 sentences. Use plain markdown bullets ("- ") only — no headings deeper than H3, no tables. Aim for under 220 words total. Always finish your final sentence.`;
 
     // Build user prompt with business context
     let userPrompt = `Business: ${businessName || "My Business"}`;
@@ -92,47 +151,52 @@ Based on this availability pattern and understanding of this specific business, 
 - Client outreach strategies relevant to the industry
 - Pricing or package ideas that work for this type of service`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: 500,
-      }),
-    });
+    // First attempt.
+    let result = await callModel(LOVABLE_API_KEY, systemPrompt, userPrompt, MAX_TOKENS_INITIAL);
 
-    if (!response.ok) {
-      if (response.status === 429) {
+    // Handle upstream errors up front.
+    if (!result.ok) {
+      if (result.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
+      if (result.status === 402) {
         return new Response(
           JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("AI gateway error:", result.status, result.raw);
       throw new Error("Failed to get AI suggestions");
     }
 
-    const data = await response.json();
-    const suggestion = data.choices?.[0]?.message?.content || "Unable to generate suggestions at this time.";
+    let truncated = result.finishReason === "length";
+
+    // Retry once with a larger budget if truncated.
+    if (truncated) {
+      console.warn("suggest-slot-filling: initial response truncated, retrying with larger max_tokens");
+      const retry = await callModel(LOVABLE_API_KEY, systemPrompt, userPrompt, MAX_TOKENS_RETRY);
+      if (retry.ok && retry.content) {
+        result = retry;
+        truncated = retry.finishReason === "length";
+      }
+    }
+
+    let suggestion = (result.content || "").trim();
+    if (!suggestion) {
+      suggestion = "Unable to generate suggestions at this time.";
+    } else if (truncated) {
+      // Strip any partial trailing word/bullet so nothing garbled reaches the UI.
+      suggestion = trimToLastComplete(suggestion) + "\n\n_…response was cut short. Try again for the full list._";
+    }
 
     return new Response(
-      JSON.stringify({ suggestion }),
+      JSON.stringify({ suggestion, truncated }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("Error in suggest-slot-filling:", error);
     return new Response(

@@ -1,31 +1,33 @@
-## Plan to fix the logo freeze
+## What's happening
 
-1. **Remove the freeze-prone logo cropper for booking page logos**
-   - Stop using the live crop/zoom editor for business logos.
-   - This avoids the repeated image transform/render loop that is freezing both mobile and desktop.
+The "AI" option in messaging is the **AI Suggestions** panel on the dashboard's Available Slots tile. It calls the `suggest-slot-filling` edge function, which asks the model for ~300 words of headers + bullets, but the request is capped at **`max_tokens: 500`**. That budget is regularly exhausted mid-sentence, so the response arrives cut off — often in the middle of a word or a markdown list — which is what looks like "messed up writing" once rendered through `ReactMarkdown`.
 
-2. **Replace it with a safer logo upload flow**
-   - When a logo is selected, resize/compress it once in the background.
-   - Upload the processed logo directly.
-   - Show a simple success message when it is ready.
+Two contributing issues:
 
-3. **Add safe logo display controls instead of image zooming**
-   - Add simple logo size choices: **Small / Medium / Large**.
-   - These will change how the logo appears on the public booking page without re-processing the image live.
-   - No drag/zoom slider, so there is nothing continuously re-rendering while the user moves it.
+1. **Token budget too small for the prompt.** Prompt asks for structured markdown (headings, 3-4 ideas, 300 words). Realistic output is 700-1200 tokens.
+2. **No truncation handling.** The function ignores `finish_reason`, so a truncated response is returned as-is with no retry and no notice to the user.
+3. **Model id needs verification.** `google/gemini-3-flash-preview` isn't a stable catalog id; if the gateway ever rejects or degrades it, the caller silently displays whatever partial text comes back.
 
-4. **Keep the existing edit experience simple**
-   - Keep the current logo preview.
-   - Keep “Change logo”.
-   - Remove or disable “Edit / Crop” for this logo area so the same freezing path cannot be triggered again.
+## Fix
 
-5. **Verify before finishing**
-   - Test uploading a logo.
-   - Test changing logo size repeatedly on desktop-sized viewport.
-   - Confirm the page stays responsive.
-   - Check that the public booking page still shows the logo correctly.
+**`supabase/functions/suggest-slot-filling/index.ts`**
+- Raise `max_tokens` to `1200`.
+- Switch model to a supported catalog id (verified from `ai-models-chat`): `google/gemini-2.5-flash` (fast, cheap, structured-output friendly). Keep it as a single constant at the top for easy swap.
+- Read `finish_reason` from the response. If it is `"length"`, retry once with `max_tokens: 2000`. If still truncated, append a small `\n\n_…response truncated_` marker so the UI never shows a mid-word cutoff without context.
+- Tighten the prompt to match the budget: ask for "3 short ideas, each 2-3 sentences, plain markdown bullets, no headings deeper than H3" — this reduces the chance of overrun in the first place.
+- Trim trailing partial words defensively (strip anything after the last complete sentence/bullet) before returning.
 
-## Technical notes
+**`src/components/dashboard/AvailableSlotsTile.tsx`**
+- No behavior change needed, but wrap the `ReactMarkdown` render in a check: if `aiSuggestion` ends without terminal punctuation or a closing list item, show a subtle "Response was cut short — try again" hint under the content with a retry button that re-invokes `handleAiSuggestions`.
 
-- The likely issue is not only canvas previewing; the live cropper/zoom interaction itself is still causing repeated transform updates.
-- The robust fix is to remove live crop/zoom for logos and use one-time image processing plus non-destructive display sizing.
+## Out of scope
+
+- The **bulk message dialog** itself (`BulkMessageDialog`) does not call any AI model — it only uses static + dynamic templates. Nothing to change there.
+- No schema / DB changes.
+- No changes to `send-message`, `parse-diary`, or `parse-price-list`.
+
+## Verification
+
+1. Open the dashboard, click **AI Suggestions** three times in a row and confirm each response ends cleanly (full sentence / closed bullet).
+2. Temporarily lower `max_tokens` to `120` locally to force truncation and confirm the retry + truncation notice both fire.
+3. Check edge function logs for any `finish_reason: length` warnings after the fix.
