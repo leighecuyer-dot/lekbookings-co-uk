@@ -123,12 +123,15 @@ export function useKanbanSettings() {
   // Merge default config with custom labels and colors
   const statusConfig: StatusConfigItem[] = defaultStatusConfig.map(status => {
     const colorId = customColors[status.id] || status.colorId;
-    const colorStyles = getColorStyles(colorId);
+    const { bgColor, textColor, borderColor, name } = getColorStyles(colorId);
     return {
       ...status,
       label: customLabels[status.id] || status.label,
       colorId,
-      ...colorStyles
+      bgColor,
+      textColor,
+      borderColor,
+      name,
     };
   });
 
