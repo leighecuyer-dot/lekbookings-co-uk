@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { format, addDays, setHours, setMinutes, isBefore, startOfDay, endOfDay } from "date-fns";
 import { Clock, CheckCircle, User, Users } from "lucide-react";
 import { WaitlistDialog } from "@/components/waitlist/WaitlistDialog";
+import { isValidEmail } from "@/lib/validation";
 
 interface Booking {
   id: string;
@@ -116,6 +117,8 @@ export function BookingFormModal({
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [waitlistDialogOpen, setWaitlistDialogOpen] = useState(false);
   const [waitlistSlot, setWaitlistSlot] = useState<string | null>(null);
+  const [confirmationSent, setConfirmationSent] = useState(false);
+  
   
   const [formData, setFormData] = useState({
     name: "",
@@ -296,7 +299,13 @@ export function BookingFormModal({
       return;
     }
 
+    if (formData.email && !isValidEmail(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     setSubmitting(true);
+    setConfirmationSent(false);
 
     const [hours, minutes] = selectedTime.split(":").map(Number);
     const startTime = setMinutes(setHours(selectedDate, hours), minutes);
@@ -348,11 +357,12 @@ export function BookingFormModal({
       setStep("success");
       // Trigger email notification (fire and forget). Only bookingId is sent —
       // the edge function looks up the verified customer email server-side.
-      if (created?.id) {
+      if (created?.id && formData.email && isValidEmail(formData.email)) {
         try {
-          await supabase.functions.invoke("send-booking-confirmation", {
+          const { error: emailErr } = await supabase.functions.invoke("send-booking-confirmation", {
             body: { bookingId: created.id },
           });
+          if (!emailErr) setConfirmationSent(true);
         } catch (e) {
           console.log("Email notification skipped:", e);
         }
@@ -535,7 +545,11 @@ export function BookingFormModal({
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="jane@example.com"
+                aria-invalid={!!formData.email && !isValidEmail(formData.email)}
               />
+              {formData.email && !isValidEmail(formData.email) && (
+                <p className="text-xs text-destructive">Please enter a valid email address</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -577,7 +591,7 @@ export function BookingFormModal({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={submitting || !formData.name}
+                disabled={submitting || !formData.name || (!!formData.email && !isValidEmail(formData.email))}
                 className="flex-1"
                 style={{ backgroundColor: primaryColor }}
               >
@@ -602,7 +616,7 @@ export function BookingFormModal({
               </p>
               <p className="text-sm text-muted-foreground">{service.name}</p>
             </div>
-            {formData.email && (
+            {confirmationSent && (
               <p className="text-xs text-muted-foreground">
                 A confirmation email has been sent to {formData.email}
               </p>
