@@ -3,7 +3,6 @@ import Cropper, { Area } from "react-easy-crop";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Loader2, Info, AlertTriangle } from "lucide-react";
 
 
@@ -87,6 +86,7 @@ export function ImageCropDialog({
   const zoomFrameRef = useRef<number | null>(null);
   const pendingCropRef = useRef({ x: 0, y: 0 });
   const pendingZoomRef = useRef(1);
+  const zoomInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeAspect =
     shape === "square" ? aspect : shape === "wide" ? 16 / 9 : undefined;
@@ -118,6 +118,7 @@ export function ImageCropDialog({
     if (open) {
       setCrop({ x: 0, y: 0 });
       setZoom(1);
+      if (zoomInputRef.current) zoomInputRef.current.value = "1";
       setAreaPixels(null);
       setAutoDetected(null);
       setSourceDims(null);
@@ -160,6 +161,13 @@ export function ImageCropDialog({
       setZoom(pendingZoomRef.current);
     });
   }, []);
+
+  const commitZoom = useCallback((nextZoom?: number) => {
+    const rawZoom = nextZoom ?? Number(zoomInputRef.current?.value ?? zoom);
+    const safeZoom = Math.min(3, Math.max(0.3, rawZoom));
+    if (zoomInputRef.current) zoomInputRef.current.value = String(safeZoom);
+    handleZoomChange(safeZoom);
+  }, [handleZoomChange, zoom]);
 
   useEffect(() => {
     return () => {
@@ -255,13 +263,14 @@ export function ImageCropDialog({
               zoom={zoom}
               minZoom={0.3}
               maxZoom={3}
+              zoomWithScroll={false}
               restrictPosition={false}
               aspect={activeAspect}
               cropShape="rect"
               showGrid
               objectFit="contain"
               onCropChange={handleCropChange}
-              onZoomChange={handleZoomChange}
+              onTouchRequest={(event) => event.touches.length < 2}
               onCropComplete={onCrop}
             />
           )}
@@ -270,13 +279,42 @@ export function ImageCropDialog({
 
         <div className="space-y-2">
           <Label className="text-xs">Zoom</Label>
-          <Slider
-            min={0.3}
-            max={3}
-            step={0.05}
-            value={[zoom]}
-            onValueChange={(v) => handleZoomChange(v[0])}
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => commitZoom(zoom - 0.1)}
+              disabled={saving || zoom <= 0.3}
+            >
+              Smaller
+            </Button>
+            <input
+              ref={zoomInputRef}
+              type="range"
+              min="0.3"
+              max="3"
+              step="0.05"
+              defaultValue="1"
+              onPointerUp={() => commitZoom()}
+              onMouseUp={() => commitZoom()}
+              onTouchEnd={() => commitZoom()}
+              onKeyUp={() => commitZoom()}
+              onBlur={() => commitZoom()}
+              className="h-8 min-w-0 flex-1 cursor-pointer accent-primary"
+              aria-label="Logo zoom"
+              disabled={saving}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => commitZoom(zoom + 0.1)}
+              disabled={saving || zoom >= 3}
+            >
+              Larger
+            </Button>
+          </div>
         </div>
 
         <DialogFooter>
