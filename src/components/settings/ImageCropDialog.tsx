@@ -296,8 +296,10 @@ export function ImageCropDialog({
               value={zoomDraft}
               onChange={(event) => setZoomDraft(Number(event.target.value))}
               onPointerUp={() => commitZoom()}
+              onMouseUp={() => commitZoom()}
               onTouchEnd={() => commitZoom()}
               onKeyUp={() => commitZoom()}
+              onBlur={() => commitZoom()}
               className="h-8 min-w-0 flex-1 cursor-pointer accent-primary"
               aria-label="Logo zoom"
               disabled={saving}
