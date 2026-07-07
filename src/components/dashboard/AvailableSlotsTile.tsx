@@ -91,7 +91,9 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
     setAiDialogOpen(true);
     setAiLoading(true);
     setAiSuggestion(null);
+    setAiTruncated(false);
     setCurrentSuggestionId(null);
+
 
     try {
       const availabilityData = daySlots.map(day => ({
