@@ -591,7 +591,7 @@ export function BookingFormModal({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={submitting || !formData.name}
+                disabled={submitting || !formData.name || (!!formData.email && !isValidEmail(formData.email))}
                 className="flex-1"
                 style={{ backgroundColor: primaryColor }}
               >
