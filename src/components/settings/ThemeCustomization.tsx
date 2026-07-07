@@ -51,6 +51,12 @@ const setLogoSizeInCustomCss = (customCss: string | null | undefined, size: Logo
   return `${withoutOldSize}${withoutOldSize ? "\n" : ""}/* logo-size:${size} */`;
 };
 
+const getLogoFileMeta = (file: File) => {
+  if (file.type === "image/jpeg") return { contentType: "image/jpeg", extension: "jpg" };
+  if (file.type === "image/webp") return { contentType: "image/webp", extension: "webp" };
+  return { contentType: "image/png", extension: "png" };
+};
+
 export function ThemeCustomization() {
   const { currentBusiness } = useBusiness();
   const [loading, setLoading] = useState(false);
@@ -137,11 +143,11 @@ export function ThemeCustomization() {
       });
 
       const { naturalWidth: width, naturalHeight: height } = img;
+      const originalMeta = getLogoFileMeta(file);
       if (!width || !height || (width <= maxDim && height <= maxDim)) {
         return {
           blob: file,
-          contentType: file.type || "image/png",
-          extension: file.type === "image/jpeg" ? "jpg" : "png",
+          ...originalMeta,
         };
       }
 
@@ -153,7 +159,12 @@ export function ThemeCustomization() {
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return originalUrl;
+      if (!ctx) {
+        return {
+          blob: file,
+          ...originalMeta,
+        };
+      }
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, w, h);
 
@@ -164,8 +175,7 @@ export function ThemeCustomization() {
       if (!blob) {
         return {
           blob: file,
-          contentType: file.type || "image/png",
-          extension: file.type === "image/jpeg" ? "jpg" : "png",
+          ...originalMeta,
         };
       }
 
@@ -176,10 +186,10 @@ export function ThemeCustomization() {
       };
     } catch (error) {
       console.error("Logo preparation failed:", error);
+      const originalMeta = getLogoFileMeta(file);
       return {
         blob: file,
-        contentType: file.type || "image/png",
-        extension: file.type === "image/jpeg" ? "jpg" : "png",
+        ...originalMeta,
       };
     } finally {
       URL.revokeObjectURL(originalUrl);
@@ -216,7 +226,7 @@ export function ThemeCustomization() {
     }
 
     if (file.size > 20 * 1024 * 1024) {
-      toast.error("Logo must be less than 10MB. Try a smaller PNG or JPG.");
+      toast.error("Logo must be less than 20MB. Try a smaller PNG or JPG.");
       return;
     }
 
@@ -330,7 +340,7 @@ export function ThemeCustomization() {
                 disabled={uploadingLogo}
               />
               <p className="text-xs text-muted-foreground">
-                PNG, JPG up to 20MB. You can crop after upload.
+                PNG, JPG or WebP up to 20MB.
               </p>
             </div>
           </div>

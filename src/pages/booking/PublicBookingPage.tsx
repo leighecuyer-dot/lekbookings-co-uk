@@ -39,6 +39,7 @@ interface PageTheme {
   accent_color: string | null;
   font_heading: string | null;
   font_body: string | null;
+  custom_css: string | null;
 }
 
 interface Service {
