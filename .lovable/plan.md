@@ -1,33 +1,61 @@
-## What's happening
 
-The "AI" option in messaging is the **AI Suggestions** panel on the dashboard's Available Slots tile. It calls the `suggest-slot-filling` edge function, which asks the model for ~300 words of headers + bullets, but the request is capped at **`max_tokens: 500`**. That budget is regularly exhausted mid-sentence, so the response arrives cut off — often in the middle of a word or a markdown list — which is what looks like "messed up writing" once rendered through `ReactMarkdown`.
+## Goal
 
-Two contributing issues:
+Confirm email sending actually works today, and turn WhatsApp on by wiring the already-implemented `TwilioProvider` into the messaging dispatcher.
 
-1. **Token budget too small for the prompt.** Prompt asks for structured markdown (headings, 3-4 ideas, 300 words). Realistic output is 700-1200 tokens.
-2. **No truncation handling.** The function ignores `finish_reason`, so a truncated response is returned as-is with no retry and no notice to the user.
-3. **Model id needs verification.** `google/gemini-3-flash-preview` isn't a stable catalog id; if the gateway ever rejects or degrades it, the caller silently displays whatever partial text comes back.
+## Part 1 — Verify email
 
-## Fix
+1. Call the deployed `send-message` function with a small transactional email payload against a real test recipient you provide (or a seeded internal address).
+2. Read the function response + `supabase edge_function_logs` + Brevo API response fields.
+3. Also spot-check the `message_logs` table row that gets written to confirm status = `sent`.
+4. Report the observed result. No code changes unless the test surfaces a bug.
 
-**`supabase/functions/suggest-slot-filling/index.ts`**
-- Raise `max_tokens` to `1200`.
-- Switch model to a supported catalog id (verified from `ai-models-chat`): `google/gemini-2.5-flash` (fast, cheap, structured-output friendly). Keep it as a single constant at the top for easy swap.
-- Read `finish_reason` from the response. If it is `"length"`, retry once with `max_tokens: 2000`. If still truncated, append a small `\n\n_…response truncated_` marker so the UI never shows a mid-word cutoff without context.
-- Tighten the prompt to match the budget: ask for "3 short ideas, each 2-3 sentences, plain markdown bullets, no headings deeper than H3" — this reduces the chance of overrun in the first place.
-- Trim trailing partial words defensively (strip anything after the last complete sentence/bullet) before returning.
+If the test fails, the plan for the fix will be added as a follow-up (most likely a missing/expired `BREVO_API_KEY` or a sender-domain issue — both are config, not code).
 
-**`src/components/dashboard/AvailableSlotsTile.tsx`**
-- No behavior change needed, but wrap the `ReactMarkdown` render in a check: if `aiSuggestion` ends without terminal punctuation or a closing list item, show a subtle "Response was cut short — try again" hint under the content with a retry button that re-invokes `handleAiSuggestions`.
+## Part 2 — Enable WhatsApp via Twilio
+
+The `TwilioProvider` already implements `sendTransactionalWhatsApp` and `sendMarketingWhatsApp`. It just isn't instantiated by the dispatcher.
+
+### Secrets required (requested via `add_secret`)
+
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_WHATSAPP_FROM` — the WhatsApp-enabled sender number in E.164 form, e.g. `+441234567890` (the provider prefixes `whatsapp:` automatically)
+- `TWILIO_SMS_FROM` — optional; if omitted we fall back to `TWILIO_WHATSAPP_FROM` for the SMS constructor slot (SMS stays disabled at the dispatcher level, so this is inert)
+
+If any of these are missing, WhatsApp sends will continue to return the current "not configured" error — no crash.
+
+### Code changes (`supabase/functions/_shared/messaging/index.ts`)
+
+1. Import `TwilioProvider`.
+2. Add `getWhatsAppProvider()` factory:
+   - Reads `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`.
+   - Returns `null` (with a `console.warn`) if any is missing.
+   - Otherwise returns `new TwilioProvider(sid, token, smsFrom ?? whatsappFrom, whatsappFrom)`.
+3. Replace the hard-coded error body of `sendTransactionalWhatsApp`:
+   - Run `canSendTransactional(customerId, businessId, "whatsapp")` first (same shape as email/SMS).
+   - If no provider → return the existing "not configured" error so nothing regresses when secrets are unset.
+   - Otherwise delegate to `provider.sendTransactionalWhatsApp(params)`.
+4. Replace `sendMarketingWhatsAppCampaign` similarly:
+   - If no provider → return the current failure `CampaignResult` unchanged.
+   - Otherwise delegate to `provider.sendMarketingWhatsApp(params)` (opt-in and rate-limit checks are handled inside the provider, matching SMS behaviour).
+
+No changes to `send-message/index.ts`, to types, to `utils.ts`, or to any frontend code — the WhatsApp branches in `send-message` already forward to these two functions.
+
+### Deploy + test
+
+1. Deploy `send-message` (it re-bundles `_shared/messaging`).
+2. Call `send-message` with `{ type: "transactional", channel: "whatsapp", template: "<approved-template-name>", recipient: "<your test WhatsApp number>", ... }`.
+3. Read the function logs and the `message_logs` row (`provider = "twilio"`, `status = "sent"`, `provider_message_id` populated).
+4. Report the Twilio SID + delivery status back to you.
+
+## What I need from you before Part 2 runs
+
+- The three Twilio secrets above (I'll request them via `add_secret` so they're stored securely; do not paste them in chat).
+- One WhatsApp test recipient number (E.164) and one approved WhatsApp template name registered on your Twilio sender.
 
 ## Out of scope
 
-- The **bulk message dialog** itself (`BulkMessageDialog`) does not call any AI model — it only uses static + dynamic templates. Nothing to change there.
-- No schema / DB changes.
-- No changes to `send-message`, `parse-diary`, or `parse-price-list`.
-
-## Verification
-
-1. Open the dashboard, click **AI Suggestions** three times in a row and confirm each response ends cleanly (full sentence / closed bullet).
-2. Temporarily lower `max_tokens` to `120` locally to force truncation and confirm the retry + truncation notice both fire.
-3. Check edge function logs for any `finish_reason: length` warnings after the fix.
+- Turning SMS on (project memory says SMS is intentionally off; leaving it that way).
+- Any UI changes — the existing WhatsApp buttons already call `send-message`, so once the dispatcher is wired they start working with no frontend edits.
+- Changing the Brevo email path (only touched if Part 1 uncovers a real failure).
