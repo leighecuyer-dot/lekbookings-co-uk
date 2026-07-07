@@ -20,6 +20,7 @@ import { PrivacySettings } from "@/components/settings/PrivacySettings";
 import { WorkflowAutomationSettings } from "@/components/settings/WorkflowAutomationSettings";
 import { DataAccessRequests } from "@/components/settings/DataAccessRequests";
 import { TeamPermissionsSection } from "@/components/settings/TeamPermissionsSection";
+import { SMSNotificationsSection } from "@/components/settings/SMSNotificationsSection";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
