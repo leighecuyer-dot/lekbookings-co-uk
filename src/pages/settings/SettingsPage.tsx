@@ -57,7 +57,7 @@ const REMINDER_TIMES = [
 ];
 
 export default function SettingsPage() {
-  const { currentBusiness, refreshBusinesses } = useBusiness();
+  const { currentBusiness, refreshBusinesses, setCurrentBusiness } = useBusiness();
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -95,22 +95,31 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     if (!currentBusiness) return;
-    
+
     setLoading(true);
-    const { error } = await supabase
+    const updates = {
+      name: formData.name,
+      phone: formData.phone || null,
+      email: formData.email || null,
+      address: formData.address || null,
+      timezone: formData.timezone,
+    };
+    const { data, error } = await supabase
       .from("businesses")
-      .update({
-        name: formData.name,
-        phone: formData.phone || null,
-        email: formData.email || null,
-        address: formData.address || null,
-        timezone: formData.timezone,
-      })
-      .eq("id", currentBusiness.id);
+      .update(updates)
+      .eq("id", currentBusiness.id)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       toast.error("Failed to update settings");
+    } else if (!data) {
+      // RLS silently blocked the update — keep the user's typed values in place.
+      toast.error("You don't have permission to update this business.");
     } else {
+      // Optimistically reflect the saved values so the [currentBusiness] effect
+      // doesn't momentarily reset the form to a stale fetch.
+      setCurrentBusiness({ ...currentBusiness, ...updates });
       toast.success("Settings saved!");
       refreshBusinesses();
     }
