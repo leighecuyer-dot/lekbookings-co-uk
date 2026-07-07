@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { format, addDays, setHours, setMinutes, isBefore, startOfDay, endOfDay } from "date-fns";
 import { Clock, CheckCircle, User, Users } from "lucide-react";
 import { WaitlistDialog } from "@/components/waitlist/WaitlistDialog";
+import { isValidEmail } from "@/lib/validation";
 
 interface Booking {
   id: string;
