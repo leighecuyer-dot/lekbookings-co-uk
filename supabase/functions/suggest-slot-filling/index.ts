@@ -6,6 +6,65 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Single point to swap model if needed.
+const MODEL = "google/gemini-2.5-flash";
+const MAX_TOKENS_INITIAL = 1200;
+const MAX_TOKENS_RETRY = 2000;
+
+// Trim a response so we never render a mid-word/mid-bullet cutoff.
+function trimToLastComplete(text: string): string {
+  const trimmed = text.trimEnd();
+  // Prefer ending on a full sentence or list item.
+  const lastTerminator = Math.max(
+    trimmed.lastIndexOf("."),
+    trimmed.lastIndexOf("!"),
+    trimmed.lastIndexOf("?"),
+    trimmed.lastIndexOf("\n- "),
+    trimmed.lastIndexOf("\n* "),
+    trimmed.lastIndexOf("\n\n"),
+  );
+  if (lastTerminator > trimmed.length * 0.5) {
+    // Include the terminator character when it's punctuation.
+    const ch = trimmed[lastTerminator];
+    return trimmed.slice(0, lastTerminator + (/[.!?]/.test(ch) ? 1 : 0)).trimEnd();
+  }
+  return trimmed;
+}
+
+async function callModel(
+  apiKey: string,
+  systemPrompt: string,
+  userPrompt: string,
+  maxTokens: number,
+): Promise<{ ok: boolean; status: number; content: string; finishReason: string; raw?: string }> {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return { ok: false, status: response.status, content: "", finishReason: "", raw: errorText };
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content ?? "";
+  const finishReason = data.choices?.[0]?.finish_reason ?? "";
+  return { ok: true, status: 200, content, finishReason };
+}
+
+
 // Industry-specific prompts for tailored suggestions
 const industryPrompts: Record<string, string> = {
   barbershop: "You specialize in barbershops and men's grooming. Consider walk-in promotions, loyalty programs, group bookings for sports teams, and social media campaigns showcasing fresh cuts.",
