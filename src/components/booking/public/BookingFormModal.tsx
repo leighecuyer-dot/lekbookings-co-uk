@@ -616,7 +616,7 @@ export function BookingFormModal({
               </p>
               <p className="text-sm text-muted-foreground">{service.name}</p>
             </div>
-            {formData.email && (
+            {confirmationSent && (
               <p className="text-xs text-muted-foreground">
                 A confirmation email has been sent to {formData.email}
               </p>
