@@ -122,42 +122,38 @@ export function ThemeCustomization() {
     setCropSrc(url);
   };
 
-  const prepareLogoForCrop = async (file: File, maxDim = 1600): Promise<string> => {
+  const prepareLogoForCrop = async (file: File, maxDim = 1200): Promise<string> => {
     const originalUrl = URL.createObjectURL(file);
+    // Use HTMLImageElement + canvas — works reliably across mobile Safari,
+    // where createImageBitmap with resize options can hang on large images.
     try {
-      if (!("createImageBitmap" in window)) return originalUrl;
+      const img: HTMLImageElement = await new Promise((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = reject;
+        el.src = originalUrl;
+      });
 
-      const originalBitmap = await createImageBitmap(file);
-      const { width, height } = originalBitmap;
-      if (width <= maxDim && height <= maxDim) {
-        originalBitmap.close();
-        return originalUrl;
-      }
+      const { naturalWidth: width, naturalHeight: height } = img;
+      if (!width || !height) return originalUrl;
+      if (width <= maxDim && height <= maxDim) return originalUrl;
 
       const scale = Math.min(maxDim / width, maxDim / height);
       const w = Math.max(1, Math.round(width * scale));
       const h = Math.max(1, Math.round(height * scale));
-      originalBitmap.close();
 
-      const bitmap = await createImageBitmap(file, {
-        resizeWidth: w,
-        resizeHeight: h,
-        resizeQuality: "high",
-      });
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        bitmap.close();
-        return originalUrl;
-      }
+      if (!ctx) return originalUrl;
       ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(bitmap, 0, 0);
-      bitmap.close();
+      ctx.drawImage(img, 0, 0, w, h);
 
       const mime = file.type === "image/png" ? "image/png" : "image/jpeg";
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.9));
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, mime, 0.9)
+      );
       if (!blob) return originalUrl;
 
       URL.revokeObjectURL(originalUrl);
