@@ -294,6 +294,9 @@ export default function SettingsPage() {
         {/* Team Permissions (owner-only, self-hides) */}
         <TeamPermissionsSection />
 
+        {/* SMS Notifications (owner/admin only, self-hides) */}
+        <SMSNotificationsSection />
+
         {/* Payment Settings */}
         <PaymentSettings />
 
