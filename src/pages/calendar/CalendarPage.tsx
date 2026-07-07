@@ -31,6 +31,7 @@ import { PinchZoomWrapper } from "@/components/calendar/PinchZoomWrapper";
 import { StatusFilter } from "@/components/calendar/StatusFilter";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { useStaffLeave } from "@/hooks/staff/useStaffLeave";
+import { isValidEmail } from "@/lib/validation";
 
 type ViewMode = "day" | "week" | "kanban";
 
