@@ -136,6 +136,8 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
 
       const suggestionText = data?.suggestion || "No suggestions available.";
       setAiSuggestion(suggestionText);
+      setAiTruncated(Boolean(data?.truncated));
+
 
       // Save suggestion to database
       const { data: savedSuggestion, error: saveError } = await supabase
