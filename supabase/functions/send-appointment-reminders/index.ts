@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { escapeHtml } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,23 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Require a shared secret (or the platform service role key) so this
+  // fan-out endpoint cannot be triggered by anonymous callers to spam
+  // every customer with upcoming bookings.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const provided = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const authorized =
+    (cronSecret && provided === cronSecret) ||
+    (serviceRoleKey && provided === serviceRoleKey);
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) {
     console.log("RESEND_API_KEY not configured, skipping reminders");
@@ -22,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabaseKey = serviceRoleKey;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   const Resend = (await import("https://esm.sh/resend@2.0.0")).Resend;
@@ -116,15 +134,15 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
 
             <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
-              <p style="font-size: 16px; margin-bottom: 20px;">Hi ${booking.customer_name},</p>
+              <p style="font-size: 16px; margin-bottom: 20px;">Hi ${escapeHtml(booking.customer_name)},</p>
 
               <p style="margin-bottom: 20px;">Just a friendly reminder that you have an appointment <strong>tomorrow</strong>:</p>
 
               <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-                <p style="margin: 0 0 10px 0;"><strong>Service:</strong> ${serviceName}</p>
-                <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${dateStr}</p>
-                <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${timeStr}</p>
-                ${businessName ? `<p style="margin: 0;"><strong>With:</strong> ${businessName}</p>` : ""}
+                <p style="margin: 0 0 10px 0;"><strong>Service:</strong> ${escapeHtml(serviceName)}</p>
+                <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${escapeHtml(dateStr)}</p>
+                <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${escapeHtml(timeStr)}</p>
+                ${businessName ? `<p style="margin: 0;"><strong>With:</strong> ${escapeHtml(businessName)}</p>` : ""}
               </div>
 
               <p style="color: #64748b; font-size: 14px;">
@@ -134,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
               <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
 
               <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">
-                This is an automated reminder from ${businessName || "LEK Booking System"}
+                This is an automated reminder from ${escapeHtml(businessName || "LEK Booking System")}
               </p>
             </div>
           </body>
