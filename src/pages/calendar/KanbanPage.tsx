@@ -280,14 +280,14 @@ export default function KanbanPage() {
                 New Booking
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
+            <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0">
+              <DialogHeader className="p-6 pb-2">
                 <DialogTitle>Create New Booking</DialogTitle>
                 <DialogDescription>
                   Add a new appointment
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 mt-4">
+              <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
                 <div className="space-y-2">
                   <Label>Select Customer</Label>
                   <Select
@@ -364,6 +364,7 @@ export default function KanbanPage() {
                     <Label>Date</Label>
                     <Input
                       type="date"
+                      min={new Date().toISOString().split("T")[0]}
                       value={newBooking.date}
                       onChange={(e) => setNewBooking({ ...newBooking, date: e.target.value })}
                     />
@@ -416,6 +417,8 @@ export default function KanbanPage() {
                     rows={2}
                   />
                 </div>
+              </div>
+              <div className="p-6 pt-4 border-t">
                 <Button onClick={handleCreateBooking} className="w-full gradient-primary">
                   Create Booking
                 </Button>
