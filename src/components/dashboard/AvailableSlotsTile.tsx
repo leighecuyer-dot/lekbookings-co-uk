@@ -520,7 +520,16 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   <ReactMarkdown>{aiSuggestion || ""}</ReactMarkdown>
                 </div>
+                {aiTruncated && (
+                  <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                    <span>Response was cut short.</span>
+                    <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={handleAiSuggestions}>
+                      Try again
+                    </Button>
+                  </div>
+                )}
               </ScrollArea>
+
               
               {onSendCampaign && (
                 <div className="mt-6 shrink-0 -mx-6 -mb-6 px-6 py-4 bg-muted/50 border-t">
