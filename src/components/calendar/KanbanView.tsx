@@ -54,7 +54,9 @@ export function KanbanView({
   };
 
   const getBookingsByStatus = (status: string) => {
-    return bookings.filter((b) => getEffectiveStatus(b) === status);
+    const filtered = bookings.filter((b) => getEffectiveStatus(b) === status);
+    console.log("[KanbanView] status:", status, "count:", filtered.length, "total:", bookings.length, "sample:", bookings[0]?.status, "effective:", bookings[0] && getEffectiveStatus(bookings[0]));
+    return filtered;
   };
 
   if (loading) {
