@@ -41,6 +41,8 @@ const LOGO_SIZE_OPTIONS: Array<{ value: LogoSize; label: string; className: stri
   { value: "large", label: "Large", className: "w-12 h-12" },
 ];
 
+const ACCEPTED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
 const getLogoSizeFromCustomCss = (customCss?: string | null): LogoSize => {
   const match = customCss?.match(/logo-size:(small|medium|large)/i);
   return (match?.[1]?.toLowerCase() as LogoSize | undefined) || "medium";
@@ -220,8 +222,8 @@ export function ThemeCustomization() {
     e.target.value = ""; // allow re-selecting same file later
     if (!file || !currentBusiness) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file");
+    if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
+      toast.error("Please choose a PNG, JPG or WebP logo");
       return;
     }
 
@@ -334,7 +336,7 @@ export function ThemeCustomization() {
               <input
                 id="business-logo-upload"
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={handleFileSelected}
                 className="hidden"
                 disabled={uploadingLogo}
