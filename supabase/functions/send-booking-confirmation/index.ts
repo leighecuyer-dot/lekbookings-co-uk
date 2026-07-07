@@ -123,6 +123,34 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
+    // Fire SMS confirmation in parallel (fire-and-forget; respects per-business opt-in + tier caps).
+    if (booking.customer_phone) {
+      try {
+        const smsUrl = `${supabaseUrl}/functions/v1/send-sms`;
+        await fetch(smsUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${serviceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            businessId: booking.business_id,
+            bookingId: booking.id,
+            eventType: "confirmation",
+            to: booking.customer_phone,
+            tokens: {
+              customer_name: booking.customer_name,
+              service_name: serviceName,
+              business_name: businessName,
+              start_time: dateTime,
+            },
+          }),
+        });
+      } catch (e) {
+        console.log("SMS confirmation skipped:", e);
+      }
+    }
+
     return new Response(JSON.stringify(emailResponse), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
