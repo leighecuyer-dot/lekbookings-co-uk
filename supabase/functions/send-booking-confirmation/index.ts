@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: booking, error: bookingErr } = await admin
       .from("bookings")
-      .select("id, customer_email, customer_name, start_time, service_id, business_id")
+      .select("id, customer_email, customer_name, customer_phone, start_time, service_id, business_id")
       .eq("id", bookingId)
       .maybeSingle();
 
