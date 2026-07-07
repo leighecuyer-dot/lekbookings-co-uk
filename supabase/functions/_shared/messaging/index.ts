@@ -3,6 +3,7 @@
 
 import { BrevoEmailProvider } from "./providers/brevo.ts";
 import { TextbeltProvider } from "./providers/textbelt.ts";
+import { TwilioProvider } from "./providers/twilio.ts";
 import type {
   TransactionalEmailParams,
   TransactionalSMSParams,
@@ -33,6 +34,20 @@ function getSMSProvider(): TextbeltProvider | null {
     return null;
   }
   return new TextbeltProvider(apiKey);
+}
+
+function getWhatsAppProvider(): TwilioProvider | null {
+  const sid = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const token = Deno.env.get("TWILIO_AUTH_TOKEN");
+  const whatsappFrom = Deno.env.get("TWILIO_WHATSAPP_FROM");
+  const smsFrom = Deno.env.get("TWILIO_SMS_FROM") || whatsappFrom;
+  if (!sid || !token || !whatsappFrom) {
+    console.warn(
+      "Twilio WhatsApp not configured (need TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM)"
+    );
+    return null;
+  }
+  return new TwilioProvider(sid, token, smsFrom!, whatsappFrom);
 }
 
 // ============ Transactional Messaging ============
@@ -96,10 +111,30 @@ export async function sendTransactionalSMS(
 export async function sendTransactionalWhatsApp(
   params: TransactionalWhatsAppParams
 ): Promise<SendResult> {
-  return {
-    success: false,
-    error: "WhatsApp is not currently configured. Twilio integration required for WhatsApp support.",
-  };
+  // Consent / opt-in check (same pattern as email + SMS)
+  const canSend = await canSendTransactional(
+    params.customerId,
+    params.businessId,
+    "whatsapp"
+  );
+
+  if (!canSend.allowed) {
+    return {
+      success: false,
+      error: canSend.reason || "Cannot send transactional WhatsApp",
+    };
+  }
+
+  const provider = getWhatsAppProvider();
+  if (!provider) {
+    return {
+      success: false,
+      error:
+        "WhatsApp is not currently configured. Twilio integration required for WhatsApp support.",
+    };
+  }
+
+  return provider.sendTransactionalWhatsApp(params);
 }
 
 // ============ Marketing Campaigns ============
@@ -143,13 +178,24 @@ export async function sendMarketingSMSCampaign(
 export async function sendMarketingWhatsAppCampaign(
   params: MarketingWhatsAppCampaignParams
 ): Promise<CampaignResult> {
-  return {
-    totalRecipients: params.recipients.length,
-    sent: 0,
-    failed: params.recipients.length,
-    blocked: 0,
-    errors: [{ customerId: "all", error: "WhatsApp not configured. Twilio integration required." }],
-  };
+  const provider = getWhatsAppProvider();
+  if (!provider) {
+    return {
+      totalRecipients: params.recipients.length,
+      sent: 0,
+      failed: params.recipients.length,
+      blocked: 0,
+      errors: [
+        {
+          customerId: "all",
+          error: "WhatsApp not configured. Twilio integration required.",
+        },
+      ],
+    };
+  }
+
+  // Provider handles opt-in checks and rate limiting per recipient
+  return provider.sendMarketingWhatsApp(params);
 }
 
 // ============ Re-exports ============
