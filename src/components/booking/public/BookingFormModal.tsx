@@ -299,7 +299,13 @@ export function BookingFormModal({
       return;
     }
 
+    if (formData.email && !isValidEmail(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     setSubmitting(true);
+    setConfirmationSent(false);
 
     const [hours, minutes] = selectedTime.split(":").map(Number);
     const startTime = setMinutes(setHours(selectedDate, hours), minutes);
