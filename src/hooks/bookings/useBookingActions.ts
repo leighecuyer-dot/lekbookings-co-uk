@@ -82,7 +82,7 @@ export function useBookingActions({ onUpdate }: UseBookingActionsProps = {}) {
       return next;
     });
 
-    // Send confirmation email when booking is confirmed. Edge function
+    // Send confirmation email/SMS when booking is confirmed. Edge function
     // fetches the verified customer data server-side using bookingId.
     if (newStatus === "confirmed") {
       try {
@@ -91,6 +91,43 @@ export function useBookingActions({ onUpdate }: UseBookingActionsProps = {}) {
         });
       } catch (e) {
         console.log("Confirmation email skipped:", e);
+      }
+    }
+
+    // Fire status-change SMS (respects per-business opt-in + tier caps server-side).
+    if (newStatus === "cancelled" || (newStatus === "confirmed" && originalStatus !== "pending")) {
+      try {
+        const eventType = newStatus === "cancelled" ? "cancellation" : "reschedule";
+        const { data: b } = await supabase
+          .from("bookings")
+          .select("id, business_id, customer_name, customer_phone, start_time, service_id, businesses(name), services(name)")
+          .eq("id", bookingId)
+          .maybeSingle();
+        if (b?.customer_phone) {
+          const start = new Date(b.start_time);
+          const formatted = start.toLocaleString("en-GB", {
+            weekday: "short", day: "numeric", month: "short",
+            hour: "2-digit", minute: "2-digit", hour12: false,
+          });
+          await supabase.functions.invoke("send-sms", {
+            body: {
+              businessId: b.business_id,
+              bookingId: b.id,
+              eventType,
+              to: b.customer_phone,
+              tokens: {
+                customer_name: b.customer_name ?? "",
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                service_name: (b as any).services?.name ?? "your appointment",
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                business_name: (b as any).businesses?.name ?? "",
+                start_time: formatted,
+              },
+            },
+          });
+        }
+      } catch (e) {
+        console.log("Status-change SMS skipped:", e);
       }
     }
 
