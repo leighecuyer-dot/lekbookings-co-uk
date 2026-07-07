@@ -1,84 +1,108 @@
 
-# Bug Fixes: Public Booking, Kanban, Validation & UX
+# SMS Notifications — Reactivate & Ship
 
-Six focused fixes across DB policies, one hook, three components, and one page. No new features; no design changes.
+Turns Twilio SMS back on for **booking confirmations, 24h reminders, and status changes (cancel/reschedule)**, with per-business opt-in, editable templates, and hard monthly caps enforced by subscription tier.
 
-## 1. Critical — Public booking page 401 on services
+## Secrets
 
-**Root cause (confirmed via `curl` + `pg_proc`):** the `public.services` and `public.service_categories` tables have three permissive `SELECT` policies each. Two of them are anon-safe (`is_active = true`), but the third — `"Users can view services"` / `"Users can view their categories"` — calls `public.get_user_business_ids(auth.uid())`, and **anon has no `EXECUTE` on that function**. Postgres evaluates every permissive policy for the OR, so anon requests fail with `42501 permission denied for function get_user_business_ids` — a 401 at PostgREST. Same function is also used by the `bookings` "Users can view" policy but only authenticated users read bookings, so it isn't hit.
+Request three secrets before deploy (via `add_secret`): `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`. Nothing sends until all three exist.
 
-**Fix (migration):** re-create those two `SELECT` policies scoped to `TO authenticated` only. The anon-only "Anyone can view active …" policies remain untouched, so the public booking page keeps read access to active rows for a business slug.
+## Database (one migration)
 
-```sql
-DROP POLICY "Users can view services" ON public.services;
-CREATE POLICY "Users can view services" ON public.services
-  FOR SELECT TO authenticated
-  USING (business_id IN (SELECT public.get_user_business_ids(auth.uid())));
+```
+business_sms_settings           per business
+  business_id (unique)          settings for one business
+  sms_enabled boolean           master on/off (default false)
+  confirmation_enabled boolean  event toggles
+  reminder_enabled boolean
+  status_change_enabled boolean
+  confirmation_template text    handlebar-style {{customer_name}} etc
+  reminder_template text
+  cancellation_template text
+  reschedule_template text
+  sender_name text              short alphanumeric prepended if provider allows
 
-DROP POLICY "Users can view their categories" ON public.service_categories;
-CREATE POLICY "Users can view their categories" ON public.service_categories
-  FOR SELECT TO authenticated
-  USING (business_id IN (SELECT public.get_user_business_ids(auth.uid())));
+sms_usage                        rolling monthly counter
+  business_id, month (YYYY-MM)   composite unique
+  sent_count int
+  cap int                        snapshot of tier cap at first send of month
+
+sms_log                          audit + STOP handling
+  business_id, booking_id, to_number, body, status, provider_sid, error, sent_at
+
+customer_sms_opt_out             STOP keyword blocklist
+  business_id, phone_e164 (composite pk), opted_out_at
 ```
 
-Verification: replay the anon `curl` against `/rest/v1/services?...&is_active=eq.true` — expect 200; sign in as owner and confirm `/services` still lists everything.
+RLS: owners/admins read+write settings for their business; staff read-only; service role bypass. All GRANTs included. `sms_usage` and `sms_log` are read-only from client (writes only via edge functions using service role).
 
-## 2. Critical — Kanban shows 0 bookings
+Tier caps (hard-coded in edge function, per `subscription-tiers-uk` memory):
+- Free: 0 (SMS unavailable)
+- Essential: 50/mo
+- Pro: 200/mo
+- Enterprise: 1000/mo
 
-The Kanban query pulls all bookings for the business with no date filter, but `KanbanView` groups by `getEffectiveStatus(b)` which returns `booking.status` — data exists (15 confirmed, 2 pending, 1 completed per DB), so columns should populate. I could not reproduce from static analysis; the render path is sound.
+## Edge functions
 
-**Fix approach:** during implementation, drive Playwright against `/kanban` to capture the actual `bookings` array in `KanbanPage`. The two realistic culprits are:
-- `bookingsRes.data` returning `[]` due to a RLS/permission failure — apply the same policy hygiene as #1 if the `"Users can view bookings"` policy shows the same anon-function trap for authenticated calls, or
-- an unexpected `booking.status` value (e.g. trimmed/casing) that doesn't match column ids.
+1. **`send-sms`** (internal helper, not publicly invokable) — accepts `{ business_id, to, body, booking_id, event_type }`:
+   - Load business + tier + `business_sms_settings`; return early if disabled or event toggled off.
+   - Normalize `to` to E.164 (default GB); return `invalid_number` if not parseable.
+   - Check `customer_sms_opt_out`; return `opted_out` if matched.
+   - Increment/read `sms_usage` for current month; if `sent_count >= cap` → log `over_cap` and return without sending.
+   - POST to Twilio Messages API with Basic Auth (SID+token); on success bump counter and insert `sms_log` row with status `sent`; on failure log `failed` with Twilio error.
 
-Fix whichever the runtime reveals; no speculative code change here. Verify column counts equal Dashboard's `today_bookings` / `pending_bookings`.
+2. **`send-booking-confirmation`** (existing) — after email, invoke `send-sms` with `confirmation` template rendered from booking data.
 
-## 3. High — Email format validation on booking creation
+3. **`send-appointment-reminders`** (existing pg_cron function) — extend to also fire `send-sms` with `reminder` template for bookings 24h out where reminder hasn't sent.
 
-Add a shared validator and apply in three places:
+4. **`twilio-webhook`** (existing) — extend inbound handler: on `STOP`/`UNSUBSCRIBE`/`STOPALL` insert into `customer_sms_opt_out` and reply with confirmation; on `START` remove the row. HMAC-SHA1 verify per existing pattern.
 
-- `src/lib/validation.ts` (new): `isValidEmail(s) = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())`.
-- **Admin quick-create** (`src/pages/calendar/CalendarPage.tsx` `handleCreateBooking`, `src/pages/calendar/KanbanPage.tsx` `handleCreateBooking`): before insert, if `customerEmail` is non-empty and invalid → `toast.error("Enter a valid email")` and return.
-- **Public booking** (`src/components/booking/public/BookingFormModal.tsx`): on the contact step, block "Next"/"Confirm" when `formData.email` is non-empty and invalid; show inline red helper text. On success, only render "A confirmation email has been sent to …" when the email is valid AND the `send-booking-confirmation` invoke resolved without error — track a `confirmationSent` boolean and gate the copy on it.
+Status-change SMS is fired from a small trigger in `useBookingActions.updateStatus` (client → invoke `send-sms` with `cancellation` or `reschedule` template).
 
-## 4. High — Past-date protection in admin New Booking
+## Template engine
 
-`CalendarPage`'s New Booking modal reuses `selectedDate` from the calendar and only lets the user pick a time. In `handleCreateBooking`, add: `if (startTime < startOfDay(new Date())) { toast.error("Cannot book in the past"); return; }`. In `KanbanPage`'s modal (which exposes a `<Input type="date">` for `newBooking.date`), add `min={new Date().toISOString().split("T")[0]}` on the input AND the same runtime guard before insert.
+Tiny in-function renderer: replace `{{customer_name}}`, `{{business_name}}`, `{{service_name}}`, `{{staff_name}}`, `{{start_time}}` (formatted `EEE d MMM, HH:mm`), `{{booking_url}}`. Unknown tokens left as-is. Char count check — warn in UI at >160.
 
-## 5. Medium — New Booking modal cut-off
+Defaults:
+- Confirmation: `Hi {{customer_name}}, your {{service_name}} at {{business_name}} is booked for {{start_time}}. Reply STOP to opt out.`
+- Reminder: `Reminder: {{service_name}} at {{business_name}} tomorrow at {{start_time}}. See you then!`
+- Cancellation: `Your {{service_name}} on {{start_time}} at {{business_name}} has been cancelled.`
+- Reschedule: `Your {{service_name}} at {{business_name}} has been rescheduled to {{start_time}}.`
 
-The two "Create New Booking" `DialogContent`s (`CalendarPage.tsx` line 373, `KanbanPage.tsx` line 272) render a long form without vertical bounds. Change both to:
+## UI (owner-only, respects existing `TeamPermissionsSection` / `PagePermissionGate`)
 
-```tsx
-<DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0">
-  <DialogHeader className="p-6 pb-2">…</DialogHeader>
-  <div className="flex-1 overflow-y-auto px-6 space-y-4">…form fields…</div>
-  <div className="p-6 pt-4 border-t">
-    <Button onClick={handleCreateBooking} className="w-full gradient-primary">Create Booking</Button>
-  </div>
-</DialogContent>
-```
+**New section in `SettingsPage` → "SMS Notifications":**
+- Master toggle `Enable SMS`. Disabled + inline copy if tier is Free ("Upgrade to Essential to enable SMS").
+- Three event toggles (Confirmation / 24h Reminder / Status changes).
+- Four `<Textarea>`s (one per template) with live token help chips and char count.
+- Monthly usage bar: `{sent} / {cap} SMS used this month`; red when 100%.
+- "Send test SMS to my number" button (uses admin's phone).
 
-Keeps the submit button pinned; body scrolls when the viewport is short.
+`SettingsPage` gets a new tab or accordion `<SMSNotificationsSection />`.
 
-## 6. Medium — Settings Phone/Email stacking on mobile
+## Files
 
-`src/pages/settings/SettingsPage.tsx` line 241: change `<div className="grid grid-cols-2 gap-4">` wrapping Phone + Email to `<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">`. Matches how other sections stack.
+- `supabase/migrations/…` — the tables above with grants + RLS.
+- `supabase/functions/send-sms/index.ts` (new).
+- `supabase/functions/send-booking-confirmation/index.ts` (extend).
+- `supabase/functions/send-appointment-reminders/index.ts` (extend).
+- `supabase/functions/twilio-webhook/index.ts` (extend STOP/START).
+- `src/hooks/sms/useSmsSettings.ts` (new).
+- `src/components/settings/SMSNotificationsSection.tsx` (new).
+- `src/pages/settings/SettingsPage.tsx` (mount section, owner-only).
+- `src/hooks/bookings/useBookingActions.ts` (invoke `send-sms` on status flip when enabled).
+- `src/integrations/supabase/types.ts` (regenerated by migration).
 
-## Files touched
+## Secrets flow
 
-- migration (policies for services + service_categories, plus #2 if the runtime confirms a policy issue on bookings)
-- `src/lib/validation.ts` (new)
-- `src/pages/calendar/CalendarPage.tsx`
-- `src/pages/calendar/KanbanPage.tsx`
-- `src/components/booking/public/BookingFormModal.tsx`
-- `src/pages/settings/SettingsPage.tsx`
+Kick off with `secrets--add_secret` for the three Twilio values. If the user cancels, ship everything except the actual sends — the edge function returns `not_configured` and the UI shows a "Twilio credentials missing — contact support" state.
 
 ## Verification
 
-- Anon `curl` to `services` returns 200; public `/book/:slug` lists services in an incognito window.
-- Kanban column counts equal Dashboard counts after diagnosis fix.
-- Typing `notanemail` on either booking form blocks submit with an inline error; confirmation screen omits "email sent" copy on failure.
-- Selecting yesterday in Kanban's date input is disabled; admin submit rejects past times with toast.
-- Resize preview to ~600px tall — Create Booking submit button remains visible and clickable.
-- Settings on 375px width: Phone and Email stack vertically.
+- Toggle SMS off → creating a booking sends email only, no `sms_log` row.
+- Toggle SMS on with valid credentials → confirmation SMS arrives; `sms_usage.sent_count` = 1; `sms_log` shows `sent`.
+- Fire 24h-reminder cron manually via `supabase--curl_edge_functions` → reminder SMS row appears.
+- Cancel a booking → cancellation SMS logged.
+- Exceed cap in test → next attempt logs `over_cap` and no Twilio call is made.
+- Reply STOP from a test phone → row appears in `customer_sms_opt_out`; next attempt to same number logs `opted_out`.
+- Free-tier business → toggle disabled in UI; edge function refuses.
