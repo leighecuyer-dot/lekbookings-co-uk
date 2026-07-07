@@ -106,6 +106,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Block anonymous AI-credit + SSRF abuse.
+  const authResult = await requireUser(req);
+  if ("error" in authResult) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
   try {
     const body = await req.json();
     const { imageData, websiteUrl } = body;
