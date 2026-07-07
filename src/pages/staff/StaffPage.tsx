@@ -31,6 +31,7 @@ import { StaffRevenueSettingsModal } from "@/components/staff/StaffRevenueSettin
 import { useSubscriptionTier } from "@/hooks/subscription/useSubscriptionTier";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUserPermissions } from "@/hooks/permissions/useUserPermissions";
 
 interface WorkingHours {
   monday: { enabled: boolean; start: string; end: string };
@@ -55,6 +56,7 @@ interface Staff {
 
 export default function StaffPage() {
   const { currentBusiness } = useBusiness();
+  const { canViewFinancials } = useUserPermissions(currentBusiness?.id);
   const { tier, limits, canAddStaff, loading: tierLoading } = useSubscriptionTier(currentBusiness?.id ?? null);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -310,15 +312,17 @@ export default function StaffPage() {
                             <CalendarDays className="w-4 h-4 mr-2" />
                             Manage Leave
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedStaffForRevenue(staff);
-                              setRevenueModalOpen(true);
-                            }}
-                          >
-                            <DollarSign className="w-4 h-4 mr-2" />
-                            Revenue Settings
-                          </DropdownMenuItem>
+                          {canViewFinancials && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedStaffForRevenue(staff);
+                                setRevenueModalOpen(true);
+                              }}
+                            >
+                              <DollarSign className="w-4 h-4 mr-2" />
+                              Revenue Settings
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() =>
@@ -349,37 +353,39 @@ export default function StaffPage() {
                       </p>
                     )}
                     {/* Revenue tracking indicator */}
-                    <div className="flex items-center gap-2 mt-2">
-                      {staff.revenue_tracking_enabled ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="text-xs gap-1 cursor-help">
-                                <Percent className="w-3 h-3" />
-                                {staff.commission_percentage}%
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Commission rate: {staff.commission_percentage}%</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="secondary" className="text-xs gap-1 cursor-help">
-                                <DollarSign className="w-3 h-3" />
-                                No tracking
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Revenue tracking disabled - paid by customers</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
+                    {canViewFinancials && (
+                      <div className="flex items-center gap-2 mt-2">
+                        {staff.revenue_tracking_enabled ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="text-xs gap-1 cursor-help">
+                                  <Percent className="w-3 h-3" />
+                                  {staff.commission_percentage}%
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Commission rate: {staff.commission_percentage}%</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="secondary" className="text-xs gap-1 cursor-help">
+                                  <DollarSign className="w-3 h-3" />
+                                  No tracking
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Revenue tracking disabled - paid by customers</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>

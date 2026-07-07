@@ -26,6 +26,7 @@ import { DashboardWidgetToggle } from "@/components/dashboard/DashboardWidgetTog
 import { DraggableWidgetGrid, type WidgetId } from "@/components/dashboard/DraggableWidgetGrid";
 import { useWidgetOrder, useWidgetSizes, useWidgetVisibility } from "@/hooks/dashboard/useDashboardSettings";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
+import { useUserPermissions } from "@/hooks/permissions/useUserPermissions";
 interface Booking {
   id: string;
   start_time: string;
@@ -53,6 +54,7 @@ interface Staff {
 
 export default function DashboardPage() {
   const { currentBusiness, isResellerMode, currentRole } = useBusiness();
+  const { canViewFinancials } = useUserPermissions(currentBusiness?.id);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -416,7 +418,7 @@ export default function DashboardPage() {
                 visible: widgetSettings.showPerformanceTile,
                 label: "Weekly Performance",
                 render: () => {
-                  const hideRevenue = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
+                  const hideRevenue = !canViewFinancials || (isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true));
                   return (
                     <WeeklyPerformanceTile
                       businessId={currentBusiness.id}
@@ -431,7 +433,7 @@ export default function DashboardPage() {
               },
               {
                 id: "revenue" as WidgetId,
-                visible: widgetSettings.showRevenueTile,
+                visible: widgetSettings.showRevenueTile && canViewFinancials,
                 label: "Revenue Growth",
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
@@ -440,7 +442,7 @@ export default function DashboardPage() {
               },
               {
                 id: "revenueBreakdown" as WidgetId,
-                visible: widgetSettings.showRevenueBreakdownTile,
+                visible: widgetSettings.showRevenueBreakdownTile && canViewFinancials,
                 label: "Revenue Breakdown",
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);

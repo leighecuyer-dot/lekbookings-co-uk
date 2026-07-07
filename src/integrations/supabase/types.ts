@@ -1390,6 +1390,44 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          business_id: string
+          can_view_financials: boolean
+          created_at: string
+          id: string
+          page_access: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          can_view_financials?: boolean
+          created_at?: string
+          id?: string
+          page_access?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          can_view_financials?: boolean
+          created_at?: string
+          id?: string
+          page_access?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           business_id: string
@@ -1595,6 +1633,10 @@ export type Database = {
       }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_business_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_user_permissions: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: Json
+      }
       handle_messaging_opt_out: {
         Args: { p_channel: string; p_phone: string }
         Returns: undefined

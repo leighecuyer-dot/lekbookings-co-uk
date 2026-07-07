@@ -19,6 +19,7 @@ import { AiContextSettings } from "@/components/settings/AiContextSettings";
 import { PrivacySettings } from "@/components/settings/PrivacySettings";
 import { WorkflowAutomationSettings } from "@/components/settings/WorkflowAutomationSettings";
 import { DataAccessRequests } from "@/components/settings/DataAccessRequests";
+import { TeamPermissionsSection } from "@/components/settings/TeamPermissionsSection";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -288,6 +289,9 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Team Permissions (owner-only, self-hides) */}
+        <TeamPermissionsSection />
 
         {/* Payment Settings */}
         <PaymentSettings />

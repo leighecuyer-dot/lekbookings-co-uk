@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { BusinessProvider } from "@/contexts/BusinessContext";
 import { ResellerProvider } from "@/contexts/ResellerContext";
 import { RouteGuard } from "@/components/routing/RouteGuard";
+import { PagePermissionGate } from "@/components/routing/PagePermissionGate";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -107,7 +108,7 @@ const AppRoutes = () => (
       path="/waitlist" 
       element={
         <RouteGuard requireAuth requireBusiness>
-          <WaitlistPage />
+          <PagePermissionGate pageKey="waitlist"><WaitlistPage /></PagePermissionGate>
         </RouteGuard>
       } 
     />
@@ -115,7 +116,7 @@ const AppRoutes = () => (
       path="/customers" 
       element={
         <RouteGuard requireAuth requireBusiness>
-          <CustomersPage />
+          <PagePermissionGate pageKey="customers"><CustomersPage /></PagePermissionGate>
         </RouteGuard>
       } 
     />
@@ -123,7 +124,7 @@ const AppRoutes = () => (
       path="/services" 
       element={
         <RouteGuard requireAuth requireBusiness>
-          <ServicesPage />
+          <PagePermissionGate pageKey="services"><ServicesPage /></PagePermissionGate>
         </RouteGuard>
       } 
     />
@@ -131,7 +132,7 @@ const AppRoutes = () => (
       path="/staff" 
       element={
         <RouteGuard requireAuth requireBusiness>
-          <StaffPage />
+          <PagePermissionGate pageKey="staff"><StaffPage /></PagePermissionGate>
         </RouteGuard>
       } 
     />
@@ -155,7 +156,7 @@ const AppRoutes = () => (
       path="/settings" 
       element={
         <RouteGuard requireAuth requireBusiness>
-          <SettingsPage />
+          <PagePermissionGate pageKey="settings"><SettingsPage /></PagePermissionGate>
         </RouteGuard>
       } 
       />
@@ -165,7 +166,7 @@ const AppRoutes = () => (
         path="/reports/campaigns" 
         element={
           <RouteGuard requireAuth requireBusiness>
-            <CampaignsReportPage />
+            <PagePermissionGate pageKey="reports"><CampaignsReportPage /></PagePermissionGate>
           </RouteGuard>
         } 
       />
@@ -173,7 +174,7 @@ const AppRoutes = () => (
         path="/reports/messages" 
         element={
           <RouteGuard requireAuth requireBusiness>
-            <MessageLogsPage />
+            <PagePermissionGate pageKey="messaging"><MessageLogsPage /></PagePermissionGate>
           </RouteGuard>
         } 
       />
