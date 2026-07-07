@@ -57,6 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
       id,
       customer_name,
       customer_email,
+      customer_phone,
       start_time,
       business_id,
       service_id,
@@ -64,8 +65,7 @@ const handler = async (req: Request): Promise<Response> => {
     `)
     .gte("start_time", windowStart.toISOString())
     .lte("start_time", windowEnd.toISOString())
-    .in("status", ["pending", "confirmed"])
-    .not("customer_email", "is", null);
+    .in("status", ["pending", "confirmed"]);
 
   if (error) {
     console.error("Error fetching bookings:", error);
