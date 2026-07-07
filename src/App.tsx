@@ -182,7 +182,7 @@ const AppRoutes = () => (
       <Route 
         path="/admin/diagnostics" 
         element={
-          <RouteGuard requireAuth requireBusiness>
+          <RouteGuard requireAuth requireBusiness requireOwner>
             <DiagnosticsPage />
           </RouteGuard>
         } 
