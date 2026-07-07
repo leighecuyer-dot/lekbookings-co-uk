@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { isValidEmail } from "@/lib/validation";
 
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { KanbanView } from "@/components/calendar/KanbanView";
