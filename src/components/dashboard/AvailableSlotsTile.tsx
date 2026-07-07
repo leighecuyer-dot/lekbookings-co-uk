@@ -77,8 +77,10 @@ export function AvailableSlotsTile({ businessId, businessName, onSendCampaign }:
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [aiTruncated, setAiTruncated] = useState(false);
   const [currentSuggestionId, setCurrentSuggestionId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+
 
   const handleDayClick = (date: Date) => {
     const dateParam = format(date, "yyyy-MM-dd");
