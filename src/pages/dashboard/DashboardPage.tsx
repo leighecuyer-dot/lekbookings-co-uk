@@ -54,6 +54,7 @@ interface Staff {
 
 export default function DashboardPage() {
   const { currentBusiness, isResellerMode, currentRole } = useBusiness();
+  const { canViewFinancials } = useUserPermissions(currentBusiness?.id);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -432,7 +433,7 @@ export default function DashboardPage() {
               },
               {
                 id: "revenue" as WidgetId,
-                visible: widgetSettings.showRevenueTile,
+                visible: widgetSettings.showRevenueTile && canViewFinancials,
                 label: "Revenue Growth",
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
@@ -441,7 +442,7 @@ export default function DashboardPage() {
               },
               {
                 id: "revenueBreakdown" as WidgetId,
-                visible: widgetSettings.showRevenueBreakdownTile,
+                visible: widgetSettings.showRevenueBreakdownTile && canViewFinancials,
                 label: "Revenue Breakdown",
                 render: () => {
                   const revenueLocked = isResellerMode && !((currentBusiness.settings as Record<string, unknown>)?.share_revenue_with_reseller === true);
