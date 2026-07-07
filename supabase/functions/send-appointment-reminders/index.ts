@@ -57,6 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
       id,
       customer_name,
       customer_email,
+      customer_phone,
       start_time,
       business_id,
       service_id,
@@ -64,8 +65,7 @@ const handler = async (req: Request): Promise<Response> => {
     `)
     .gte("start_time", windowStart.toISOString())
     .lte("start_time", windowEnd.toISOString())
-    .in("status", ["pending", "confirmed"])
-    .not("customer_email", "is", null);
+    .in("status", ["pending", "confirmed"]);
 
   if (error) {
     console.error("Error fetching bookings:", error);
@@ -81,7 +81,10 @@ const handler = async (req: Request): Promise<Response> => {
   let failed = 0;
 
   for (const booking of bookings ?? []) {
-    if (!booking.customer_email || !booking.customer_name) continue;
+    if (!booking.customer_name) continue;
+    const hasEmail = !!booking.customer_email;
+    const hasPhone = !!booking.customer_phone;
+    if (!hasEmail && !hasPhone) continue;
 
     // Fetch service name
     let serviceName = "Appointment";
@@ -117,50 +120,68 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     try {
-      await resend.emails.send({
-        from: "LEK Booking <noreply@resend.dev>",
-        to: [booking.customer_email],
-        subject: `Reminder: ${serviceName} tomorrow at ${timeStr}`,
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 24px;">⏰ Appointment Reminder</h1>
-            </div>
-
-            <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
-              <p style="font-size: 16px; margin-bottom: 20px;">Hi ${escapeHtml(booking.customer_name)},</p>
-
-              <p style="margin-bottom: 20px;">Just a friendly reminder that you have an appointment <strong>tomorrow</strong>:</p>
-
-              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-                <p style="margin: 0 0 10px 0;"><strong>Service:</strong> ${escapeHtml(serviceName)}</p>
-                <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${escapeHtml(dateStr)}</p>
-                <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${escapeHtml(timeStr)}</p>
-                ${businessName ? `<p style="margin: 0;"><strong>With:</strong> ${escapeHtml(businessName)}</p>` : ""}
+      if (hasEmail) {
+        await resend.emails.send({
+          from: "LEK Booking <noreply@resend.dev>",
+          to: [booking.customer_email!],
+          subject: `Reminder: ${serviceName} tomorrow at ${timeStr}`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">⏰ Appointment Reminder</h1>
               </div>
+              <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+                <p style="font-size: 16px; margin-bottom: 20px;">Hi ${escapeHtml(booking.customer_name)},</p>
+                <p style="margin-bottom: 20px;">Just a friendly reminder that you have an appointment <strong>tomorrow</strong>:</p>
+                <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                  <p style="margin: 0 0 10px 0;"><strong>Service:</strong> ${escapeHtml(serviceName)}</p>
+                  <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${escapeHtml(dateStr)}</p>
+                  <p style="margin: 0 0 10px 0;"><strong>Time:</strong> ${escapeHtml(timeStr)}</p>
+                  ${businessName ? `<p style="margin: 0;"><strong>With:</strong> ${escapeHtml(businessName)}</p>` : ""}
+                </div>
+                <p style="color: #64748b; font-size: 14px;">If you need to cancel or reschedule, please contact us as soon as possible.</p>
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">This is an automated reminder from ${escapeHtml(businessName || "LEK Booking System")}</p>
+              </div>
+            </body>
+            </html>
+          `,
+        });
+      }
 
-              <p style="color: #64748b; font-size: 14px;">
-                If you need to cancel or reschedule, please contact us as soon as possible.
-              </p>
+      if (hasPhone) {
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${serviceRoleKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              businessId: booking.business_id,
+              bookingId: booking.id,
+              eventType: "reminder",
+              to: booking.customer_phone,
+              tokens: {
+                customer_name: booking.customer_name,
+                service_name: serviceName,
+                business_name: businessName,
+                start_time: `${dateStr} ${timeStr}`,
+              },
+            }),
+          });
+        } catch (e) {
+          console.log("SMS reminder skipped:", e);
+        }
+      }
 
-              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-
-              <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">
-                This is an automated reminder from ${escapeHtml(businessName || "LEK Booking System")}
-              </p>
-            </div>
-          </body>
-          </html>
-        `,
-      });
       sent++;
-      console.log(`Reminder sent to ${booking.customer_email} for booking ${booking.id}`);
     } catch (e) {
       failed++;
       console.error(`Failed to send reminder for booking ${booking.id}:`, e);

@@ -110,7 +110,49 @@ Deno.serve(async (req) => {
 
     // Normalize the phone number
     const customerPhone = normalizePhoneNumber(payload.From);
-    
+
+    // STOP / START keyword handling for SMS opt-out compliance (UK GDPR + carrier rules).
+    // These take precedence over any booking intent parsing.
+    const stopWords = ["stop", "stopall", "unsubscribe", "cancel all", "end", "quit"];
+    const startWords = ["start", "unstop", "yes join", "subscribe"];
+    const lowerBody = payload.Body.toLowerCase().trim();
+    const isStop = stopWords.some((w) => lowerBody === w);
+    const isStart = startWords.some((w) => lowerBody === w);
+
+    if (isStop || isStart) {
+      // Apply the opt-out to every business that has ever texted this number.
+      const { data: recentLogs } = await supabase
+        .from("sms_log")
+        .select("business_id")
+        .eq("to_number", customerPhone)
+        .order("sent_at", { ascending: false })
+        .limit(20);
+      const businessIds = Array.from(new Set((recentLogs ?? []).map((l) => l.business_id)));
+
+      if (isStop) {
+        for (const bid of businessIds) {
+          await supabase.from("customer_sms_opt_out").upsert({
+            business_id: bid, phone_e164: customerPhone,
+          }, { onConflict: "business_id,phone_e164" });
+        }
+      } else {
+        for (const bid of businessIds) {
+          await supabase.from("customer_sms_opt_out")
+            .delete()
+            .eq("business_id", bid)
+            .eq("phone_e164", customerPhone);
+        }
+      }
+
+      const reply = isStop
+        ? "You have been unsubscribed from SMS notifications. Reply START to opt back in."
+        : "You have been re-subscribed to SMS notifications. Reply STOP at any time to opt out.";
+      return new Response(
+        `<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n  <Message>${escapeXml(reply)}</Message>\n</Response>`,
+        { headers: { ...corsHeaders, "Content-Type": "text/xml" } },
+      );
+    }
+
     // Detect customer intent
     const intent = detectIntent(payload.Body);
     console.log("Detected intent:", intent, "from message:", payload.Body);

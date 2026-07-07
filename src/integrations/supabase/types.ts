@@ -200,6 +200,62 @@ export type Database = {
           },
         ]
       }
+      business_sms_settings: {
+        Row: {
+          business_id: string
+          cancellation_template: string
+          confirmation_enabled: boolean
+          confirmation_template: string
+          created_at: string
+          id: string
+          reminder_enabled: boolean
+          reminder_template: string
+          reschedule_template: string
+          sender_name: string | null
+          sms_enabled: boolean
+          status_change_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          cancellation_template?: string
+          confirmation_enabled?: boolean
+          confirmation_template?: string
+          created_at?: string
+          id?: string
+          reminder_enabled?: boolean
+          reminder_template?: string
+          reschedule_template?: string
+          sender_name?: string | null
+          sms_enabled?: boolean
+          status_change_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          cancellation_template?: string
+          confirmation_enabled?: boolean
+          confirmation_template?: string
+          created_at?: string
+          id?: string
+          reminder_enabled?: boolean
+          reminder_template?: string
+          reschedule_template?: string
+          sender_name?: string | null
+          sms_enabled?: boolean
+          status_change_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_sms_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           address: string | null
@@ -439,6 +495,32 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_sms_opt_out: {
+        Row: {
+          business_id: string
+          opted_out_at: string
+          phone_e164: string
+        }
+        Insert: {
+          business_id: string
+          opted_out_at?: string
+          phone_e164: string
+        }
+        Update: {
+          business_id?: string
+          opted_out_at?: string
+          phone_e164?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_sms_opt_out_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -1105,6 +1187,95 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_log: {
+        Row: {
+          body: string
+          booking_id: string | null
+          business_id: string
+          error: string | null
+          event_type: string
+          id: string
+          provider_sid: string | null
+          sent_at: string
+          status: string
+          to_number: string
+        }
+        Insert: {
+          body: string
+          booking_id?: string | null
+          business_id: string
+          error?: string | null
+          event_type: string
+          id?: string
+          provider_sid?: string | null
+          sent_at?: string
+          status: string
+          to_number: string
+        }
+        Update: {
+          body?: string
+          booking_id?: string | null
+          business_id?: string
+          error?: string | null
+          event_type?: string
+          id?: string
+          provider_sid?: string | null
+          sent_at?: string
+          status?: string
+          to_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_log_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_usage: {
+        Row: {
+          business_id: string
+          cap: number
+          id: string
+          month: string
+          sent_count: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          cap?: number
+          id?: string
+          month: string
+          sent_count?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          cap?: number
+          id?: string
+          month?: string
+          sent_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_usage_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
