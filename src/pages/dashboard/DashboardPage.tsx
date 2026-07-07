@@ -26,6 +26,7 @@ import { DashboardWidgetToggle } from "@/components/dashboard/DashboardWidgetTog
 import { DraggableWidgetGrid, type WidgetId } from "@/components/dashboard/DraggableWidgetGrid";
 import { useWidgetOrder, useWidgetSizes, useWidgetVisibility } from "@/hooks/dashboard/useDashboardSettings";
 import { getPrivacySettings } from "@/components/settings/PrivacySettings";
+import { useUserPermissions } from "@/hooks/permissions/useUserPermissions";
 interface Booking {
   id: string;
   start_time: string;
