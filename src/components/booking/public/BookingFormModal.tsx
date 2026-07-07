@@ -545,7 +545,11 @@ export function BookingFormModal({
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="jane@example.com"
+                aria-invalid={!!formData.email && !isValidEmail(formData.email)}
               />
+              {formData.email && !isValidEmail(formData.email) && (
+                <p className="text-xs text-destructive">Please enter a valid email address</p>
+              )}
             </div>
 
             <div className="space-y-2">
