@@ -117,6 +117,8 @@ export function BookingFormModal({
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [waitlistDialogOpen, setWaitlistDialogOpen] = useState(false);
   const [waitlistSlot, setWaitlistSlot] = useState<string | null>(null);
+  const [confirmationSent, setConfirmationSent] = useState(false);
+  
   
   const [formData, setFormData] = useState({
     name: "",
