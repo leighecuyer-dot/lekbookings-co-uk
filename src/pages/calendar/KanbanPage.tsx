@@ -127,6 +127,7 @@ export default function KanbanPage() {
         .order("name", { ascending: true }),
     ]);
 
+    console.log("[Kanban] bookingsRes:", bookingsRes.data?.length, "error:", bookingsRes.error);
     if (bookingsRes.data) setBookings(bookingsRes.data);
     if (servicesRes.data) setServices(servicesRes.data);
     if (staffRes.data) setStaffList(staffRes.data);
