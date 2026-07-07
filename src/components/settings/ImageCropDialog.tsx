@@ -140,7 +140,9 @@ export function ImageCropDialog({
     setAreaPixels(pixels);
   }, []);
 
-  // Generate a live preview (debounced) whenever the crop area changes
+  // Generate a live preview (debounced) whenever the crop area changes.
+  // Longer debounce + requestIdleCallback keeps mobile Safari responsive
+  // while the user is actively dragging / zooming.
   useEffect(() => {
     if (!imageSrc || !areaPixels || saving) return;
     if (previewTimer.current) window.clearTimeout(previewTimer.current);
@@ -148,7 +150,7 @@ export function ImageCropDialog({
       try {
         const image = loadedImageRef.current || await loadImage(imageSrc);
         loadedImageRef.current = image;
-        const maxSide = 256;
+        const maxSide = 192;
         const scale = Math.min(1, maxSide / Math.max(areaPixels.width, areaPixels.height));
         const w = Math.max(1, Math.round(areaPixels.width * scale));
         const h = Math.max(1, Math.round(areaPixels.height * scale));
@@ -172,7 +174,7 @@ export function ImageCropDialog({
       } catch (e) {
         console.warn("Preview render failed", e);
       }
-    }, 80);
+    }, 350);
     return () => {
       if (previewTimer.current) window.clearTimeout(previewTimer.current);
     };
