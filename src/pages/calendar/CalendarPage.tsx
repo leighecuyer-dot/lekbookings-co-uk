@@ -197,12 +197,22 @@ export default function CalendarPage() {
       return;
     }
 
+    if (newBooking.customerEmail && !isValidEmail(newBooking.customerEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     const service = services.find((s) => s.id === newBooking.serviceId);
     const durationMinutes = service?.duration_minutes || 30;
 
     const startTime = new Date(selectedDate);
     const [hours, minutes] = newBooking.time.split(":").map(Number);
     startTime.setHours(hours, minutes, 0, 0);
+
+    if (startTime < new Date()) {
+      toast.error("Cannot create a booking in the past");
+      return;
+    }
 
     const endTime = new Date(startTime);
     endTime.setMinutes(endTime.getMinutes() + durationMinutes);
