@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { toast } from "sonner";
-import { format } from "date-fns";
 
 interface UseBookingActionsProps {
   onUpdate?: () => void;
