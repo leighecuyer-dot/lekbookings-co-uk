@@ -81,7 +81,10 @@ const handler = async (req: Request): Promise<Response> => {
   let failed = 0;
 
   for (const booking of bookings ?? []) {
-    if (!booking.customer_email || !booking.customer_name) continue;
+    if (!booking.customer_name) continue;
+    const hasEmail = !!booking.customer_email;
+    const hasPhone = !!booking.customer_phone;
+    if (!hasEmail && !hasPhone) continue;
 
     // Fetch service name
     let serviceName = "Appointment";
