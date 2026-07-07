@@ -314,7 +314,7 @@ export function BookingFormModal({
       }
     }
 
-    const { error } = await supabase.from("bookings").insert({
+    const { data: created, error } = await supabase.from("bookings").insert({
       business_id: businessId,
       service_id: service.id,
       staff_id: selectedStaff,
@@ -328,7 +328,7 @@ export function BookingFormModal({
       total_price: totalPrice > 0 ? totalPrice : null,
       deposit_amount: depositAmount,
       payment_status: "unpaid",
-    });
+    }).select("id").single();
 
     if (error) {
       console.error("Booking error:", error);
@@ -346,19 +346,16 @@ export function BookingFormModal({
       }
       
       setStep("success");
-      // Trigger email notification (fire and forget)
-      try {
-        await supabase.functions.invoke("send-booking-confirmation", {
-          body: {
-            email: formData.email,
-            customerName: formData.name,
-            serviceName: service.name,
-            dateTime: format(startTime, "EEEE, MMMM d 'at' h:mm a"),
-          },
-        });
-      } catch (e) {
-        // Email is optional, don't block on failure
-        console.log("Email notification skipped:", e);
+      // Trigger email notification (fire and forget). Only bookingId is sent —
+      // the edge function looks up the verified customer email server-side.
+      if (created?.id) {
+        try {
+          await supabase.functions.invoke("send-booking-confirmation", {
+            body: { bookingId: created.id },
+          });
+        } catch (e) {
+          console.log("Email notification skipped:", e);
+        }
       }
     }
     setSubmitting(false);

@@ -7,6 +7,7 @@ import {
   sendMarketingSMSCampaign,
   sendMarketingWhatsAppCampaign,
 } from "../_shared/messaging/index.ts";
+import { requireUser, userHasBusinessAccess } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +54,16 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Require authenticated caller (blocks anonymous credential abuse).
+  const authResult = await requireUser(req);
+  if ("error" in authResult) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const { user } = authResult;
+
   try {
     const request: MessageRequest = await req.json();
 
@@ -63,6 +74,16 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Ensure the caller actually belongs to (or is a reseller for) the target business.
+    const allowed = await userHasBusinessAccess(user.id, request.businessId);
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: no access to this business" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
 
     // ============ Transactional Messages ============
     if (request.type === "transactional") {

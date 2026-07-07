@@ -16,6 +16,8 @@ interface RouteGuardProps {
   requireReseller?: boolean;
   /** Require reseller to have completed onboarding (has branding set up) */
   requireResellerOnboarded?: boolean;
+  /** Require user to have owner/admin role in the current business (for admin-only routes) */
+  requireOwner?: boolean;
   /** Redirect authenticated users away (for login/register pages) */
   redirectAuthenticated?: boolean;
   /** Redirect users who already have a business (for onboarding) */
@@ -82,12 +84,50 @@ function BusinessFallback({ userId, fallbackPath }: { userId: string; fallbackPa
 
 
 
+function OwnerGate({
+  userId,
+  businessId,
+  children,
+}: {
+  userId: string;
+  businessId: string;
+  children: ReactNode;
+}) {
+  const [state, setState] = useState<"loading" | "allowed" | "denied">("loading");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("business_id", businessId)
+        .in("role", ["owner", "admin"])
+        .limit(1);
+      if (cancelled) return;
+      if (!error && data && data.length > 0) {
+        setState("allowed");
+      } else {
+        setState("denied");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, businessId]);
+
+  if (state === "loading") return <LoadingState />;
+  if (state === "denied") return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
+
 export function RouteGuard({
   children,
   requireAuth = false,
   requireBusiness = false,
   requireReseller = false,
   requireResellerOnboarded = false,
+  requireOwner = false,
   redirectAuthenticated = false,
   redirectIfHasBusiness = false,
   redirectIfIsReseller = false,
@@ -98,7 +138,7 @@ export function RouteGuard({
   const { isReseller, needsOnboarding, loading: resellerLoading } = useReseller();
 
   // Determine which loading states we need to wait for
-  const needsBusinessContext = requireBusiness || redirectIfHasBusiness || redirectAuthenticated;
+  const needsBusinessContext = requireBusiness || redirectIfHasBusiness || redirectAuthenticated || requireOwner;
   const needsResellerContext = requireReseller || requireResellerOnboarded || redirectIfIsReseller;
 
   const isLoading =
@@ -151,6 +191,14 @@ export function RouteGuard({
   // Require reseller to have completed onboarding (branding set up)
   if (requireResellerOnboarded && isReseller && needsOnboarding) {
     return <Navigate to="/reseller/onboarding" replace />;
+  }
+
+  // Require owner/admin role in the current business (admin-only routes)
+  if (requireOwner && user) {
+    if (!currentBusiness) {
+      return <Navigate to={fallbackPath || "/dashboard"} replace />;
+    }
+    return <OwnerGate userId={user.id} businessId={currentBusiness.id}>{children}</OwnerGate>;
   }
 
   return <>{children}</>;

@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { toast } from "sonner";
-import { format } from "date-fns";
 
 interface UseBookingActionsProps {
   onUpdate?: () => void;
@@ -83,44 +82,13 @@ export function useBookingActions({ onUpdate }: UseBookingActionsProps = {}) {
       return next;
     });
 
-    // Send confirmation email when booking is confirmed
+    // Send confirmation email when booking is confirmed. Edge function
+    // fetches the verified customer data server-side using bookingId.
     if (newStatus === "confirmed") {
       try {
-        const { data: booking } = await supabase
-          .from("bookings")
-          .select("customer_email, customer_name, start_time, service_id, business_id")
-          .eq("id", bookingId)
-          .single();
-
-        if (booking?.customer_email && booking.customer_name) {
-          let serviceName = "Appointment";
-          if (booking.service_id) {
-            const { data: service } = await supabase
-              .from("services")
-              .select("name")
-              .eq("id", booking.service_id)
-              .single();
-            if (service) serviceName = service.name;
-          }
-
-          let businessName: string | undefined;
-          const { data: business } = await supabase
-            .from("businesses")
-            .select("name")
-            .eq("id", booking.business_id)
-            .single();
-          if (business) businessName = business.name;
-
-          await supabase.functions.invoke("send-booking-confirmation", {
-            body: {
-              email: booking.customer_email,
-              customerName: booking.customer_name,
-              serviceName,
-              dateTime: format(new Date(booking.start_time), "EEEE, MMMM d 'at' h:mm a"),
-              businessName,
-            },
-          });
-        }
+        await supabase.functions.invoke("send-booking-confirmation", {
+          body: { bookingId },
+        });
       } catch (e) {
         console.log("Confirmation email skipped:", e);
       }

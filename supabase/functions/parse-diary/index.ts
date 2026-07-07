@@ -4,6 +4,7 @@ import {
   checkRateLimit, 
   createRateLimitResponse 
 } from "./rateLimit.ts";
+import { requireUser } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -140,8 +141,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Check rate limit
-  const rateLimitKey = getRateLimitKey(req);
+  // Require authenticated caller — blocks anonymous AI-credit abuse.
+  const authResult = await requireUser(req);
+  if ("error" in authResult) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  // Check rate limit (per-user, best-effort per instance)
+  const rateLimitKey = `user:${authResult.user.id}`;
   const rateLimit = checkRateLimit(rateLimitKey);
 
   if (!rateLimit.allowed) {
