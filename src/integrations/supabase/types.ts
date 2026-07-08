@@ -1785,6 +1785,10 @@ export type Database = {
         }
         Returns: Json
       }
+      customer_visible_to_staff: {
+        Args: { _customer: string; _user: string }
+        Returns: boolean
+      }
       diag_orphan_businesses: { Args: never; Returns: Json }
       get_dashboard_overview: {
         Args: { _business_id: string; _from_date?: string; _to_date?: string }

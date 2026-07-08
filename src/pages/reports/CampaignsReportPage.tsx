@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useSubscriptionTier } from "@/hooks/subscription/useSubscriptionTier";
+import { useMyCustomerIds } from "@/hooks/customers";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -41,6 +42,7 @@ interface CampaignConversion {
 export default function CampaignsReportPage() {
   const { currentBusiness } = useBusiness();
   const { limits, tier, loading: tierLoading } = useSubscriptionTier(currentBusiness?.id || null);
+  const { scopeAll, ids: myCustomerIds } = useMyCustomerIds(currentBusiness?.id);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
 
   // Check if user has access to campaign reports
@@ -78,9 +80,36 @@ export default function CampaignsReportPage() {
     enabled: !!currentBusiness?.id && campaigns.length > 0,
   });
 
+  // Scope campaigns and conversions to the current user's visible customers
+  // when they're a staff member (owners/admins/resellers see all).
+  const { scopedCampaigns, scopedConversions } = useMemo(() => {
+    if (scopeAll) {
+      return { scopedCampaigns: campaigns, scopedConversions: conversions };
+    }
+    const allowed = myCustomerIds;
+    const filteredCampaigns = campaigns
+      .map((c) => {
+        const recipientIds = (c.recipient_customer_ids || []).filter((id) => allowed.has(id));
+        if (recipientIds.length === 0) return null;
+        // Prorate sent/failed counts to the visible slice
+        const originalRecipients = c.recipient_count || (c.recipient_customer_ids?.length ?? 0);
+        const ratio = originalRecipients > 0 ? recipientIds.length / originalRecipients : 0;
+        return {
+          ...c,
+          recipient_customer_ids: recipientIds,
+          recipient_count: recipientIds.length,
+          sent_count: Math.round((c.sent_count || 0) * ratio),
+          failed_count: Math.round((c.failed_count || 0) * ratio),
+        } as Campaign;
+      })
+      .filter((c): c is Campaign => c !== null);
+    const filteredConversions = conversions.filter((cv) => allowed.has(cv.customer_id));
+    return { scopedCampaigns: filteredCampaigns, scopedConversions: filteredConversions };
+  }, [scopeAll, myCustomerIds, campaigns, conversions]);
+
   // Calculate metrics
   const calculateCampaignMetrics = (campaign: Campaign) => {
-    const campaignConversions = conversions.filter(c => c.campaign_id === campaign.id);
+    const campaignConversions = scopedConversions.filter(c => c.campaign_id === campaign.id);
     const conversionRate = campaign.sent_count > 0 
       ? (campaignConversions.length / campaign.sent_count) * 100 
       : 0;
@@ -99,25 +128,26 @@ export default function CampaignsReportPage() {
 
   // Overall stats
   const overallStats = {
-    totalCampaigns: campaigns.length,
-    totalRecipients: campaigns.reduce((sum, c) => sum + c.recipient_count, 0),
-    totalConversions: conversions.length,
-    totalRevenue: conversions.reduce((sum, c) => sum + (c.booking_value || 0), 0),
-    avgConversionRate: campaigns.length > 0
-      ? campaigns.reduce((sum, c) => {
+    totalCampaigns: scopedCampaigns.length,
+    totalRecipients: scopedCampaigns.reduce((sum, c) => sum + c.recipient_count, 0),
+    totalConversions: scopedConversions.length,
+    totalRevenue: scopedConversions.reduce((sum, c) => sum + (c.booking_value || 0), 0),
+    avgConversionRate: scopedCampaigns.length > 0
+      ? scopedCampaigns.reduce((sum, c) => {
           const metrics = calculateCampaignMetrics(c);
           return sum + metrics.conversionRate;
-        }, 0) / campaigns.length
+        }, 0) / scopedCampaigns.length
       : 0,
   };
 
   // Recent campaigns (last 30 days)
-  const recentCampaigns = campaigns.filter(c => 
+  const recentCampaigns = scopedCampaigns.filter(c => 
     isWithinInterval(new Date(c.sent_at), {
       start: subDays(new Date(), 30),
       end: new Date(),
     })
   );
+
 
   const getCampaignTypeBadge = (type: string) => {
     const variants: Record<string, "default" | "secondary" | "outline"> = {
@@ -254,11 +284,13 @@ export default function CampaignsReportPage() {
               <TabsContent value="all" className="mt-4">
                 {isLoading ? (
                   <div className="text-center py-8 text-muted-foreground">Loading campaigns...</div>
-                ) : campaigns.length === 0 ? (
+                ) : scopedCampaigns.length === 0 ? (
                   <EmptyState
                     icon={MessageSquare}
                     title="No campaigns yet"
-                    description="Start sending campaigns from the Customers page to see performance data here."
+                    description={scopeAll
+                      ? "Start sending campaigns from the Customers page to see performance data here."
+                      : "No campaigns to your assigned customers yet."}
                   />
                 ) : (
                   <div className="overflow-x-auto">
@@ -276,7 +308,7 @@ export default function CampaignsReportPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {campaigns.map((campaign) => {
+                        {scopedCampaigns.map((campaign) => {
                           const metrics = calculateCampaignMetrics(campaign);
                           return (
                             <TableRow key={campaign.id}>

@@ -1,37 +1,70 @@
 ## Goal
-On the public booking form success step, show a short human-readable booking reference and make sure a confirmation SMS is sent to the customer's phone whenever one was provided.
+Staff-role users can only see and select customers assigned to them (via `staff_customers`). Owners and admins keep full visibility.
 
-## Changes
+## Where this applies
+1. **Customers page** (`/customers`) — list is limited to their assigned customers. The existing "All / Mine" tab is removed for staff (they only ever see "Mine").
+2. **Bulk Messaging recipients** (`BulkMessageDialog`) — the recipient list they can pick from is scoped to their assigned customers.
+3. **Campaigns Report** (`/reports/campaigns`) — recipient counts, conversions, and per-customer breakdowns are filtered so a staff member only sees campaigns/conversions tied to their assigned customers.
 
-### 1. Booking reference
-- Derive a short reference from the client-generated `bookingId` (first 8 chars of the UUID, uppercased, e.g. `A1B2C3D4`). No DB change — the UUID is already the source of truth; this is a display formatting.
-- Store it in component state when the insert succeeds and render it on the success step in `BookingFormModal.tsx`:
-  - Prominent line: `Reference: A1B2C3D4`
-  - "Copy" button (uses `navigator.clipboard`, toast on success).
-- Include the reference in the existing success screen alongside date/time/service so the customer can quote it.
+Owners and admins bypass all filters and continue to see every customer.
 
-### 2. SMS on booking creation
-Current flow: after anon insert, `send-booking-confirmation` is only invoked when a valid email is present. Server-side that function also fires SMS, so no-email-but-phone bookings currently get nothing.
+## Implementation
 
-Fix in `BookingFormModal.handleSubmit`:
-- Always invoke `send-booking-confirmation` when the insert succeeds (drop the email guard). The edge function already looks up the booking server-side and no-ops the email step if there's no customer email; it will still send SMS when a phone is present and per-business SMS opt-in + tier cap allow it.
-- Keep the current `confirmationSent` UX flag; extend it to reflect either email or SMS delivery (edge function response includes `emailSent` / `smsSent`).
-- On the success screen, show one of:
-  - "Confirmation sent to your email and phone"
-  - "Confirmation sent to your phone"
-  - "Confirmation sent to your email"
-  - "Save your reference — we couldn't send a confirmation" (fallback)
+### A. Backend — enforce at the RLS layer (defence in depth)
+Add a helper + tighten the `customers` SELECT policy so staff can only read rows in `staff_customers` linked to them; owners/admins/resellers keep current access.
 
-No new tables, no new secrets — Twilio secrets are already configured, and `business_sms_settings` / tier caps already gate sending.
+```
+CREATE FUNCTION public.customer_visible_to_staff(_user uuid, _customer uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.staff_customers sc
+    JOIN public.staff s ON s.id = sc.staff_id
+    WHERE sc.customer_id = _customer AND s.user_id = _user
+  )
+$$;
+```
 
-### 3. Minor
-- Update the success-step copy to lead with the reference and delivery status.
-- No changes to admin views, RLS, or migrations.
+Rewrite the customers SELECT policy:
+- Owner/Admin OR reseller → all customers in business
+- Staff role → only customers where `customer_visible_to_staff(auth.uid(), id)` is true
+
+Same principle applied to `customer_contact_preferences` SELECT so the messaging opt-in join stays consistent.
+
+`campaigns` / `campaign_conversions` remain readable business-wide (they aggregate across customers). Staff filtering there happens client-side, since a campaign row itself isn't per-customer.
+
+### B. Frontend — a single reusable hook
+`src/hooks/customers/useMyCustomerIds.ts`
+- Reads current role via `useUserPermissions` (already exists).
+- If owner/admin: returns `{ scopeAll: true, ids: null }`.
+- Else looks up the user's `staff.id` for the business, fetches their `staff_customers.customer_id` list, returns `{ scopeAll: false, ids: Set<string> }`.
+
+### C. Apply the hook
+
+1. **CustomersPage**
+   - Remove the "All/Mine" tab for staff (always "Mine").
+   - `fetchCustomers` still queries all business customers — RLS will now trim them for staff automatically. The client filter becomes a no-op safety net.
+
+2. **BulkMessageDialog**
+   - After `fetchCustomersWithPreferences`, filter `customersData` through `myCustomerIds` when `!scopeAll`.
+   - The "select all" pre-selection then operates only on the scoped list.
+
+3. **CampaignsReportPage**
+   - When `!scopeAll`: filter each campaign's `recipient_customer_ids` and each `campaign_conversions.customer_id` through the staff's assigned set before rendering counts/tables. Campaigns with zero assigned recipients are hidden.
+
+### D. Empty states
+- Customers page (staff, zero assignments): "You don't have any assigned customers yet. Ask an owner or admin to assign customers to you."
+- BulkMessageDialog (staff, zero assignments): "No assigned customers to message."
+- Campaigns report: hide the table with an equivalent empty state.
 
 ## Files touched
-- `src/components/booking/public/BookingFormModal.tsx` — reference state + success-screen UI + always-invoke edge function.
-- (Optional) `supabase/functions/send-booking-confirmation/index.ts` — ensure the response body includes `{ emailSent, smsSent }` so the UI can render an accurate status. Confirm current shape before editing; only touch if fields are missing.
+- `supabase/migrations/<new>.sql` — new function + updated RLS policies on `customers` and `customer_contact_preferences`.
+- `src/hooks/customers/useMyCustomerIds.ts` — new.
+- `src/hooks/customers/index.ts` — export.
+- `src/pages/customers/CustomersPage.tsx` — hide All tab for staff, use hook.
+- `src/components/messaging/BulkMessageDialog.tsx` — filter recipients.
+- `src/pages/reports/CampaignsReportPage.tsx` — filter campaigns/conversions.
 
 ## Out of scope
-- No changes to owner/admin booking flow (they already see confirmations via existing hooks).
-- No SMS opt-in UI changes on the public page — customers implicitly consent by providing a phone number for a transactional booking confirmation, which matches the current messaging-compliance model.
+- No changes to the booking flow (owners/admins/staff creating bookings can still pick any customer inside the create-booking dialog — that's a separate scope you opted out of).
+- No changes to how assignments are created (already handled by `AssignStaffDialog`).
+- No reseller flow changes; resellers continue to see everything for linked businesses.
