@@ -1,108 +1,36 @@
+## Goal
+Confirm a booking created anonymously from `/book/:slug` shows up straight away in the owner's admin views (Day/Week calendar and Kanban) at the right time slot, staff, and status.
 
-# SMS Notifications — Reactivate & Ship
+## Verification steps
 
-Turns Twilio SMS back on for **booking confirmations, 24h reminders, and status changes (cancel/reschedule)**, with per-business opt-in, editable templates, and hard monthly caps enforced by subscription tier.
+1. **Pick a test business**
+   - Query `businesses` for a slug that has at least one active service and one active staff member.
+   - Note its `id`, a `service_id`, and a `staff_id`.
 
-## Secrets
+2. **Create a booking as anonymous (simulating the public page)**
+   - Use the anon key against `POST /rest/v1/bookings` with the same payload shape `BookingFormModal` sends: client-generated `id` (uuid), `business_id`, `service_id`, `staff_id`, `customer_name`, `start_time`, `end_time`, `status: 'pending'`, `payment_status: 'unpaid'`.
+   - Confirm HTTP 201 and no RLS error. Record the `id` and `start_time`.
 
-Request three secrets before deploy (via `add_secret`): `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`. Nothing sends until all three exist.
+3. **Verify DB persistence (owner view)**
+   - `SELECT` the row via `supabase--read_query` to confirm it landed with the expected `business_id`, `staff_id`, `start_time`, `status='pending'`.
 
-## Database (one migration)
+4. **Verify admin UI queries return it**
+   - Reproduce the exact fetches used by:
+     - `CalendarPage` / `DayTimelineView` (bookings for that day + business, joined with service/staff)
+     - `WeekPage` / `WeekView` (bookings within the week window)
+     - `KanbanPage` / `KanbanView` (pending column, no date filter per project memory)
+   - Confirm the new row is included in each result set.
 
-```
-business_sms_settings           per business
-  business_id (unique)          settings for one business
-  sms_enabled boolean           master on/off (default false)
-  confirmation_enabled boolean  event toggles
-  reminder_enabled boolean
-  status_change_enabled boolean
-  confirmation_template text    handlebar-style {{customer_name}} etc
-  reminder_template text
-  cancellation_template text
-  reschedule_template text
-  sender_name text              short alphanumeric prepended if provider allows
+5. **Verify the live UI with Playwright** (only if signed-in session is available; `LOVABLE_BROWSER_AUTH_STATUS=injected`)
+   - Restore the owner session, navigate to `/calendar`, `/week`, `/kanban`.
+   - Screenshot each and confirm the booking card is visible in the right slot / column.
+   - If `LOVABLE_BROWSER_AUTH_STATUS` is `signed_out` or `external_unmanaged`, skip this step and rely on the DB + query-level verification, and report that limitation.
 
-sms_usage                        rolling monthly counter
-  business_id, month (YYYY-MM)   composite unique
-  sent_count int
-  cap int                        snapshot of tier cap at first send of month
+6. **Report**
+   - For each view: pass/fail with evidence (row count, screenshot path, or query result).
+   - If any view is missing the booking, diagnose (RLS on read, date filter, staff filter, cache) and note the fix — no code changes in plan mode.
 
-sms_log                          audit + STOP handling
-  business_id, booking_id, to_number, body, status, provider_sid, error, sent_at
-
-customer_sms_opt_out             STOP keyword blocklist
-  business_id, phone_e164 (composite pk), opted_out_at
-```
-
-RLS: owners/admins read+write settings for their business; staff read-only; service role bypass. All GRANTs included. `sms_usage` and `sms_log` are read-only from client (writes only via edge functions using service role).
-
-Tier caps (hard-coded in edge function, per `subscription-tiers-uk` memory):
-- Free: 0 (SMS unavailable)
-- Essential: 50/mo
-- Pro: 200/mo
-- Enterprise: 1000/mo
-
-## Edge functions
-
-1. **`send-sms`** (internal helper, not publicly invokable) — accepts `{ business_id, to, body, booking_id, event_type }`:
-   - Load business + tier + `business_sms_settings`; return early if disabled or event toggled off.
-   - Normalize `to` to E.164 (default GB); return `invalid_number` if not parseable.
-   - Check `customer_sms_opt_out`; return `opted_out` if matched.
-   - Increment/read `sms_usage` for current month; if `sent_count >= cap` → log `over_cap` and return without sending.
-   - POST to Twilio Messages API with Basic Auth (SID+token); on success bump counter and insert `sms_log` row with status `sent`; on failure log `failed` with Twilio error.
-
-2. **`send-booking-confirmation`** (existing) — after email, invoke `send-sms` with `confirmation` template rendered from booking data.
-
-3. **`send-appointment-reminders`** (existing pg_cron function) — extend to also fire `send-sms` with `reminder` template for bookings 24h out where reminder hasn't sent.
-
-4. **`twilio-webhook`** (existing) — extend inbound handler: on `STOP`/`UNSUBSCRIBE`/`STOPALL` insert into `customer_sms_opt_out` and reply with confirmation; on `START` remove the row. HMAC-SHA1 verify per existing pattern.
-
-Status-change SMS is fired from a small trigger in `useBookingActions.updateStatus` (client → invoke `send-sms` with `cancellation` or `reschedule` template).
-
-## Template engine
-
-Tiny in-function renderer: replace `{{customer_name}}`, `{{business_name}}`, `{{service_name}}`, `{{staff_name}}`, `{{start_time}}` (formatted `EEE d MMM, HH:mm`), `{{booking_url}}`. Unknown tokens left as-is. Char count check — warn in UI at >160.
-
-Defaults:
-- Confirmation: `Hi {{customer_name}}, your {{service_name}} at {{business_name}} is booked for {{start_time}}. Reply STOP to opt out.`
-- Reminder: `Reminder: {{service_name}} at {{business_name}} tomorrow at {{start_time}}. See you then!`
-- Cancellation: `Your {{service_name}} on {{start_time}} at {{business_name}} has been cancelled.`
-- Reschedule: `Your {{service_name}} at {{business_name}} has been rescheduled to {{start_time}}.`
-
-## UI (owner-only, respects existing `TeamPermissionsSection` / `PagePermissionGate`)
-
-**New section in `SettingsPage` → "SMS Notifications":**
-- Master toggle `Enable SMS`. Disabled + inline copy if tier is Free ("Upgrade to Essential to enable SMS").
-- Three event toggles (Confirmation / 24h Reminder / Status changes).
-- Four `<Textarea>`s (one per template) with live token help chips and char count.
-- Monthly usage bar: `{sent} / {cap} SMS used this month`; red when 100%.
-- "Send test SMS to my number" button (uses admin's phone).
-
-`SettingsPage` gets a new tab or accordion `<SMSNotificationsSection />`.
-
-## Files
-
-- `supabase/migrations/…` — the tables above with grants + RLS.
-- `supabase/functions/send-sms/index.ts` (new).
-- `supabase/functions/send-booking-confirmation/index.ts` (extend).
-- `supabase/functions/send-appointment-reminders/index.ts` (extend).
-- `supabase/functions/twilio-webhook/index.ts` (extend STOP/START).
-- `src/hooks/sms/useSmsSettings.ts` (new).
-- `src/components/settings/SMSNotificationsSection.tsx` (new).
-- `src/pages/settings/SettingsPage.tsx` (mount section, owner-only).
-- `src/hooks/bookings/useBookingActions.ts` (invoke `send-sms` on status flip when enabled).
-- `src/integrations/supabase/types.ts` (regenerated by migration).
-
-## Secrets flow
-
-Kick off with `secrets--add_secret` for the three Twilio values. If the user cancels, ship everything except the actual sends — the edge function returns `not_configured` and the UI shows a "Twilio credentials missing — contact support" state.
-
-## Verification
-
-- Toggle SMS off → creating a booking sends email only, no `sms_log` row.
-- Toggle SMS on with valid credentials → confirmation SMS arrives; `sms_usage.sent_count` = 1; `sms_log` shows `sent`.
-- Fire 24h-reminder cron manually via `supabase--curl_edge_functions` → reminder SMS row appears.
-- Cancel a booking → cancellation SMS logged.
-- Exceed cap in test → next attempt logs `over_cap` and no Twilio call is made.
-- Reply STOP from a test phone → row appears in `customer_sms_opt_out`; next attempt to same number logs `opted_out`.
-- Free-tier business → toggle disabled in UI; edge function refuses.
+## Notes
+- No schema or code changes are planned; this is a read-only verification pass.
+- The recent fix (client-generated `id`, no `.select().single()` after anon insert) is the specific behavior being validated.
+- Test row will be left in place unless you want it deleted afterwards — say the word and I'll clean it up.
