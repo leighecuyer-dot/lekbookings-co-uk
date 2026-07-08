@@ -154,9 +154,11 @@ export default function PricingPage() {
                   <span className="text-sm text-muted-foreground">{t.period}</span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Transaction fee: <span className="font-medium text-foreground">{t.txFee}</span>
-              </p>
+              {t.txFee && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Transaction fee: <span className="font-medium text-foreground">{t.txFee}</span>
+                </p>
+              )}
 
               <div className="mt-6 space-y-3 rounded-2xl border border-border bg-muted/40 p-4">
                 <Row icon={<Users className="h-4 w-4" />} label="Customers" value={t.customers} />
