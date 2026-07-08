@@ -57,9 +57,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (!booking.customer_email || !booking.customer_name) {
+    if (!booking.customer_name) {
       return new Response(
-        JSON.stringify({ message: "Missing customer email or name" }),
+        JSON.stringify({ message: "Missing customer name", emailSent: false, smsSent: false }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
