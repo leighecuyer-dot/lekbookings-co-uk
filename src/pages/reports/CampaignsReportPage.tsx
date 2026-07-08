@@ -284,11 +284,13 @@ export default function CampaignsReportPage() {
               <TabsContent value="all" className="mt-4">
                 {isLoading ? (
                   <div className="text-center py-8 text-muted-foreground">Loading campaigns...</div>
-                ) : campaigns.length === 0 ? (
+                ) : scopedCampaigns.length === 0 ? (
                   <EmptyState
                     icon={MessageSquare}
                     title="No campaigns yet"
-                    description="Start sending campaigns from the Customers page to see performance data here."
+                    description={scopeAll
+                      ? "Start sending campaigns from the Customers page to see performance data here."
+                      : "No campaigns to your assigned customers yet."}
                   />
                 ) : (
                   <div className="overflow-x-auto">
@@ -306,7 +308,7 @@ export default function CampaignsReportPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {campaigns.map((campaign) => {
+                        {scopedCampaigns.map((campaign) => {
                           const metrics = calculateCampaignMetrics(campaign);
                           return (
                             <TableRow key={campaign.id}>
