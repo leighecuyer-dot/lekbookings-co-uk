@@ -55,6 +55,7 @@ interface Customer {
 export default function CustomersPage() {
   const { currentBusiness, isResellerMode } = useBusiness();
   const { createCustomer: resellerCreateCustomer } = useResellerOperations();
+  const { scopeAll } = useMyCustomerIds(currentBusiness?.id);
   const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
