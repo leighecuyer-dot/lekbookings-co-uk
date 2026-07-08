@@ -33,9 +33,9 @@ const plans: Plan[] = [
   {
     name: "Essential",
     description: "For solo practitioners",
-    price: 20,
+    price: 25,
     period: "month",
-    transactionFee: "1.5%",
+    transactionFee: "",
     features: [
       { name: "Up to 2 staff members", included: true },
       { name: "Up to 100 bookings/month", included: true },
