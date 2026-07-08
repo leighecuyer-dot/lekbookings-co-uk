@@ -150,10 +150,12 @@ export function PricingSection() {
                   "text-sm ml-1",
                   plan.popular ? "text-background/70" : "text-muted-foreground"
                 )}>/{plan.period}</span>
-                <p className={cn(
-                  "text-xs mt-2",
-                  plan.popular ? "text-background/60" : "text-muted-foreground"
-                )}>+ {plan.transactionFee} per transaction</p>
+                {plan.transactionFee && (
+                  <p className={cn(
+                    "text-xs mt-2",
+                    plan.popular ? "text-background/60" : "text-muted-foreground"
+                  )}>+ {plan.transactionFee} per transaction</p>
+                )}
               </div>
 
               {/* Page Builder Badge */}
