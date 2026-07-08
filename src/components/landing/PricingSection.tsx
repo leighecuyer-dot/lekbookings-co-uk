@@ -54,9 +54,9 @@ const plans: Plan[] = [
   {
     name: "Professional",
     description: "For growing businesses",
-    price: 59,
+    price: 51,
     period: "month",
-    transactionFee: "1%",
+    transactionFee: "",
     features: [
       { name: "Up to 5 staff members", included: true },
       { name: "Unlimited bookings", included: true },
