@@ -1,36 +1,37 @@
 ## Goal
-Confirm a booking created anonymously from `/book/:slug` shows up straight away in the owner's admin views (Day/Week calendar and Kanban) at the right time slot, staff, and status.
+On the public booking form success step, show a short human-readable booking reference and make sure a confirmation SMS is sent to the customer's phone whenever one was provided.
 
-## Verification steps
+## Changes
 
-1. **Pick a test business**
-   - Query `businesses` for a slug that has at least one active service and one active staff member.
-   - Note its `id`, a `service_id`, and a `staff_id`.
+### 1. Booking reference
+- Derive a short reference from the client-generated `bookingId` (first 8 chars of the UUID, uppercased, e.g. `A1B2C3D4`). No DB change — the UUID is already the source of truth; this is a display formatting.
+- Store it in component state when the insert succeeds and render it on the success step in `BookingFormModal.tsx`:
+  - Prominent line: `Reference: A1B2C3D4`
+  - "Copy" button (uses `navigator.clipboard`, toast on success).
+- Include the reference in the existing success screen alongside date/time/service so the customer can quote it.
 
-2. **Create a booking as anonymous (simulating the public page)**
-   - Use the anon key against `POST /rest/v1/bookings` with the same payload shape `BookingFormModal` sends: client-generated `id` (uuid), `business_id`, `service_id`, `staff_id`, `customer_name`, `start_time`, `end_time`, `status: 'pending'`, `payment_status: 'unpaid'`.
-   - Confirm HTTP 201 and no RLS error. Record the `id` and `start_time`.
+### 2. SMS on booking creation
+Current flow: after anon insert, `send-booking-confirmation` is only invoked when a valid email is present. Server-side that function also fires SMS, so no-email-but-phone bookings currently get nothing.
 
-3. **Verify DB persistence (owner view)**
-   - `SELECT` the row via `supabase--read_query` to confirm it landed with the expected `business_id`, `staff_id`, `start_time`, `status='pending'`.
+Fix in `BookingFormModal.handleSubmit`:
+- Always invoke `send-booking-confirmation` when the insert succeeds (drop the email guard). The edge function already looks up the booking server-side and no-ops the email step if there's no customer email; it will still send SMS when a phone is present and per-business SMS opt-in + tier cap allow it.
+- Keep the current `confirmationSent` UX flag; extend it to reflect either email or SMS delivery (edge function response includes `emailSent` / `smsSent`).
+- On the success screen, show one of:
+  - "Confirmation sent to your email and phone"
+  - "Confirmation sent to your phone"
+  - "Confirmation sent to your email"
+  - "Save your reference — we couldn't send a confirmation" (fallback)
 
-4. **Verify admin UI queries return it**
-   - Reproduce the exact fetches used by:
-     - `CalendarPage` / `DayTimelineView` (bookings for that day + business, joined with service/staff)
-     - `WeekPage` / `WeekView` (bookings within the week window)
-     - `KanbanPage` / `KanbanView` (pending column, no date filter per project memory)
-   - Confirm the new row is included in each result set.
+No new tables, no new secrets — Twilio secrets are already configured, and `business_sms_settings` / tier caps already gate sending.
 
-5. **Verify the live UI with Playwright** (only if signed-in session is available; `LOVABLE_BROWSER_AUTH_STATUS=injected`)
-   - Restore the owner session, navigate to `/calendar`, `/week`, `/kanban`.
-   - Screenshot each and confirm the booking card is visible in the right slot / column.
-   - If `LOVABLE_BROWSER_AUTH_STATUS` is `signed_out` or `external_unmanaged`, skip this step and rely on the DB + query-level verification, and report that limitation.
+### 3. Minor
+- Update the success-step copy to lead with the reference and delivery status.
+- No changes to admin views, RLS, or migrations.
 
-6. **Report**
-   - For each view: pass/fail with evidence (row count, screenshot path, or query result).
-   - If any view is missing the booking, diagnose (RLS on read, date filter, staff filter, cache) and note the fix — no code changes in plan mode.
+## Files touched
+- `src/components/booking/public/BookingFormModal.tsx` — reference state + success-screen UI + always-invoke edge function.
+- (Optional) `supabase/functions/send-booking-confirmation/index.ts` — ensure the response body includes `{ emailSent, smsSent }` so the UI can render an accurate status. Confirm current shape before editing; only touch if fields are missing.
 
-## Notes
-- No schema or code changes are planned; this is a read-only verification pass.
-- The recent fix (client-generated `id`, no `.select().single()` after anon insert) is the specific behavior being validated.
-- Test row will be left in place unless you want it deleted afterwards — say the word and I'll clean it up.
+## Out of scope
+- No changes to owner/admin booking flow (they already see confirmations via existing hooks).
+- No SMS opt-in UI changes on the public page — customers implicitly consent by providing a phone number for a transactional booking confirmation, which matches the current messaging-compliance model.
