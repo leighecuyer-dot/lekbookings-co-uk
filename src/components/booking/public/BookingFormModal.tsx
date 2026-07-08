@@ -630,10 +630,32 @@ export function BookingFormModal({
               </p>
               <p className="text-sm text-muted-foreground">{service.name}</p>
             </div>
-            {confirmationSent && (
-              <p className="text-xs text-muted-foreground">
-                A confirmation email has been sent to {formData.email}
-              </p>
+            {confirmation && (
+              <div className="space-y-2">
+                <div className="mx-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/50">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Reference</span>
+                  <span className="font-mono font-semibold text-foreground">{confirmation.reference}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(confirmation.reference);
+                      toast.success("Reference copied");
+                    }}
+                    className="text-xs underline text-muted-foreground hover:text-foreground"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {confirmation.emailSent && confirmation.smsSent
+                    ? "Confirmation sent to your email and phone."
+                    : confirmation.smsSent
+                    ? "Confirmation sent to your phone."
+                    : confirmation.emailSent
+                    ? "Confirmation sent to your email."
+                    : "Please save this reference — we couldn't send an automatic confirmation."}
+                </p>
+              </div>
             )}
             <Button onClick={() => onOpenChange(false)} style={{ backgroundColor: primaryColor }}>
               Done
