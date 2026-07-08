@@ -305,7 +305,7 @@ export function BookingFormModal({
     }
 
     setSubmitting(true);
-    setConfirmationSent(false);
+    setConfirmation(null);
 
     const [hours, minutes] = selectedTime.split(":").map(Number);
     const startTime = setMinutes(setHours(selectedDate, hours), minutes);
@@ -327,6 +327,7 @@ export function BookingFormModal({
     // bookings prevents `.select().single()` from returning the inserted row
     // (which would otherwise cause a false "Failed to create booking" error).
     const bookingId = crypto.randomUUID();
+    const reference = bookingId.slice(0, 8).toUpperCase();
 
     const { error } = await supabase.from("bookings").insert({
       id: bookingId,
@@ -359,19 +360,26 @@ export function BookingFormModal({
       } else {
         clearSavedDetails();
       }
-      
+
       setStep("success");
-      // Trigger email notification (fire and forget). Only bookingId is sent —
-      // the edge function looks up the verified customer email server-side.
-      if (formData.email && isValidEmail(formData.email)) {
-        try {
-          const { error: emailErr } = await supabase.functions.invoke("send-booking-confirmation", {
-            body: { bookingId },
+      setConfirmation({ reference, emailSent: false, smsSent: false });
+
+      // Trigger confirmation email + SMS (edge function looks up verified
+      // customer data server-side and handles opt-in / tier caps).
+      try {
+        const { data, error: fnErr } = await supabase.functions.invoke<{
+          emailSent?: boolean;
+          smsSent?: boolean;
+        }>("send-booking-confirmation", { body: { bookingId } });
+        if (!fnErr && data) {
+          setConfirmation({
+            reference,
+            emailSent: !!data.emailSent,
+            smsSent: !!data.smsSent,
           });
-          if (!emailErr) setConfirmationSent(true);
-        } catch (e) {
-          console.log("Email notification skipped:", e);
         }
+      } catch (e) {
+        console.log("Confirmation notification skipped:", e);
       }
     }
     setSubmitting(false);
