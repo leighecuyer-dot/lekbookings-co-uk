@@ -40,6 +40,7 @@ import {
 import { format } from "date-fns";
 import { CustomerPreferencesDialog } from "@/components/customers";
 import { AssignStaffDialog } from "@/components/customers/AssignStaffDialog";
+import { useMyCustomerIds } from "@/hooks/customers";
 
 interface Customer {
   id: string;
