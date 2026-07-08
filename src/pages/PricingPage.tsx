@@ -33,7 +33,7 @@ const tiers: Tier[] = [
     customers: "Unlimited",
     staff: "1 staff member",
     bookings: "Up to 30 / month",
-    txFee: "2%",
+    txFee: "",
     features: [
       { label: "Public booking page", included: true },
       { label: "Calendar & customers", included: true },
