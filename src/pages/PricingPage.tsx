@@ -68,7 +68,7 @@ const tiers: Tier[] = [
   },
   {
     name: "Pro",
-    price: "£59",
+    price: "£51",
     period: "/month",
     blurb: "For growing teams who need automation.",
     email: "Unlimited",
@@ -77,7 +77,7 @@ const tiers: Tier[] = [
     customers: "Unlimited",
     staff: "Up to 5 staff",
     bookings: "Unlimited",
-    txFee: "1%",
+    txFee: "",
     features: [
       { label: "Everything in Essential", included: true },
       { label: "Automated SMS reminders", included: true },
