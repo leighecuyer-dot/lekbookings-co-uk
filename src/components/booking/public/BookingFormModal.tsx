@@ -117,7 +117,7 @@ export function BookingFormModal({
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [waitlistDialogOpen, setWaitlistDialogOpen] = useState(false);
   const [waitlistSlot, setWaitlistSlot] = useState<string | null>(null);
-  const [confirmationSent, setConfirmationSent] = useState(false);
+  const [confirmation, setConfirmation] = useState<{ reference: string; emailSent: boolean; smsSent: boolean } | null>(null);
   
   
   const [formData, setFormData] = useState({
@@ -305,7 +305,7 @@ export function BookingFormModal({
     }
 
     setSubmitting(true);
-    setConfirmationSent(false);
+    setConfirmation(null);
 
     const [hours, minutes] = selectedTime.split(":").map(Number);
     const startTime = setMinutes(setHours(selectedDate, hours), minutes);
@@ -327,6 +327,7 @@ export function BookingFormModal({
     // bookings prevents `.select().single()` from returning the inserted row
     // (which would otherwise cause a false "Failed to create booking" error).
     const bookingId = crypto.randomUUID();
+    const reference = bookingId.slice(0, 8).toUpperCase();
 
     const { error } = await supabase.from("bookings").insert({
       id: bookingId,
@@ -359,19 +360,26 @@ export function BookingFormModal({
       } else {
         clearSavedDetails();
       }
-      
+
       setStep("success");
-      // Trigger email notification (fire and forget). Only bookingId is sent —
-      // the edge function looks up the verified customer email server-side.
-      if (formData.email && isValidEmail(formData.email)) {
-        try {
-          const { error: emailErr } = await supabase.functions.invoke("send-booking-confirmation", {
-            body: { bookingId },
+      setConfirmation({ reference, emailSent: false, smsSent: false });
+
+      // Trigger confirmation email + SMS (edge function looks up verified
+      // customer data server-side and handles opt-in / tier caps).
+      try {
+        const { data, error: fnErr } = await supabase.functions.invoke<{
+          emailSent?: boolean;
+          smsSent?: boolean;
+        }>("send-booking-confirmation", { body: { bookingId } });
+        if (!fnErr && data) {
+          setConfirmation({
+            reference,
+            emailSent: !!data.emailSent,
+            smsSent: !!data.smsSent,
           });
-          if (!emailErr) setConfirmationSent(true);
-        } catch (e) {
-          console.log("Email notification skipped:", e);
         }
+      } catch (e) {
+        console.log("Confirmation notification skipped:", e);
       }
     }
     setSubmitting(false);
@@ -622,10 +630,32 @@ export function BookingFormModal({
               </p>
               <p className="text-sm text-muted-foreground">{service.name}</p>
             </div>
-            {confirmationSent && (
-              <p className="text-xs text-muted-foreground">
-                A confirmation email has been sent to {formData.email}
-              </p>
+            {confirmation && (
+              <div className="space-y-2">
+                <div className="mx-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/50">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Reference</span>
+                  <span className="font-mono font-semibold text-foreground">{confirmation.reference}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(confirmation.reference);
+                      toast.success("Reference copied");
+                    }}
+                    className="text-xs underline text-muted-foreground hover:text-foreground"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {confirmation.emailSent && confirmation.smsSent
+                    ? "Confirmation sent to your email and phone."
+                    : confirmation.smsSent
+                    ? "Confirmation sent to your phone."
+                    : confirmation.emailSent
+                    ? "Confirmation sent to your email."
+                    : "Please save this reference — we couldn't send an automatic confirmation."}
+                </p>
+              </div>
             )}
             <Button onClick={() => onOpenChange(false)} style={{ backgroundColor: primaryColor }}>
               Done

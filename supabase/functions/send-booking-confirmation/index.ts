@@ -57,9 +57,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (!booking.customer_email || !booking.customer_name) {
+    if (!booking.customer_name) {
       return new Response(
-        JSON.stringify({ message: "Missing customer email or name" }),
+        JSON.stringify({ message: "Missing customer name", emailSent: false, smsSent: false }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
@@ -86,48 +86,59 @@ const handler = async (req: Request): Promise<Response> => {
       hour12: true,
     });
 
-    const Resend = (await import("https://esm.sh/resend@2.0.0")).Resend;
-    const resend = new Resend(apiKey);
+    let emailSent = false;
+    let smsSent = false;
 
-    const safeName = escapeHtml(booking.customer_name);
-    const safeService = escapeHtml(serviceName);
-    const safeDateTime = escapeHtml(dateTime);
-    const safeBusiness = escapeHtml(businessName);
+    if (booking.customer_email) {
+      const Resend = (await import("https://esm.sh/resend@2.0.0")).Resend;
+      const resend = new Resend(apiKey);
 
-    const emailResponse = await resend.emails.send({
-      from: "LEK Booking <onboarding@resend.dev>",
-      to: [booking.customer_email],
-      subject: `Booking Confirmed: ${serviceName}`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">Booking Confirmed! ✓</h1>
-          </div>
-          <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
-            <p style="font-size: 16px; margin-bottom: 20px;">Hi ${safeName},</p>
-            <p style="margin-bottom: 20px;">Your appointment has been confirmed. Here are the details:</p>
-            <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-              <p style="margin: 0 0 10px 0;"><strong>Service:</strong> ${safeService}</p>
-              <p style="margin: 0 0 10px 0;"><strong>Date & Time:</strong> ${safeDateTime}</p>
-              ${businessName ? `<p style="margin: 0;"><strong>Location:</strong> ${safeBusiness}</p>` : ""}
-            </div>
-            <p style="color: #64748b; font-size: 14px;">If you need to make changes to your appointment, please contact us directly.</p>
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">This is an automated message from LEK Booking System</p>
-          </div>
-        </body>
-        </html>
-      `,
-    });
+      const safeName = escapeHtml(booking.customer_name);
+      const safeService = escapeHtml(serviceName);
+      const safeDateTime = escapeHtml(dateTime);
+      const safeBusiness = escapeHtml(businessName);
 
-    // Fire SMS confirmation in parallel (fire-and-forget; respects per-business opt-in + tier caps).
+      try {
+        const emailResponse = await resend.emails.send({
+          from: "LEK Booking <onboarding@resend.dev>",
+          to: [booking.customer_email],
+          subject: `Booking Confirmed: ${serviceName}`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">Booking Confirmed! ✓</h1>
+              </div>
+              <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+                <p style="font-size: 16px; margin-bottom: 20px;">Hi ${safeName},</p>
+                <p style="margin-bottom: 20px;">Your appointment has been confirmed. Here are the details:</p>
+                <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                  <p style="margin: 0 0 10px 0;"><strong>Service:</strong> ${safeService}</p>
+                  <p style="margin: 0 0 10px 0;"><strong>Date & Time:</strong> ${safeDateTime}</p>
+                  <p style="margin: 0 0 10px 0;"><strong>Reference:</strong> ${booking.id.slice(0, 8).toUpperCase()}</p>
+                  ${businessName ? `<p style="margin: 0;"><strong>Location:</strong> ${safeBusiness}</p>` : ""}
+                </div>
+                <p style="color: #64748b; font-size: 14px;">If you need to make changes to your appointment, please contact us directly.</p>
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">This is an automated message from LEK Booking System</p>
+              </div>
+            </body>
+            </html>
+          `,
+        });
+        emailSent = !emailResponse.error;
+      } catch (e) {
+        console.log("Email send failed:", e);
+      }
+    }
+
+    // Send SMS confirmation (respects per-business opt-in + tier caps).
     if (booking.customer_phone) {
       try {
         const smsUrl = `${supabaseUrl}/functions/v1/send-sms`;
-        await fetch(smsUrl, {
+        const smsRes = await fetch(smsUrl, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${serviceKey}`,
@@ -143,15 +154,17 @@ const handler = async (req: Request): Promise<Response> => {
               service_name: serviceName,
               business_name: businessName,
               start_time: dateTime,
+              reference: booking.id.slice(0, 8).toUpperCase(),
             },
           }),
         });
+        smsSent = smsRes.ok;
       } catch (e) {
         console.log("SMS confirmation skipped:", e);
       }
     }
 
-    return new Response(JSON.stringify(emailResponse), {
+    return new Response(JSON.stringify({ emailSent, smsSent }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
