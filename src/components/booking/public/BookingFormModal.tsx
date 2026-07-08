@@ -323,7 +323,13 @@ export function BookingFormModal({
       }
     }
 
-    const { data: created, error } = await supabase.from("bookings").insert({
+    // Generate booking id client-side because the anon SELECT RLS policy on
+    // bookings prevents `.select().single()` from returning the inserted row
+    // (which would otherwise cause a false "Failed to create booking" error).
+    const bookingId = crypto.randomUUID();
+
+    const { error } = await supabase.from("bookings").insert({
+      id: bookingId,
       business_id: businessId,
       service_id: service.id,
       staff_id: selectedStaff,
@@ -337,7 +343,7 @@ export function BookingFormModal({
       total_price: totalPrice > 0 ? totalPrice : null,
       deposit_amount: depositAmount,
       payment_status: "unpaid",
-    }).select("id").single();
+    });
 
     if (error) {
       console.error("Booking error:", error);
@@ -357,10 +363,10 @@ export function BookingFormModal({
       setStep("success");
       // Trigger email notification (fire and forget). Only bookingId is sent —
       // the edge function looks up the verified customer email server-side.
-      if (created?.id && formData.email && isValidEmail(formData.email)) {
+      if (formData.email && isValidEmail(formData.email)) {
         try {
           const { error: emailErr } = await supabase.functions.invoke("send-booking-confirmation", {
-            body: { bookingId: created.id },
+            body: { bookingId },
           });
           if (!emailErr) setConfirmationSent(true);
         } catch (e) {
