@@ -295,21 +295,28 @@ export default function CustomersPage() {
       <div className="space-y-6">
         {/* Scope filter + search */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <Tabs value={scope} onValueChange={(v) => setScope(v as "all" | "mine")}>
-            <TabsList>
-              <TabsTrigger value="all">
-                <Users className="w-4 h-4 mr-1.5" />
-                All contacts
-              </TabsTrigger>
-              <TabsTrigger value="mine" disabled={!currentStaffId}>
-                <UserCheck className="w-4 h-4 mr-1.5" />
-                My contacts
-                {currentStaffId && (
-                  <span className="ml-1.5 text-xs opacity-70">({myCustomerIds.size})</span>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {scopeAll ? (
+            <Tabs value={scope} onValueChange={(v) => setScope(v as "all" | "mine")}>
+              <TabsList>
+                <TabsTrigger value="all">
+                  <Users className="w-4 h-4 mr-1.5" />
+                  All contacts
+                </TabsTrigger>
+                <TabsTrigger value="mine" disabled={!currentStaffId}>
+                  <UserCheck className="w-4 h-4 mr-1.5" />
+                  My contacts
+                  {currentStaffId && (
+                    <span className="ml-1.5 text-xs opacity-70">({myCustomerIds.size})</span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          ) : (
+            <Badge variant="secondary" className="gap-1.5">
+              <UserCheck className="w-3.5 h-3.5" />
+              My assigned customers
+            </Badge>
+          )}
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -321,11 +328,17 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {scope === "all" && (
+        {scopeAll && scope === "all" && (
           <p className="text-xs text-muted-foreground -mt-2">
             All contacts are visible to every team member so anyone can reach a customer in an emergency.
           </p>
         )}
+        {!scopeAll && (
+          <p className="text-xs text-muted-foreground -mt-2">
+            You only see customers assigned to you. Ask an owner or admin to assign more.
+          </p>
+        )}
+
 
 
         {/* Customer List */}
