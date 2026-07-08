@@ -46,7 +46,7 @@ const tiers: Tier[] = [
   },
   {
     name: "Essential",
-    price: "£20",
+    price: "£25",
     period: "/month",
     blurb: "For solo practitioners getting started.",
     email: "Unlimited",
@@ -55,7 +55,7 @@ const tiers: Tier[] = [
     customers: "Unlimited",
     staff: "Up to 2 staff",
     bookings: "Up to 100 / month",
-    txFee: "1.5%",
+    txFee: "",
     features: [
       { label: "Everything in Free", included: true },
       { label: "Branding customization", included: true },
