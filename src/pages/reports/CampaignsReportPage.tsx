@@ -42,6 +42,7 @@ interface CampaignConversion {
 export default function CampaignsReportPage() {
   const { currentBusiness } = useBusiness();
   const { limits, tier, loading: tierLoading } = useSubscriptionTier(currentBusiness?.id || null);
+  const { scopeAll, ids: myCustomerIds } = useMyCustomerIds(currentBusiness?.id);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
 
   // Check if user has access to campaign reports
