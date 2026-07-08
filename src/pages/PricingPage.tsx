@@ -91,7 +91,7 @@ const tiers: Tier[] = [
   },
   {
     name: "Enterprise",
-    price: "£149",
+    price: "£167",
     period: "/month",
     blurb: "For larger teams with bigger volumes.",
     email: "Unlimited",
@@ -100,7 +100,7 @@ const tiers: Tier[] = [
     customers: "Unlimited",
     staff: "Unlimited staff",
     bookings: "Unlimited",
-    txFee: "0.5%",
+    txFee: "",
     features: [
       { label: "Everything in Pro", included: true },
       { label: "API access", included: true },
