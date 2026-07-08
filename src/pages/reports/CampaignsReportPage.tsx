@@ -80,9 +80,36 @@ export default function CampaignsReportPage() {
     enabled: !!currentBusiness?.id && campaigns.length > 0,
   });
 
+  // Scope campaigns and conversions to the current user's visible customers
+  // when they're a staff member (owners/admins/resellers see all).
+  const { scopedCampaigns, scopedConversions } = useMemo(() => {
+    if (scopeAll) {
+      return { scopedCampaigns: campaigns, scopedConversions: conversions };
+    }
+    const allowed = myCustomerIds;
+    const filteredCampaigns = campaigns
+      .map((c) => {
+        const recipientIds = (c.recipient_customer_ids || []).filter((id) => allowed.has(id));
+        if (recipientIds.length === 0) return null;
+        // Prorate sent/failed counts to the visible slice
+        const originalRecipients = c.recipient_count || (c.recipient_customer_ids?.length ?? 0);
+        const ratio = originalRecipients > 0 ? recipientIds.length / originalRecipients : 0;
+        return {
+          ...c,
+          recipient_customer_ids: recipientIds,
+          recipient_count: recipientIds.length,
+          sent_count: Math.round((c.sent_count || 0) * ratio),
+          failed_count: Math.round((c.failed_count || 0) * ratio),
+        } as Campaign;
+      })
+      .filter((c): c is Campaign => c !== null);
+    const filteredConversions = conversions.filter((cv) => allowed.has(cv.customer_id));
+    return { scopedCampaigns: filteredCampaigns, scopedConversions: filteredConversions };
+  }, [scopeAll, myCustomerIds, campaigns, conversions]);
+
   // Calculate metrics
   const calculateCampaignMetrics = (campaign: Campaign) => {
-    const campaignConversions = conversions.filter(c => c.campaign_id === campaign.id);
+    const campaignConversions = scopedConversions.filter(c => c.campaign_id === campaign.id);
     const conversionRate = campaign.sent_count > 0 
       ? (campaignConversions.length / campaign.sent_count) * 100 
       : 0;
@@ -101,25 +128,26 @@ export default function CampaignsReportPage() {
 
   // Overall stats
   const overallStats = {
-    totalCampaigns: campaigns.length,
-    totalRecipients: campaigns.reduce((sum, c) => sum + c.recipient_count, 0),
-    totalConversions: conversions.length,
-    totalRevenue: conversions.reduce((sum, c) => sum + (c.booking_value || 0), 0),
-    avgConversionRate: campaigns.length > 0
-      ? campaigns.reduce((sum, c) => {
+    totalCampaigns: scopedCampaigns.length,
+    totalRecipients: scopedCampaigns.reduce((sum, c) => sum + c.recipient_count, 0),
+    totalConversions: scopedConversions.length,
+    totalRevenue: scopedConversions.reduce((sum, c) => sum + (c.booking_value || 0), 0),
+    avgConversionRate: scopedCampaigns.length > 0
+      ? scopedCampaigns.reduce((sum, c) => {
           const metrics = calculateCampaignMetrics(c);
           return sum + metrics.conversionRate;
-        }, 0) / campaigns.length
+        }, 0) / scopedCampaigns.length
       : 0,
   };
 
   // Recent campaigns (last 30 days)
-  const recentCampaigns = campaigns.filter(c => 
+  const recentCampaigns = scopedCampaigns.filter(c => 
     isWithinInterval(new Date(c.sent_at), {
       start: subDays(new Date(), 30),
       end: new Date(),
     })
   );
+
 
   const getCampaignTypeBadge = (type: string) => {
     const variants: Record<string, "default" | "secondary" | "outline"> = {
