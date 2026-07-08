@@ -33,9 +33,9 @@ const plans: Plan[] = [
   {
     name: "Essential",
     description: "For solo practitioners",
-    price: 20,
+    price: 25,
     period: "month",
-    transactionFee: "1.5%",
+    transactionFee: "",
     features: [
       { name: "Up to 2 staff members", included: true },
       { name: "Up to 100 bookings/month", included: true },
@@ -54,9 +54,9 @@ const plans: Plan[] = [
   {
     name: "Professional",
     description: "For growing businesses",
-    price: 59,
+    price: 51,
     period: "month",
-    transactionFee: "1%",
+    transactionFee: "",
     features: [
       { name: "Up to 5 staff members", included: true },
       { name: "Unlimited bookings", included: true },
@@ -74,9 +74,9 @@ const plans: Plan[] = [
   {
     name: "Enterprise",
     description: "For larger teams",
-    price: 149,
+    price: 167,
     period: "month",
-    transactionFee: "0.5%",
+    transactionFee: "",
     features: [
       { name: "Unlimited staff", included: true },
       { name: "Unlimited bookings", included: true },
@@ -150,10 +150,12 @@ export function PricingSection() {
                   "text-sm ml-1",
                   plan.popular ? "text-background/70" : "text-muted-foreground"
                 )}>/{plan.period}</span>
-                <p className={cn(
-                  "text-xs mt-2",
-                  plan.popular ? "text-background/60" : "text-muted-foreground"
-                )}>+ {plan.transactionFee} per transaction</p>
+                {plan.transactionFee && (
+                  <p className={cn(
+                    "text-xs mt-2",
+                    plan.popular ? "text-background/60" : "text-muted-foreground"
+                  )}>+ {plan.transactionFee} per transaction</p>
+                )}
               </div>
 
               {/* Page Builder Badge */}

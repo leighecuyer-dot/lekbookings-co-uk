@@ -33,7 +33,7 @@ const tiers: Tier[] = [
     customers: "Unlimited",
     staff: "1 staff member",
     bookings: "Up to 30 / month",
-    txFee: "2%",
+    txFee: "",
     features: [
       { label: "Public booking page", included: true },
       { label: "Calendar & customers", included: true },
@@ -46,7 +46,7 @@ const tiers: Tier[] = [
   },
   {
     name: "Essential",
-    price: "£20",
+    price: "£25",
     period: "/month",
     blurb: "For solo practitioners getting started.",
     email: "Unlimited",
@@ -55,7 +55,7 @@ const tiers: Tier[] = [
     customers: "Unlimited",
     staff: "Up to 2 staff",
     bookings: "Up to 100 / month",
-    txFee: "1.5%",
+    txFee: "",
     features: [
       { label: "Everything in Free", included: true },
       { label: "Branding customization", included: true },
@@ -68,7 +68,7 @@ const tiers: Tier[] = [
   },
   {
     name: "Pro",
-    price: "£59",
+    price: "£51",
     period: "/month",
     blurb: "For growing teams who need automation.",
     email: "Unlimited",
@@ -77,7 +77,7 @@ const tiers: Tier[] = [
     customers: "Unlimited",
     staff: "Up to 5 staff",
     bookings: "Unlimited",
-    txFee: "1%",
+    txFee: "",
     features: [
       { label: "Everything in Essential", included: true },
       { label: "Automated SMS reminders", included: true },
@@ -91,7 +91,7 @@ const tiers: Tier[] = [
   },
   {
     name: "Enterprise",
-    price: "£149",
+    price: "£167",
     period: "/month",
     blurb: "For larger teams with bigger volumes.",
     email: "Unlimited",
@@ -100,7 +100,7 @@ const tiers: Tier[] = [
     customers: "Unlimited",
     staff: "Unlimited staff",
     bookings: "Unlimited",
-    txFee: "0.5%",
+    txFee: "",
     features: [
       { label: "Everything in Pro", included: true },
       { label: "API access", included: true },
@@ -154,9 +154,11 @@ export default function PricingPage() {
                   <span className="text-sm text-muted-foreground">{t.period}</span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Transaction fee: <span className="font-medium text-foreground">{t.txFee}</span>
-              </p>
+              {t.txFee && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Transaction fee: <span className="font-medium text-foreground">{t.txFee}</span>
+                </p>
+              )}
 
               <div className="mt-6 space-y-3 rounded-2xl border border-border bg-muted/40 p-4">
                 <Row icon={<Users className="h-4 w-4" />} label="Customers" value={t.customers} />
