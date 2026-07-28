@@ -1,45 +1,44 @@
-## What I checked in your live data
-
-Guild Hair (`/book/the-guild-hair-f1yk0u`) is real and mostly ready:
-
-- 16 active services, 3 staff (Craig, Helen, Charlotte) all with working hours set
-- 11 customers, 9 bookings already in the system, booking page theme configured
-- Business email `craigandhelen@guildhair.co.uk`, phone `+44 7928 455886`
-- Email sending domain `notify.lekbookings.co.uk` is verified and live
-- Twilio SMS/WhatsApp credentials are all stored
-
-Four things will trip you up today if we don't fix them first:
-
-1. **Timezone is set to UTC.** It's British Summer Time, so every appointment time can display an hour out. Needs to be London.
-2. **SMS is switched off.** There is no SMS settings record for Guild Hair, so no confirmation text will ever send. It has never sent one (SMS log is empty).
-3. **No message has ever actually been sent** from this business — email or SMS. So today is the first real send; it needs a controlled test before a real customer sees it.
-4. **A duplicate leftover business exists** named "Tes 2" with a near-identical Guild Hair booking link. Easy to demo the wrong page by accident.
-
-Also: staff records have no email or phone, so Craig/Helen/Charlotte can't log in as themselves yet. Fine if today is owner-only, worth knowing.
-
 ## Plan
 
-### Step 1 — Fix the settings that will break the test
-- Set Guild Hair's timezone to London so times show correctly.
-- Create the SMS settings for Guild Hair with SMS on, booking confirmations on, reminders on, and the sender name set to "Guild Hair".
-- Make sure email booking confirmations are explicitly on.
-- Rename or clear the duplicate "Tes 2" business so there's no chance of demoing the wrong link.
+1. **Make GBP the only currency shown in the app**
+   - Keep all service, booking, revenue, dashboard, pricing, and onboarding displays using **£ / GBP**.
+   - Remove the multi-currency choices from the AI price-list import so imported services default to GBP.
+   - Keep price storage as whole GBP values, matching the existing project rule.
 
-### Step 2 — Add a one-tap "Send test message" button
-On the Settings page, next to the SMS section, add a button that sends a test SMS to a number you type in, and a matching one for a test email. This means you can prove the numbers and notices work in the salon, in front of Craig and Helen, without creating a fake booking.
+2. **Make shared booking links show the company booking-page logo**
+   - Update the booking page metadata in the browser to use the current business name and logo.
+   - Add a proper share-preview route/function that returns social preview tags using the business booking logo, then redirects visitors to the booking page.
+   - Update the booking-link copy/share button in Settings so the shared link uses that preview route, which is what WhatsApp/Facebook/iMessage need to show the right picture.
+   - If a company has no booking-page logo, fall back to the business logo, then the LEK default image.
 
-### Step 3 — Run the full test with you before you leave
-I'll run it end to end here first and report what happens:
-- Book as a customer through the public page with your own mobile and email
-- Confirm the booking appears in the calendar and Kanban at the right time
-- Confirm the SMS lands, with correct wording and salon name
-- Confirm the email lands and isn't in spam
-- Change the booking status as owner and confirm the update notice sends
+3. **Let customers choose the right staff member when booking**
+   - Change the public booking modal flow to: **service → date → staff → time → details**.
+   - Only show staff who:
+     - are active,
+     - are assigned to that service where service assignments exist,
+     - are working that day,
+     - are not on leave,
+     - and have at least one free slot for the selected service length.
+   - After the customer picks a staff member, show only that staff member’s available times.
+   - If nobody is available for that date, show a clear “choose another date” message instead of letting the customer pick an invalid slot.
 
-### Step 4 — Your on-site checklist
-I'll write you a short printed-style checklist page you can follow at the salon, step by step, in order.
+4. **Fix the SMS failure path and add Twilio instructions**
+   - The latest backend log confirms the customer number is now formatted correctly; the current failure is the configured Twilio **From** number: `+441156478559` is **not SMS-capable**.
+   - Keep the code change that supports either:
+     - `TWILIO_SMS_FROM` = an SMS-capable Twilio number, or
+     - `TWILIO_MESSAGING_SERVICE_SID` = a Twilio Messaging Service.
+   - Add clearer on-screen SMS test errors so it says exactly when the sender number is the issue.
+   - Provide a simple Twilio checklist:
+     1. In Twilio, go to **Phone Numbers → Manage → Active numbers**.
+     2. Open the number you want to use.
+     3. Confirm it has **SMS** capability, not only Voice.
+     4. If it does not, buy/use a Twilio number with SMS enabled.
+     5. Save that SMS-capable number as `TWILIO_SMS_FROM` in Lovable’s secure secrets form.
+     6. Re-test **Settings → SMS notifications → Send test SMS**.
+   - Recommend enabling Twilio **SMS Pumping Protection** and reviewing **Geo Permissions** before real customer traffic.
 
-## Technical notes
-- Timezone/SMS settings are data changes (`businesses.timezone`, new `business_sms_settings` row), not code.
-- Test-send buttons call the existing `send-sms` and booking-confirmation functions with a `test` event type, logged to `sms_log` so we can see delivery status and any Twilio error code.
-- UK numbers get normalised to +44 E.164 before sending, and STOP/opt-out rules still apply.
+5. **Verify after implementation**
+   - Check the latest SMS log after a test send.
+   - Check a public booking page flow where a service has multiple staff.
+   - Confirm copied booking links use the new share-preview URL.
+   - Confirm remaining visible currency labels are GBP/£.
