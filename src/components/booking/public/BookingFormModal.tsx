@@ -167,15 +167,12 @@ export function BookingFormModal({
     const dayEnd = endOfDay(date);
     setAvailabilityLoading(true);
 
-    const { data, error } = await (supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(
-      "get_public_booking_availability",
-      {
-        p_business_id: businessId,
-        p_service_id: service.id,
-        p_day_start: dayStart.toISOString(),
-        p_day_end: dayEnd.toISOString(),
-      }
-    );
+    const { data, error } = await supabase.rpc("get_public_booking_availability", {
+      p_business_id: businessId,
+      p_service_id: service.id,
+      p_day_start: dayStart.toISOString(),
+      p_day_end: dayEnd.toISOString(),
+    });
 
     setAvailabilityLoading(false);
 
