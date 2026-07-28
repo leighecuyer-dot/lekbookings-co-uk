@@ -62,6 +62,7 @@ const AppRoutes = () => (
       </RouteGuard>
     } />
     <Route path="/book/:slug" element={<PublicBookingPage />} />
+    <Route path="/share/book/:slug" element={<PublicBookingPage />} />
     <Route path="/dns-setup" element={<DnsSetupPage />} />
     <Route path="/unsubscribe" element={<UnsubscribePage />} />
     
