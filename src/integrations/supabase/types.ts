@@ -1914,6 +1914,15 @@ export type Database = {
         Args: { _business_id: string; _from_date?: string; _to_date?: string }
         Returns: Json
       }
+      get_public_booking_availability: {
+        Args: {
+          p_business_id: string
+          p_day_end: string
+          p_day_start: string
+          p_service_id: string
+        }
+        Returns: Json
+      }
       get_reseller_audit_logs: {
         Args: { p_business_id?: string; p_limit?: number }
         Returns: {

@@ -22,6 +22,7 @@ import { DataAccessRequests } from "@/components/settings/DataAccessRequests";
 import { TeamPermissionsSection } from "@/components/settings/TeamPermissionsSection";
 import { SMSNotificationsSection } from "@/components/settings/SMSNotificationsSection";
 import { EmailNotificationsSection } from "@/components/settings/EmailNotificationsSection";
+import { getBookingShareUrl, getBookingUrl } from "@/lib/bookingLinks";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
@@ -129,12 +130,11 @@ export default function SettingsPage() {
     setLoading(false);
   };
 
-  const bookingUrl = currentBusiness
-    ? `${window.location.origin}/book/${currentBusiness.slug}`
-    : "";
+  const bookingUrl = currentBusiness ? getBookingUrl(window.location.origin, currentBusiness.slug) : "";
+  const bookingShareUrl = currentBusiness ? getBookingShareUrl(window.location.origin, currentBusiness.slug) : "";
 
   const copyBookingUrl = () => {
-    navigator.clipboard.writeText(bookingUrl);
+    navigator.clipboard.writeText(bookingShareUrl);
     toast.success("Booking link copied!");
   };
 
@@ -453,7 +453,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
-                value={bookingUrl}
+                value={bookingShareUrl}
                 readOnly
                 className="font-mono text-sm"
               />

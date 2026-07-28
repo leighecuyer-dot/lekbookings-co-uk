@@ -9,35 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Camera, Link, Loader2, Upload, Check, X, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-
-const CURRENCY_OPTIONS = [
-  { code: "GBP", symbol: "£", label: "GBP (£)" },
-  { code: "USD", symbol: "$", label: "USD ($)" },
-  { code: "EUR", symbol: "€", label: "EUR (€)" },
-  { code: "AUD", symbol: "A$", label: "AUD (A$)" },
-  { code: "CAD", symbol: "C$", label: "CAD (C$)" },
-  { code: "NZD", symbol: "NZ$", label: "NZD (NZ$)" },
-  { code: "CHF", symbol: "CHF", label: "CHF" },
-  { code: "JPY", symbol: "¥", label: "JPY (¥)" },
-  { code: "CNY", symbol: "¥", label: "CNY (¥)" },
-  { code: "INR", symbol: "₹", label: "INR (₹)" },
-  { code: "ZAR", symbol: "R", label: "ZAR (R)" },
-  { code: "AED", symbol: "د.إ", label: "AED (د.إ)" },
-  { code: "SGD", symbol: "S$", label: "SGD (S$)" },
-  { code: "HKD", symbol: "HK$", label: "HKD (HK$)" },
-];
 
 interface ExtractedService {
   name: string;
@@ -66,34 +42,12 @@ export function AiServiceImportDialog({
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [extractedServices, setExtractedServices] = useState<ExtractedService[]>([]);
-  const [detectedCurrency, setDetectedCurrency] = useState<string>("GBP");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const getCurrencySymbol = (code: string): string => {
-    const symbols: Record<string, string> = {
-      GBP: "£",
-      USD: "$",
-      EUR: "€",
-      AUD: "A$",
-      CAD: "C$",
-      NZD: "NZ$",
-      CHF: "CHF",
-      JPY: "¥",
-      CNY: "¥",
-      INR: "₹",
-      ZAR: "R",
-      AED: "د.إ",
-      SGD: "S$",
-      HKD: "HK$",
-    };
-    return symbols[code] || code;
-  };
-
   const resetState = () => {
     setExtractedServices([]);
-    setDetectedCurrency("GBP");
     setImagePreview(null);
     setWebsiteUrl("");
     setLoading(false);
@@ -155,7 +109,6 @@ export function AiServiceImportDialog({
         return;
       }
 
-      setDetectedCurrency(data.currency || "GBP");
       setExtractedServices(services);
       toast.success(`Found ${services.length} services!`);
     } catch (error) {
@@ -203,7 +156,6 @@ export function AiServiceImportDialog({
         return;
       }
 
-      setDetectedCurrency(data.currency || "GBP");
       setExtractedServices(services);
       toast.success(`Found ${services.length} services!`);
     } catch (error) {
@@ -421,18 +373,7 @@ export function AiServiceImportDialog({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Select value={detectedCurrency} onValueChange={setDetectedCurrency}>
-                  <SelectTrigger className="w-[110px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCY_OPTIONS.map((currency) => (
-                      <SelectItem key={currency.code} value={currency.code}>
-                        {currency.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <span className="rounded-md border px-3 py-1 text-sm font-medium">GBP (£)</span>
                 <Button variant="ghost" size="sm" onClick={resetState}>
                   Start Over
                 </Button>
@@ -470,7 +411,7 @@ export function AiServiceImportDialog({
                           placeholder="Service name"
                         />
                         <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-sm text-muted-foreground">{getCurrencySymbol(detectedCurrency)}</span>
+                          <span className="text-sm text-muted-foreground">£</span>
                           <Input
                             type="number"
                             step="0.01"

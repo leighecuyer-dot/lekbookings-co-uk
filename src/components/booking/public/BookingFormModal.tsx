@@ -20,7 +20,7 @@ import { WaitlistDialog } from "@/components/waitlist/WaitlistDialog";
 import { isValidEmail } from "@/lib/validation";
 
 interface Booking {
-  id: string;
+  staff_id: string | null;
   start_time: string;
   end_time: string;
   status: string;
@@ -37,13 +37,7 @@ interface Staff {
   id: string;
   name: string;
   working_hours: Record<string, { enabled: boolean; start: string; end: string }> | null;
-}
-
-interface StaffLeave {
-  id: string;
-  staff_id: string;
-  start_date: string;
-  end_date: string;
+  on_leave?: boolean;
 }
 
 interface BookingFormModalProps {
@@ -60,11 +54,7 @@ interface SavedCustomerDetails {
   phone: string;
 }
 
-const TIME_SLOTS = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-  "15:00", "15:30", "16:00", "16:30", "17:00"
-];
+const DEFAULT_WORKING_HOURS = { enabled: true, start: "09:00", end: "17:00" };
 
 const STORAGE_KEY = "booking_customer_details";
 
@@ -100,12 +90,12 @@ export function BookingFormModal({
   service,
   primaryColor,
 }: BookingFormModalProps) {
-  const [step, setStep] = useState<"date" | "time" | "details" | "success">("date");
+  const [step, setStep] = useState<"date" | "staff" | "time" | "details" | "success">("date");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
-  const [staffLeave, setStaffLeave] = useState<StaffLeave[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [rememberDetails, setRememberDetails] = useState(false);
   const [hasSavedDetails, setHasSavedDetails] = useState(false);
@@ -129,8 +119,6 @@ export function BookingFormModal({
 
   useEffect(() => {
     if (open && businessId) {
-      fetchStaff();
-      fetchStaffLeave();
       fetchPaymentConfig();
       // Load saved customer details
       const saved = getSavedDetails();
@@ -170,59 +158,40 @@ export function BookingFormModal({
   // Fetch existing bookings when date changes
   useEffect(() => {
     if (selectedDate && businessId) {
-      fetchBookingsForDate(selectedDate);
+      fetchAvailabilityForDate(selectedDate);
     }
-  }, [selectedDate, businessId]);
+  }, [selectedDate, businessId, service.id]);
 
-  const fetchBookingsForDate = async (date: Date) => {
+  const fetchAvailabilityForDate = async (date: Date) => {
     const dayStart = startOfDay(date);
     const dayEnd = endOfDay(date);
-    
-    const { data } = await supabase
-      .from("bookings")
-      .select("id, start_time, end_time, status")
-      .eq("business_id", businessId)
-      .gte("start_time", dayStart.toISOString())
-      .lte("start_time", dayEnd.toISOString())
-      .neq("status", "cancelled");
-    
-    if (data) {
-      setExistingBookings(data);
-    }
-  };
+    setAvailabilityLoading(true);
 
-  const fetchStaff = async () => {
-    const { data } = await supabase
-      .from("staff")
-      .select("id, name, working_hours")
-      .eq("business_id", businessId)
-      .eq("is_active", true);
-    
-    if (data && data.length > 0) {
-      setStaff(data as Staff[]);
-      setSelectedStaff(data[0].id);
-    }
-  };
+    const { data, error } = await supabase.rpc("get_public_booking_availability", {
+      p_business_id: businessId,
+      p_service_id: service.id,
+      p_day_start: dayStart.toISOString(),
+      p_day_end: dayEnd.toISOString(),
+    });
 
-  const fetchStaffLeave = async () => {
-    const { data } = await supabase
-      .from("staff_leave")
-      .select("id, staff_id, start_date, end_date")
-      .eq("business_id", businessId);
-    
-    if (data) {
-      setStaffLeave(data);
-    }
-  };
+    setAvailabilityLoading(false);
 
-  const isStaffOnLeave = (staffId: string, date: Date): boolean => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    return staffLeave.some(
-      (leave) =>
-        leave.staff_id === staffId &&
-        leave.start_date <= dateStr &&
-        leave.end_date >= dateStr
-    );
+    if (error) {
+      console.error("Availability error:", error);
+      setStaff([]);
+      setExistingBookings([]);
+      toast.error("Could not load availability. Please try another date.");
+      return;
+    }
+
+    const availability = data as { staff?: Staff[]; bookings?: Booking[] } | null;
+    const nextStaff = availability?.staff ?? [];
+    setStaff(nextStaff);
+    setExistingBookings(availability?.bookings ?? []);
+
+    if (selectedStaff && !nextStaff.some((member) => member.id === selectedStaff)) {
+      setSelectedStaff(null);
+    }
   };
 
   const fetchPaymentConfig = async () => {
@@ -245,36 +214,53 @@ export function BookingFormModal({
     }
   };
 
-  const getAvailableSlots = () => {
-    if (!selectedDate || !selectedStaff) return TIME_SLOTS;
-    
-    // Check if selected staff is on leave for this date
-    if (isStaffOnLeave(selectedStaff, selectedDate)) {
-      return [];
-    }
-    
+  const parseTimeOnDate = (date: Date, time: string) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return setMinutes(setHours(date, hours), minutes);
+  };
+
+  const formatSlot = (date: Date) => format(date, "HH:mm");
+
+  const getStaffHoursForDate = (staffMember: Staff) => {
+    if (!selectedDate || staffMember.on_leave) return null;
     const dayName = format(selectedDate, "EEEE").toLowerCase();
-    const staffMember = staff.find(s => s.id === selectedStaff);
-    
-    if (!staffMember?.working_hours) return TIME_SLOTS;
-    
-    const dayHours = staffMember.working_hours[dayName];
-    if (!dayHours?.enabled) return [];
-    
-    return TIME_SLOTS.filter(slot => {
-      return slot >= dayHours.start && slot < dayHours.end;
-    });
+    const dayHours = staffMember.working_hours?.[dayName] ?? DEFAULT_WORKING_HOURS;
+    return dayHours?.enabled ? dayHours : null;
+  };
+
+  const getWorkingSlotsForStaff = (staffId: string) => {
+    if (!selectedDate) return [];
+    const staffMember = staff.find((s) => s.id === staffId);
+    if (!staffMember) return [];
+    const hours = getStaffHoursForDate(staffMember);
+    if (!hours) return [];
+
+    const slots: string[] = [];
+    let cursor = parseTimeOnDate(selectedDate, hours.start);
+    const workingEnd = parseTimeOnDate(selectedDate, hours.end);
+
+    while (cursor.getTime() + service.duration_minutes * 60000 <= workingEnd.getTime()) {
+      slots.push(formatSlot(cursor));
+      cursor = new Date(cursor.getTime() + 30 * 60000);
+    }
+
+    return slots;
+  };
+
+  const getAvailableSlots = () => {
+    if (!selectedStaff) return [];
+    return getWorkingSlotsForStaff(selectedStaff);
   };
 
   // Check if a time slot is already booked
-  const isSlotBooked = (slot: string): boolean => {
-    if (!selectedDate) return false;
-    
-    const [hours, minutes] = slot.split(":").map(Number);
-    const slotStart = setMinutes(setHours(selectedDate, hours), minutes);
+  const isSlotBooked = (slot: string, staffId = selectedStaff): boolean => {
+    if (!selectedDate || !staffId) return false;
+
+    const slotStart = parseTimeOnDate(selectedDate, slot);
     const slotEnd = new Date(slotStart.getTime() + service.duration_minutes * 60000);
-    
+
     return existingBookings.some(booking => {
+      if (booking.staff_id && booking.staff_id !== staffId) return false;
       const bookingStart = new Date(booking.start_time);
       const bookingEnd = new Date(booking.end_time);
       // Check for overlap
@@ -282,11 +268,15 @@ export function BookingFormModal({
     });
   };
 
-  // Get available staff for a given date (not on leave)
-  const getAvailableStaff = () => {
-    if (!selectedDate) return staff;
-    return staff.filter(s => !isStaffOnLeave(s.id, selectedDate));
+  const hasAvailableSlot = (staffId: string) => {
+    return getWorkingSlotsForStaff(staffId).some((slot) => !isSlotBooked(slot, staffId));
   };
+
+  const getAvailableStaff = () => {
+    return staff.filter((s) => !s.on_leave && hasAvailableSlot(s.id));
+  };
+
+  const selectedStaffName = staff.find((member) => member.id === selectedStaff)?.name;
 
   const handleJoinWaitlist = (slot: string) => {
     setWaitlistSlot(slot);
@@ -294,7 +284,7 @@ export function BookingFormModal({
   };
 
   const handleSubmit = async () => {
-    if (!selectedDate || !selectedTime || !formData.name) {
+    if (!selectedDate || !selectedStaff || !selectedTime || !formData.name) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -386,6 +376,7 @@ export function BookingFormModal({
   };
 
   const availableSlots = getAvailableSlots();
+  const availableStaff = getAvailableStaff();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -397,6 +388,7 @@ export function BookingFormModal({
           {step !== "success" && (
             <DialogDescription>
               {step === "date" && "Select a date for your appointment"}
+              {step === "staff" && "Choose who you would like to book with"}
               {step === "time" && "Choose your preferred time"}
               {step === "details" && "Enter your contact information"}
             </DialogDescription>
@@ -411,28 +403,9 @@ export function BookingFormModal({
               onSelect={(date) => {
                 setSelectedDate(date);
                 if (date) {
-                  // Auto-select first available staff member (not on leave)
-                  const availableStaff = staff.filter(s => {
-                    const dateStr = format(date, "yyyy-MM-dd");
-                    return !staffLeave.some(
-                      leave =>
-                        leave.staff_id === s.id &&
-                        leave.start_date <= dateStr &&
-                        leave.end_date >= dateStr
-                    );
-                  });
-                  if (availableStaff.length > 0 && selectedStaff) {
-                    const currentStaffOnLeave = staffLeave.some(
-                      leave =>
-                        leave.staff_id === selectedStaff &&
-                        leave.start_date <= format(date, "yyyy-MM-dd") &&
-                        leave.end_date >= format(date, "yyyy-MM-dd")
-                    );
-                    if (currentStaffOnLeave) {
-                      setSelectedStaff(availableStaff[0].id);
-                    }
-                  }
-                  setStep("time");
+                  setSelectedStaff(null);
+                  setSelectedTime(null);
+                  setStep("staff");
                 }
               }}
               disabled={(date) => isBefore(date, startOfDay(new Date())) || isBefore(date, addDays(new Date(), -1))}
@@ -441,40 +414,60 @@ export function BookingFormModal({
           </div>
         )}
 
-        {step === "time" && (
+        {step === "staff" && (
           <div className="py-4 space-y-4">
             <div className="text-sm text-muted-foreground mb-2">
               {selectedDate && format(selectedDate, "EEEE, MMMM d, yyyy")}
             </div>
-            
-            {staff.length > 1 && (
-              <div className="space-y-2">
-                <Label>Select Staff</Label>
-                <div className="flex flex-wrap gap-2">
-                  {staff.map((s) => {
-                    const onLeave = selectedDate ? isStaffOnLeave(s.id, selectedDate) : false;
-                    return (
-                      <Button
-                        key={s.id}
-                        variant={selectedStaff === s.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => !onLeave && setSelectedStaff(s.id)}
-                        disabled={onLeave}
-                        style={selectedStaff === s.id ? { backgroundColor: primaryColor } : {}}
-                        className={onLeave ? "opacity-50" : ""}
-                      >
-                        {s.name}
-                        {onLeave && " (On Leave)"}
-                      </Button>
-                    );
-                  })}
+
+            {availabilityLoading ? (
+              <p className="text-center text-muted-foreground py-6">Checking availability...</p>
+            ) : availableStaff.length === 0 ? (
+              <div className="space-y-4">
+                <p className="text-center text-muted-foreground py-4">
+                  No staff have available times for this service on this day. Please select another date.
+                </p>
+                <Button variant="outline" onClick={() => setStep("date")} className="w-full">
+                  ← Back to calendar
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid gap-2">
+                  {availableStaff.map((member) => (
+                    <Button
+                      key={member.id}
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedStaff(member.id);
+                        setSelectedTime(null);
+                        setStep("time");
+                      }}
+                      className="justify-start h-12"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      {member.name}
+                    </Button>
+                  ))}
                 </div>
+                <Button variant="ghost" onClick={() => setStep("date")} className="w-full">
+                  ← Back to calendar
+                </Button>
               </div>
             )}
+          </div>
+        )}
+
+        {step === "time" && (
+          <div className="py-4 space-y-4">
+            <div className="text-sm text-muted-foreground mb-2">
+              {selectedDate && format(selectedDate, "EEEE, MMMM d, yyyy")}
+              {selectedStaffName && <span className="block">with {selectedStaffName}</span>}
+            </div>
 
             {availableSlots.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">
-                No available times for this day. Please select another date.
+                No available times for this staff member. Please choose another person or date.
               </p>
             ) : (
               <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
@@ -521,8 +514,8 @@ export function BookingFormModal({
               </p>
             )}
 
-            <Button variant="ghost" onClick={() => setStep("date")} className="w-full">
-              ← Back to calendar
+            <Button variant="ghost" onClick={() => setStep("staff")} className="w-full">
+              ← Back to staff
             </Button>
           </div>
         )}
@@ -538,6 +531,7 @@ export function BookingFormModal({
             
             <div className="text-sm text-muted-foreground mb-2">
               {selectedDate && format(selectedDate, "EEEE, MMMM d")} at {selectedTime}
+              {selectedStaffName && <span className="block">with {selectedStaffName}</span>}
             </div>
 
             <div className="space-y-2">
@@ -629,6 +623,7 @@ export function BookingFormModal({
                 {selectedDate && format(selectedDate, "EEEE, MMMM d")} at {selectedTime}
               </p>
               <p className="text-sm text-muted-foreground">{service.name}</p>
+              {selectedStaffName && <p className="text-sm text-muted-foreground">with {selectedStaffName}</p>}
             </div>
             {confirmation && (
               <div className="space-y-2">
