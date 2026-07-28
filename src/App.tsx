@@ -34,6 +34,7 @@ import DiagnosticsPage from "./pages/admin/DiagnosticsPage";
 import CampaignsReportPage from "./pages/reports/CampaignsReportPage";
 import DnsSetupPage from "./pages/DnsSetupPage";
 import MessageLogsPage from "./pages/messaging/MessageLogsPage";
+import UnsubscribePage from "./pages/UnsubscribePage";
 
 // Reseller Pages
 import ResellerDashboard from "./pages/reseller/ResellerDashboard";
@@ -62,6 +63,7 @@ const AppRoutes = () => (
     } />
     <Route path="/book/:slug" element={<PublicBookingPage />} />
     <Route path="/dns-setup" element={<DnsSetupPage />} />
+    <Route path="/unsubscribe" element={<UnsubscribePage />} />
     
     {/* Onboarding - authenticated users can always access to add more businesses */}
     <Route 

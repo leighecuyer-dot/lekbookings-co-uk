@@ -1,70 +1,45 @@
-## Goal
-Staff-role users can only see and select customers assigned to them (via `staff_customers`). Owners and admins keep full visibility.
+## What I checked in your live data
 
-## Where this applies
-1. **Customers page** (`/customers`) — list is limited to their assigned customers. The existing "All / Mine" tab is removed for staff (they only ever see "Mine").
-2. **Bulk Messaging recipients** (`BulkMessageDialog`) — the recipient list they can pick from is scoped to their assigned customers.
-3. **Campaigns Report** (`/reports/campaigns`) — recipient counts, conversions, and per-customer breakdowns are filtered so a staff member only sees campaigns/conversions tied to their assigned customers.
+Guild Hair (`/book/the-guild-hair-f1yk0u`) is real and mostly ready:
 
-Owners and admins bypass all filters and continue to see every customer.
+- 16 active services, 3 staff (Craig, Helen, Charlotte) all with working hours set
+- 11 customers, 9 bookings already in the system, booking page theme configured
+- Business email `craigandhelen@guildhair.co.uk`, phone `+44 7928 455886`
+- Email sending domain `notify.lekbookings.co.uk` is verified and live
+- Twilio SMS/WhatsApp credentials are all stored
 
-## Implementation
+Four things will trip you up today if we don't fix them first:
 
-### A. Backend — enforce at the RLS layer (defence in depth)
-Add a helper + tighten the `customers` SELECT policy so staff can only read rows in `staff_customers` linked to them; owners/admins/resellers keep current access.
+1. **Timezone is set to UTC.** It's British Summer Time, so every appointment time can display an hour out. Needs to be London.
+2. **SMS is switched off.** There is no SMS settings record for Guild Hair, so no confirmation text will ever send. It has never sent one (SMS log is empty).
+3. **No message has ever actually been sent** from this business — email or SMS. So today is the first real send; it needs a controlled test before a real customer sees it.
+4. **A duplicate leftover business exists** named "Tes 2" with a near-identical Guild Hair booking link. Easy to demo the wrong page by accident.
 
-```
-CREATE FUNCTION public.customer_visible_to_staff(_user uuid, _customer uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.staff_customers sc
-    JOIN public.staff s ON s.id = sc.staff_id
-    WHERE sc.customer_id = _customer AND s.user_id = _user
-  )
-$$;
-```
+Also: staff records have no email or phone, so Craig/Helen/Charlotte can't log in as themselves yet. Fine if today is owner-only, worth knowing.
 
-Rewrite the customers SELECT policy:
-- Owner/Admin OR reseller → all customers in business
-- Staff role → only customers where `customer_visible_to_staff(auth.uid(), id)` is true
+## Plan
 
-Same principle applied to `customer_contact_preferences` SELECT so the messaging opt-in join stays consistent.
+### Step 1 — Fix the settings that will break the test
+- Set Guild Hair's timezone to London so times show correctly.
+- Create the SMS settings for Guild Hair with SMS on, booking confirmations on, reminders on, and the sender name set to "Guild Hair".
+- Make sure email booking confirmations are explicitly on.
+- Rename or clear the duplicate "Tes 2" business so there's no chance of demoing the wrong link.
 
-`campaigns` / `campaign_conversions` remain readable business-wide (they aggregate across customers). Staff filtering there happens client-side, since a campaign row itself isn't per-customer.
+### Step 2 — Add a one-tap "Send test message" button
+On the Settings page, next to the SMS section, add a button that sends a test SMS to a number you type in, and a matching one for a test email. This means you can prove the numbers and notices work in the salon, in front of Craig and Helen, without creating a fake booking.
 
-### B. Frontend — a single reusable hook
-`src/hooks/customers/useMyCustomerIds.ts`
-- Reads current role via `useUserPermissions` (already exists).
-- If owner/admin: returns `{ scopeAll: true, ids: null }`.
-- Else looks up the user's `staff.id` for the business, fetches their `staff_customers.customer_id` list, returns `{ scopeAll: false, ids: Set<string> }`.
+### Step 3 — Run the full test with you before you leave
+I'll run it end to end here first and report what happens:
+- Book as a customer through the public page with your own mobile and email
+- Confirm the booking appears in the calendar and Kanban at the right time
+- Confirm the SMS lands, with correct wording and salon name
+- Confirm the email lands and isn't in spam
+- Change the booking status as owner and confirm the update notice sends
 
-### C. Apply the hook
+### Step 4 — Your on-site checklist
+I'll write you a short printed-style checklist page you can follow at the salon, step by step, in order.
 
-1. **CustomersPage**
-   - Remove the "All/Mine" tab for staff (always "Mine").
-   - `fetchCustomers` still queries all business customers — RLS will now trim them for staff automatically. The client filter becomes a no-op safety net.
-
-2. **BulkMessageDialog**
-   - After `fetchCustomersWithPreferences`, filter `customersData` through `myCustomerIds` when `!scopeAll`.
-   - The "select all" pre-selection then operates only on the scoped list.
-
-3. **CampaignsReportPage**
-   - When `!scopeAll`: filter each campaign's `recipient_customer_ids` and each `campaign_conversions.customer_id` through the staff's assigned set before rendering counts/tables. Campaigns with zero assigned recipients are hidden.
-
-### D. Empty states
-- Customers page (staff, zero assignments): "You don't have any assigned customers yet. Ask an owner or admin to assign customers to you."
-- BulkMessageDialog (staff, zero assignments): "No assigned customers to message."
-- Campaigns report: hide the table with an equivalent empty state.
-
-## Files touched
-- `supabase/migrations/<new>.sql` — new function + updated RLS policies on `customers` and `customer_contact_preferences`.
-- `src/hooks/customers/useMyCustomerIds.ts` — new.
-- `src/hooks/customers/index.ts` — export.
-- `src/pages/customers/CustomersPage.tsx` — hide All tab for staff, use hook.
-- `src/components/messaging/BulkMessageDialog.tsx` — filter recipients.
-- `src/pages/reports/CampaignsReportPage.tsx` — filter campaigns/conversions.
-
-## Out of scope
-- No changes to the booking flow (owners/admins/staff creating bookings can still pick any customer inside the create-booking dialog — that's a separate scope you opted out of).
-- No changes to how assignments are created (already handled by `AssignStaffDialog`).
-- No reseller flow changes; resellers continue to see everything for linked businesses.
+## Technical notes
+- Timezone/SMS settings are data changes (`businesses.timezone`, new `business_sms_settings` row), not code.
+- Test-send buttons call the existing `send-sms` and booking-confirmation functions with a `test` event type, logged to `sms_log` so we can see delivery status and any Twilio error code.
+- UK numbers get normalised to +44 E.164 before sending, and STOP/opt-out rules still apply.
