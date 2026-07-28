@@ -116,13 +116,15 @@ export function SMSNotificationsSection() {
     });
     setTesting(false);
     if (error) { toast.error("Test send failed"); return; }
-    const status = (data as { status?: string })?.status;
+    const result = data as { status?: string; error?: string } | null;
+    const status = result?.status;
     if (status === "sent") toast.success("Test SMS sent");
     else if (status === "not_configured") toast.error("Twilio credentials missing — contact support");
     else if (status === "disabled") toast.error("Enable SMS first, then save, then try again");
     else if (status === "over_cap") toast.error("Monthly SMS cap reached for this tier");
     else if (status === "invalid_number") toast.error("Invalid phone number format");
     else if (status === "opted_out") toast.error("This number has opted out");
+    else if (status === "failed") toast.error(result?.error ?? "SMS provider rejected the message");
     else toast.warning(`Result: ${status ?? "unknown"}`);
   };
 
