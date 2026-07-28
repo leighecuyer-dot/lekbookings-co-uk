@@ -298,6 +298,9 @@ export default function SettingsPage() {
         {/* SMS Notifications (owner/admin only, self-hides) */}
         <SMSNotificationsSection />
 
+        <EmailNotificationsSection />
+
+
         {/* Payment Settings */}
         <PaymentSettings />
 
