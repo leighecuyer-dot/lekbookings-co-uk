@@ -18,13 +18,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const apiKey = Deno.env.get("RESEND_API_KEY");
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ message: "Email service not configured" }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
-      );
-    }
+
 
     const { bookingId }: BookingConfirmationRequest = await req.json();
     if (!bookingId || typeof bookingId !== "string") {
