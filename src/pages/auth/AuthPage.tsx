@@ -109,7 +109,7 @@ export default function AuthPage() {
       }
     } else {
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(next ?? "/dashboard");
     }
     setLoading(false);
   };
@@ -131,6 +131,12 @@ export default function AuthPage() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
+        if (next) {
+          toast.success("Account created!");
+          navigate(next);
+          setLoading(false);
+          return;
+        }
         // Check if user already has a business (e.g. via accepted invite)
         const { data: roles } = await supabase
           .from("user_roles")
