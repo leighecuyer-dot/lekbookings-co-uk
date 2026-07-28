@@ -1,0 +1,333 @@
+{
+  "version": 1,
+  "sdk_version": "0.25.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://oleozgrhqfxavbmsiecf.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "lek-bookings-mcp",
+      "version": "0.1.0",
+      "title": "LEK Bookings"
+    },
+    "tools": [
+      {
+        "name": "list_businesses",
+        "title": "List businesses",
+        "description": "List the businesses the signed-in user can access, with their id, name and booking page slug. Call this first to get a business_id for the other tools.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_bookings",
+        "title": "List bookings",
+        "description": "List appointments for a business within an optional date range and status filter. Returns customer, service, staff, time and payment details.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business id from list_businesses."
+            },
+            "from": {
+              "type": "string",
+              "description": "Inclusive ISO 8601 start of the range, e.g. 2026-07-28T00:00:00Z."
+            },
+            "to": {
+              "type": "string",
+              "description": "Exclusive ISO 8601 end of the range."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "confirmed",
+                "completed",
+                "cancelled",
+                "no_show"
+              ],
+              "description": "Only return bookings with this status."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum rows to return (default 50, max 200)."
+            }
+          },
+          "required": [
+            "business_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_booking",
+        "title": "Create booking",
+        "description": "Create a new appointment for a business. The end time is derived from the service duration unless an explicit end_time is given.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business id from list_businesses."
+            },
+            "service_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service id from list_services."
+            },
+            "start_time": {
+              "type": "string",
+              "description": "ISO 8601 start time of the appointment."
+            },
+            "end_time": {
+              "type": "string",
+              "description": "ISO 8601 end time. Defaults to start + service duration."
+            },
+            "customer_name": {
+              "type": "string",
+              "description": "Customer full name."
+            },
+            "customer_email": {
+              "type": "string",
+              "description": "Customer email address."
+            },
+            "customer_phone": {
+              "type": "string",
+              "description": "Customer phone number."
+            },
+            "staff_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Staff member id from list_staff."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Internal notes for this appointment."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "confirmed"
+              ],
+              "description": "Initial status. Defaults to pending."
+            }
+          },
+          "required": [
+            "business_id",
+            "service_id",
+            "start_time",
+            "customer_name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_booking_status",
+        "title": "Update booking status",
+        "description": "Change the status of an existing appointment, for example to confirm, complete or cancel it.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "booking_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Booking id from list_bookings."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "confirmed",
+                "completed",
+                "cancelled",
+                "no_show"
+              ],
+              "description": "The new status for the appointment."
+            }
+          },
+          "required": [
+            "booking_id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_customers",
+        "title": "List customers",
+        "description": "List or search the customers of a business by name, email or phone. Staff accounts only see the customers assigned to them.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business id from list_businesses."
+            },
+            "search": {
+              "type": "string",
+              "description": "Free-text match on name, email or phone."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum rows to return (default 50, max 200)."
+            }
+          },
+          "required": [
+            "business_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_customer",
+        "title": "Create customer",
+        "description": "Add a new customer record to a business's client list.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business id from list_businesses."
+            },
+            "name": {
+              "type": "string",
+              "description": "Customer full name."
+            },
+            "email": {
+              "type": "string",
+              "description": "Customer email address."
+            },
+            "phone": {
+              "type": "string",
+              "description": "Customer phone number."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Notes about this customer."
+            }
+          },
+          "required": [
+            "business_id",
+            "name"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_services",
+        "title": "List services",
+        "description": "List the bookable services of a business, including duration in minutes and price in GBP.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business id from list_businesses."
+            },
+            "include_inactive": {
+              "type": "boolean",
+              "description": "Include services that are currently switched off. Defaults to false."
+            }
+          },
+          "required": [
+            "business_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_staff",
+        "title": "List staff",
+        "description": "List the staff members of a business along with their working hours.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "business_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Business id from list_businesses."
+            },
+            "include_inactive": {
+              "type": "boolean",
+              "description": "Include deactivated staff members. Defaults to false."
+            }
+          },
+          "required": [
+            "business_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
