@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { MessageSquare, Send } from "lucide-react";
+import { AlertCircle, MessageSquare, Send } from "lucide-react";
 
 const TIER_CAPS: Record<string, number> = {
   free: 0, essential: 50, professional: 200, enterprise: 1000, unknown: 0,
@@ -248,6 +249,14 @@ export function SMSNotificationsSection() {
               {testing ? "Sending..." : "Test"}
             </Button>
           </div>
+          <Alert className="mt-3">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Twilio sender check</AlertTitle>
+            <AlertDescription className="space-y-1 text-sm">
+              <p>Use an SMS-enabled Twilio number, not a voice-only or landline number.</p>
+              <p>If Twilio shows the sender can send SMS, save that number as TWILIO_SMS_FROM. If using a Messaging Service, save its SID as TWILIO_MESSAGING_SERVICE_SID.</p>
+            </AlertDescription>
+          </Alert>
         </div>
 
         <Button onClick={save} disabled={saving} className="gradient-primary">
