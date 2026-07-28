@@ -37,15 +37,21 @@ function currentMonth(): string {
 
 function normalizeE164(input: string, defaultCountry = "GB"): string | null {
   if (!input) return null;
-  const trimmed = input.trim().replace(/[\s\-()]/g, "");
-  if (/^\+\d{8,15}$/.test(trimmed)) return trimmed;
+  let trimmed = input.trim().replace(/[\s\-()]/g, "");
+  // "00" international prefix -> "+"
+  if (/^00\d{8,15}$/.test(trimmed)) trimmed = `+${trimmed.slice(2)}`;
+  // Common user error: "+0XXXXXXXXXX" (national trunk 0 after a plus)
+  if (/^\+0\d{9,10}$/.test(trimmed)) trimmed = trimmed.slice(2);
+  else if (/^\+\d{8,15}$/.test(trimmed)) return trimmed;
   // GB local: 07XXXXXXXXX -> +447XXXXXXXXX
-  if (defaultCountry === "GB" && /^0\d{9,10}$/.test(trimmed)) {
+  if (defaultCountry === "GB" && /^0?\d{10}$/.test(trimmed) && trimmed.startsWith("0")) {
     return `+44${trimmed.slice(1)}`;
   }
+  if (defaultCountry === "GB" && /^7\d{9}$/.test(trimmed)) return `+44${trimmed}`;
   if (/^\d{10,15}$/.test(trimmed)) return `+${trimmed}`;
   return null;
 }
+
 
 function renderTemplate(template: string, tokens: Record<string, string>): string {
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => tokens[key] ?? `{{${key}}}`);
