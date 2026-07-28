@@ -21,6 +21,7 @@ import { WorkflowAutomationSettings } from "@/components/settings/WorkflowAutoma
 import { DataAccessRequests } from "@/components/settings/DataAccessRequests";
 import { TeamPermissionsSection } from "@/components/settings/TeamPermissionsSection";
 import { SMSNotificationsSection } from "@/components/settings/SMSNotificationsSection";
+import { EmailNotificationsSection } from "@/components/settings/EmailNotificationsSection";
 
 const TIMEZONES = [
   { value: "America/New_York", label: "Eastern Time (US)" },
