@@ -99,9 +99,9 @@ const handler = async (req: Request): Promise<Response> => {
         const { error: emailError } = await admin.functions.invoke("send-transactional-email", {
           body: {
             templateName: "booking-confirmation",
-            to: booking.customer_email,
+            recipientEmail: booking.customer_email,
             idempotencyKey: `booking-confirmation-${booking.id}`,
-            data: {
+            templateData: {
               customerName: booking.customer_name,
               businessName,
               serviceName,
