@@ -113,12 +113,13 @@ serve(async (req: Request) => {
 
   const sid = Deno.env.get("TWILIO_ACCOUNT_SID");
   const token = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const fromNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
-  if (!sid || !token || !fromNumber) {
+  const messagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
+  const fromNumber = Deno.env.get("TWILIO_SMS_FROM") ?? Deno.env.get("TWILIO_PHONE_NUMBER");
+  if (!sid || !token || (!fromNumber && !messagingServiceSid)) {
     await admin.from("sms_log").insert({
       business_id: businessId, booking_id: bookingId ?? null, event_type: eventType,
       to_number: to, body: bodyOverride ?? "", status: "not_configured",
-      error: "Twilio credentials missing",
+      error: "Twilio SMS sender missing",
     });
     return json(200, { status: "not_configured" });
   }
@@ -206,7 +207,12 @@ serve(async (req: Request) => {
 
   // Fire to Twilio
   const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
-  const form = new URLSearchParams({ To: e164, From: fromNumber, Body: body });
+  const form = new URLSearchParams({ To: e164, Body: body });
+  if (messagingServiceSid) {
+    form.set("MessagingServiceSid", messagingServiceSid);
+  } else if (fromNumber) {
+    form.set("From", fromNumber);
+  }
   const auth = btoa(`${sid}:${token}`);
   const resp = await fetch(twilioUrl, {
     method: "POST",
@@ -219,12 +225,16 @@ serve(async (req: Request) => {
   const respBody = await resp.json().catch(() => ({}));
 
   if (!resp.ok) {
+    const providerMessage = respBody?.message ?? `HTTP ${resp.status}`;
+    const friendlyMessage = typeof providerMessage === "string" && providerMessage.includes("not SMS-capable")
+      ? "The configured Twilio SMS sender is not SMS-capable. Add an SMS-enabled Twilio number as TWILIO_SMS_FROM, or set TWILIO_MESSAGING_SERVICE_SID."
+      : providerMessage;
     await admin.from("sms_log").insert({
       business_id: businessId, booking_id: bookingId ?? null, event_type: eventType,
       to_number: e164, body, status: "failed",
-      error: respBody?.message ?? `HTTP ${resp.status}`,
+      error: friendlyMessage,
     });
-    return json(200, { status: "failed", error: respBody?.message ?? `HTTP ${resp.status}` });
+    return json(200, { status: "failed", error: friendlyMessage });
   }
 
   // Bump usage counter
