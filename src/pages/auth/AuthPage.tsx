@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,10 @@ const getAllowedOAuthHosts = () => {
   return allowedHosts;
 };
 
+// Only allow same-origin relative paths as a post-login redirect target.
+const sanitizeNext = (value: string | null) =>
+  value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+
 export default function AuthPage() {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -39,12 +43,16 @@ export default function AuthPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const next = sanitizeNext(searchParams.get("next"));
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
 
     try {
-      const redirectTo = `${window.location.origin}/auth`;
+      const redirectTo = next
+        ? `${window.location.origin}${next}`
+        : `${window.location.origin}/auth`;
       const isCustomDomain = !isLovableHostedDomain(window.location.hostname);
 
       if (isCustomDomain) {
@@ -101,7 +109,7 @@ export default function AuthPage() {
       }
     } else {
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(next ?? "/dashboard");
     }
     setLoading(false);
   };
@@ -123,6 +131,12 @@ export default function AuthPage() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
+        if (next) {
+          toast.success("Account created!");
+          navigate(next);
+          setLoading(false);
+          return;
+        }
         // Check if user already has a business (e.g. via accepted invite)
         const { data: roles } = await supabase
           .from("user_roles")
