@@ -1,2 +1,2 @@
-/share/book/:slug    /functions/v1/booking-share-preview/:slug    200
+/share/book/:slug    https://oleozgrhqfxavbmsiecf.supabase.co/functions/v1/booking-share-preview/:slug    200
 /*    /index.html   200
