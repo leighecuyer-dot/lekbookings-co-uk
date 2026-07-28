@@ -168,10 +168,6 @@ export default function PublicBookingPage() {
       document.head.appendChild(appleIcon);
     }
 
-    // Set page title to business name
-    const originalTitle = document.title;
-    document.title = business.name;
-
     // Inject a dynamic manifest for Android "Add to Home Screen"
     const manifest = {
       name: business.name,
@@ -198,7 +194,6 @@ export default function PublicBookingPage() {
 
     return () => {
       // Restore originals on unmount
-      document.title = originalTitle;
       if (appleIcon && originalAppleHref) appleIcon.href = originalAppleHref;
       manifestLink.remove();
       URL.revokeObjectURL(manifestUrl);
