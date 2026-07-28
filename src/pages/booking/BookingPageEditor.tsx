@@ -10,16 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Copy, ExternalLink, Eye, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { getBookingShareUrl, getBookingUrl } from "@/lib/bookingLinks";
 
 export default function BookingPageEditor() {
   const { currentBusiness } = useBusiness();
 
-  const bookingUrl = currentBusiness
-    ? `${window.location.origin}/book/${currentBusiness.slug}`
-    : "";
+  const bookingUrl = currentBusiness ? getBookingUrl(window.location.origin, currentBusiness.slug) : "";
+  const bookingShareUrl = currentBusiness ? getBookingShareUrl(window.location.origin, currentBusiness.slug) : "";
 
   const copyBookingUrl = () => {
-    navigator.clipboard.writeText(bookingUrl);
+    navigator.clipboard.writeText(bookingShareUrl);
     toast.success("Booking link copied!");
   };
 
@@ -58,7 +58,7 @@ export default function BookingPageEditor() {
           <CardContent>
             <div className="flex gap-2">
               <Input
-                value={bookingUrl}
+                value={bookingShareUrl}
                 readOnly
                 className="font-mono text-sm bg-background"
               />
