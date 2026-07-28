@@ -9,6 +9,7 @@ import { BookingFooter } from "@/components/booking/public/BookingFooter";
 import { FloatingWhatsApp } from "@/components/booking/public/FloatingWhatsApp";
 import { BookingPageSetupWizard } from "@/components/booking/public/BookingPageSetupWizard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getBookingUrl } from "@/lib/bookingLinks";
 
 interface SocialLinks {
   instagram?: string;
@@ -83,6 +84,70 @@ export default function PublicBookingPage() {
       fetchBusinessData();
     }
   }, [slug]);
+
+  useEffect(() => {
+    if (!business) return;
+
+    const title = `${business.name} Booking Page`;
+    const description = `Book an appointment with ${business.name}.`;
+    const bookingUrl = getBookingUrl(window.location.origin, business.slug);
+    const rawLogoUrl = theme?.logo_url || business.logo_url;
+    const imageUrl = rawLogoUrl?.startsWith("http")
+      ? rawLogoUrl
+      : rawLogoUrl?.startsWith("/")
+        ? `${window.location.origin}${rawLogoUrl}`
+        : undefined;
+
+    const originalTitle = document.title;
+    document.title = title;
+
+    const ensureMeta = (selector: string, attrs: Record<string, string>) => {
+      const existing = document.head.querySelector(selector) as HTMLMetaElement | null;
+      const element = existing || document.createElement("meta");
+      Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+      if (!existing) document.head.appendChild(element);
+      return { element, created: !existing };
+    };
+
+    const ensureLink = (selector: string, attrs: Record<string, string>) => {
+      const existing = document.head.querySelector(selector) as HTMLLinkElement | null;
+      const element = existing || document.createElement("link");
+      const previousHref = existing?.href;
+      Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+      if (!existing) document.head.appendChild(element);
+      return { element, created: !existing, previousHref };
+    };
+
+    const metas = [
+      ensureMeta('meta[name="description"]', { name: "description", content: description }),
+      ensureMeta('meta[property="og:title"]', { property: "og:title", content: title }),
+      ensureMeta('meta[property="og:description"]', { property: "og:description", content: description }),
+      ensureMeta('meta[property="og:type"]', { property: "og:type", content: "website" }),
+      ensureMeta('meta[property="og:url"]', { property: "og:url", content: bookingUrl }),
+      ensureMeta('meta[name="twitter:card"]', { name: "twitter:card", content: "summary_large_image" }),
+      ensureMeta('meta[name="twitter:title"]', { name: "twitter:title", content: title }),
+      ensureMeta('meta[name="twitter:description"]', { name: "twitter:description", content: description }),
+    ];
+
+    if (imageUrl) {
+      metas.push(
+        ensureMeta('meta[property="og:image"]', { property: "og:image", content: imageUrl }),
+        ensureMeta('meta[property="og:image:alt"]', { property: "og:image:alt", content: `${business.name} logo` }),
+        ensureMeta('meta[name="twitter:image"]', { name: "twitter:image", content: imageUrl })
+      );
+    }
+
+    const canonical = ensureLink('link[rel="canonical"]', { rel: "canonical", href: bookingUrl });
+
+    return () => {
+      document.title = originalTitle;
+      metas.forEach(({ element, created }) => {
+        if (created) element.remove();
+      });
+      if (canonical.created) canonical.element.remove();
+      else if (canonical.previousHref) canonical.element.href = canonical.previousHref;
+    };
+  }, [business, theme]);
 
   // Dynamically set PWA manifest and apple-touch-icon for this business
   useEffect(() => {
