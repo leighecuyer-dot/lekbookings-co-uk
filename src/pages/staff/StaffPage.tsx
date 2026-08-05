@@ -517,6 +517,49 @@ export default function StaffPage() {
         />
       )}
 
+      {/* Edit Staff Details Modal */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Details</DialogTitle>
+            <DialogDescription>Update this team member's name and contact details.</DialogDescription>
+          </DialogHeader>
+          {editStaff && (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  value={editStaff.name}
+                  onChange={(e) => setEditStaff({ ...editStaff, name: e.target.value })}
+                  placeholder="Jane Smith"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={editStaff.email}
+                  onChange={(e) => setEditStaff({ ...editStaff, email: e.target.value })}
+                  placeholder="jane@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input
+                  value={editStaff.phone}
+                  onChange={(e) => setEditStaff({ ...editStaff, phone: e.target.value })}
+                  placeholder="+44 7700 900000"
+                />
+              </div>
+              <Button onClick={handleUpdateStaff} disabled={savingEdit} className="w-full gradient-primary">
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
     </DashboardLayout>
   );
 }
