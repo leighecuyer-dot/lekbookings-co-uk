@@ -200,6 +200,68 @@ export type Database = {
           },
         ]
       }
+      business_notification_settings: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          notify_cancellation: boolean
+          notify_daily_summary: boolean
+          notify_new_booking: boolean
+          notify_reschedule: boolean
+          owner_channel_email: boolean
+          owner_channel_sms: boolean
+          owner_email: string | null
+          owner_phone: string | null
+          staff_alert_channel_email: boolean
+          staff_alert_channel_sms: boolean
+          staff_alerts_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          notify_cancellation?: boolean
+          notify_daily_summary?: boolean
+          notify_new_booking?: boolean
+          notify_reschedule?: boolean
+          owner_channel_email?: boolean
+          owner_channel_sms?: boolean
+          owner_email?: string | null
+          owner_phone?: string | null
+          staff_alert_channel_email?: boolean
+          staff_alert_channel_sms?: boolean
+          staff_alerts_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          notify_cancellation?: boolean
+          notify_daily_summary?: boolean
+          notify_new_booking?: boolean
+          notify_reschedule?: boolean
+          owner_channel_email?: boolean
+          owner_channel_sms?: boolean
+          owner_email?: string | null
+          owner_phone?: string | null
+          staff_alert_channel_email?: boolean
+          staff_alert_channel_sms?: boolean
+          staff_alerts_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_notification_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_sms_settings: {
         Row: {
           business_id: string
@@ -1674,29 +1736,38 @@ export type Database = {
       }
       user_permissions: {
         Row: {
+          booking_edit_scope: string
           business_id: string
+          calendar_scope: string
           can_view_financials: boolean
           created_at: string
           id: string
           page_access: Json
+          staff_alerts_enabled: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          booking_edit_scope?: string
           business_id: string
+          calendar_scope?: string
           can_view_financials?: boolean
           created_at?: string
           id?: string
           page_access?: Json
+          staff_alerts_enabled?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
+          booking_edit_scope?: string
           business_id?: string
+          calendar_scope?: string
           can_view_financials?: boolean
           created_at?: string
           id?: string
           page_access?: Json
+          staff_alerts_enabled?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -1834,6 +1905,14 @@ export type Database = {
     }
     Functions: {
       accept_business_invite: { Args: { _token: string }; Returns: Json }
+      booking_edit_scope: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: string
+      }
+      calendar_scope: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: string
+      }
       can_access_business: { Args: { p_business_id: string }; Returns: boolean }
       check_marketing_rate_limit: {
         Args: {
@@ -1966,6 +2045,19 @@ export type Database = {
         Args: { _business_id: string; _reseller_id: string }
         Returns: boolean
       }
+      link_staff_to_user: {
+        Args: { _staff_id: string; _user_id: string }
+        Returns: undefined
+      }
+      list_business_members: {
+        Args: { _business_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -1974,6 +2066,10 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      my_staff_id: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: string
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
