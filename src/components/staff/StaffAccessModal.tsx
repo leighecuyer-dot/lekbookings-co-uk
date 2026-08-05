@@ -88,14 +88,20 @@ export function StaffAccessModal({
       .maybeSingle();
     setBusy(false);
 
-    if (error || !data) {
-      toast.error("Could not create the invite");
+    if (error) {
+      console.error("create invite error:", error);
+      toast.error(`Could not create the invite: ${error.message}`);
+      return;
+    }
+    if (!data?.token) {
+      toast.error("Invite created but the link could not be read back. Please refresh and try again.");
       return;
     }
     const link = `${window.location.origin}/invite/accept?token=${data.token}`;
     setInviteLink(link);
     toast.success("Invite created — send them the link");
     onSaved();
+
   };
 
   return (
