@@ -1,3 +1,5 @@
+import { useUserPermissions } from "@/hooks/permissions/useUserPermissions";
+import { applyCalendarScope } from "@/lib/bookingVisibility";
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -64,6 +66,8 @@ interface Customer {
 
 export default function KanbanPage() {
   const { currentBusiness, isResellerMode } = useBusiness();
+  const { calendarScope, staffId: myStaffId } = useUserPermissions(currentBusiness?.id);
+
   const { createBooking: resellerCreateBooking } = useResellerOperations();
   const [selectedDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -128,7 +132,7 @@ export default function KanbanPage() {
         .order("name", { ascending: true }),
     ]);
 
-    if (bookingsRes.data) setBookings(bookingsRes.data);
+    if (bookingsRes.data) setBookings(applyCalendarScope(bookingsRes.data, calendarScope, myStaffId));
     if (servicesRes.data) setServices(servicesRes.data);
     if (staffRes.data) setStaffList(staffRes.data);
     if (customersRes.data) setCustomers(customersRes.data);

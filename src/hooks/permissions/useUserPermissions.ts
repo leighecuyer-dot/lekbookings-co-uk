@@ -11,10 +11,16 @@ export type PageKey =
   | "staff"
   | "services";
 
+export type CalendarScope = "all" | "all_masked" | "own";
+export type BookingEditScope = "all" | "own" | "none";
+
 export interface UserPermissions {
   isOwner: boolean;
   canViewFinancials: boolean;
   pages: Record<PageKey, boolean>;
+  calendarScope: CalendarScope;
+  bookingEditScope: BookingEditScope;
+  staffId: string | null;
 }
 
 const DEFAULT_PAGES: Record<PageKey, boolean> = {
@@ -31,7 +37,11 @@ const FULL_ACCESS: UserPermissions = {
   isOwner: true,
   canViewFinancials: true,
   pages: DEFAULT_PAGES,
+  calendarScope: "all",
+  bookingEditScope: "all",
+  staffId: null,
 };
+
 
 export function useUserPermissions(businessId: string | null | undefined) {
   const { user } = useAuth();
@@ -52,17 +62,24 @@ export function useUserPermissions(businessId: string | null | undefined) {
     if (error || !data) {
       setPermissions(FULL_ACCESS);
     } else {
-      const d = data as {
+      const d = data as unknown as {
         is_owner: boolean;
         can_view_financials: boolean;
         page_access: Record<string, boolean>;
+        calendar_scope?: CalendarScope;
+        booking_edit_scope?: BookingEditScope;
+        staff_id?: string | null;
       };
       setPermissions({
         isOwner: !!d.is_owner,
         canViewFinancials: d.can_view_financials !== false,
         pages: { ...DEFAULT_PAGES, ...(d.page_access || {}) } as Record<PageKey, boolean>,
+        calendarScope: d.calendar_scope ?? "all",
+        bookingEditScope: d.booking_edit_scope ?? "all",
+        staffId: d.staff_id ?? null,
       });
     }
+
     setLoading(false);
   }, [user, businessId]);
 

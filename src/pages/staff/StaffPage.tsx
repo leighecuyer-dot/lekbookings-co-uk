@@ -16,7 +16,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent } from "lucide-react";
+import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent, KeyRound } from "lucide-react";
+import { StaffAccessModal } from "@/components/staff/StaffAccessModal";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,10 +51,12 @@ interface Staff {
   email: string | null;
   phone: string | null;
   is_active: boolean;
+  user_id: string | null;
   working_hours: WorkingHours | null;
   revenue_tracking_enabled: boolean;
   commission_percentage: number;
 }
+
 
 export default function StaffPage() {
   const { currentBusiness } = useBusiness();
@@ -64,9 +68,12 @@ export default function StaffPage() {
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [revenueModalOpen, setRevenueModalOpen] = useState(false);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState<Staff | null>(null);
   const [selectedStaffForLeave, setSelectedStaffForLeave] = useState<Staff | null>(null);
   const [selectedStaffForRevenue, setSelectedStaffForRevenue] = useState<Staff | null>(null);
+  const [selectedStaffForAccess, setSelectedStaffForAccess] = useState<Staff | null>(null);
+
   
   const [newStaff, setNewStaff] = useState({
     name: "",
@@ -102,6 +109,8 @@ export default function StaffPage() {
         email: s.email,
         phone: s.phone,
         is_active: s.is_active,
+        user_id: s.user_id ?? null,
+
         working_hours: s.working_hours as unknown as WorkingHours | null,
         revenue_tracking_enabled: s.revenue_tracking_enabled,
         commission_percentage: s.commission_percentage,
@@ -296,6 +305,16 @@ export default function StaffPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
+                              setSelectedStaffForAccess(staff);
+                              setAccessModalOpen(true);
+                            }}
+                          >
+                            <KeyRound className="w-4 h-4 mr-2" />
+                            Login Access
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => {
                               setSelectedStaffForAvailability(staff);
                               setAvailabilityModalOpen(true);
                             }}
@@ -352,6 +371,13 @@ export default function StaffPage() {
                         {staff.phone}
                       </p>
                     )}
+                    <div className="mt-2">
+                      <Badge variant={staff.user_id ? "outline" : "secondary"} className="text-xs gap-1">
+                        <KeyRound className="w-3 h-3" />
+                        {staff.user_id ? "Login linked" : "No login"}
+                      </Badge>
+                    </div>
+
                     {/* Revenue tracking indicator */}
                     {canViewFinancials && (
                       <div className="flex items-center gap-2 mt-2">
@@ -429,6 +455,21 @@ export default function StaffPage() {
           onSave={fetchStaff}
         />
       )}
+
+      {/* Login Access Modal */}
+      {selectedStaffForAccess && currentBusiness && (
+        <StaffAccessModal
+          open={accessModalOpen}
+          onOpenChange={setAccessModalOpen}
+          businessId={currentBusiness.id}
+          staffId={selectedStaffForAccess.id}
+          staffName={selectedStaffForAccess.name}
+          staffEmail={selectedStaffForAccess.email}
+          linkedUserId={selectedStaffForAccess.user_id}
+          onSaved={fetchStaff}
+        />
+      )}
+
     </DashboardLayout>
   );
 }
