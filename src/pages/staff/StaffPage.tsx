@@ -16,7 +16,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent } from "lucide-react";
+import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent, KeyRound } from "lucide-react";
+import { StaffAccessModal } from "@/components/staff/StaffAccessModal";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -301,6 +303,16 @@ export default function StaffPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedStaffForAccess(staff);
+                              setAccessModalOpen(true);
+                            }}
+                          >
+                            <KeyRound className="w-4 h-4 mr-2" />
+                            Login Access
+                          </DropdownMenuItem>
+
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedStaffForAvailability(staff);
