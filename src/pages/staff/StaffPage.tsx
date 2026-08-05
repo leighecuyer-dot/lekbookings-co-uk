@@ -49,10 +49,12 @@ interface Staff {
   email: string | null;
   phone: string | null;
   is_active: boolean;
+  user_id: string | null;
   working_hours: WorkingHours | null;
   revenue_tracking_enabled: boolean;
   commission_percentage: number;
 }
+
 
 export default function StaffPage() {
   const { currentBusiness } = useBusiness();
@@ -64,9 +66,12 @@ export default function StaffPage() {
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [revenueModalOpen, setRevenueModalOpen] = useState(false);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState<Staff | null>(null);
   const [selectedStaffForLeave, setSelectedStaffForLeave] = useState<Staff | null>(null);
   const [selectedStaffForRevenue, setSelectedStaffForRevenue] = useState<Staff | null>(null);
+  const [selectedStaffForAccess, setSelectedStaffForAccess] = useState<Staff | null>(null);
+
   
   const [newStaff, setNewStaff] = useState({
     name: "",
