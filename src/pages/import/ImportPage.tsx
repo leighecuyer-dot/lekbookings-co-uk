@@ -393,7 +393,7 @@ export default function ImportPage() {
       setCapturedImages([]);
     } catch (error) {
       console.error("Import error:", error);
-      toast({ title: "Import failed", description: "Some records may not have been imported", variant: "destructive" });
+      toast({ title: "Import failed", description: error instanceof Error ? error.message : "Some records may not have been imported", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
