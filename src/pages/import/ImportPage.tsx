@@ -277,32 +277,79 @@ export default function ImportPage() {
           await supabase.from("staff").insert(insertData);
           break;
 
-        case "bookings":
+        case "bookings": {
+          const [{ data: services }, { data: staffRows }, { data: existingCustomers }] = await Promise.all([
+            supabase.from("services").select("id,name,duration_minutes,price").eq("business_id", currentBusiness.id),
+            supabase.from("staff").select("id,name").eq("business_id", currentBusiness.id),
+            supabase.from("customers").select("id,name,phone").eq("business_id", currentBusiness.id),
+          ]);
+
+          const norm = (v?: string | null) => (v ?? "").trim().toLowerCase();
+          const findService = (name?: string) =>
+            (services ?? []).find((s) => norm(s.name) === norm(name)) ??
+            (name ? (services ?? []).find((s) => norm(s.name).includes(norm(name)) || norm(name).includes(norm(s.name))) : undefined);
+          const findStaff = (name?: string) =>
+            (staffRows ?? []).find((s) => norm(s.name) === norm(name)) ??
+            (name ? (staffRows ?? []).find((s) => norm(s.name).split(" ")[0] === norm(name).split(" ")[0]) : undefined);
+
+          // Create any customers we don't already have, so the bookings link up.
+          const customerMap = new Map<string, string>();
+          (existingCustomers ?? []).forEach((c) => customerMap.set(norm(c.name), c.id));
+
+          const newCustomers = parsedData
+            .filter((b: ParsedBooking) => b.customer_name && !customerMap.has(norm(b.customer_name)))
+            .reduce((acc: ParsedBooking[], b: ParsedBooking) => {
+              if (!acc.some((x) => norm(x.customer_name) === norm(b.customer_name))) acc.push(b);
+              return acc;
+            }, []);
+
+          if (newCustomers.length > 0) {
+            const { data: created } = await supabase
+              .from("customers")
+              .insert(newCustomers.map((b) => ({
+                business_id: currentBusiness.id,
+                name: b.customer_name,
+                phone: b.customer_phone || null,
+                email: b.customer_email || null,
+              })))
+              .select("id,name");
+            (created ?? []).forEach((c) => customerMap.set(norm(c.name), c.id));
+          }
+
           insertData = parsedData.map((b: ParsedBooking) => {
+            const service = findService(b.service_name);
+            const staffMember = findStaff(b.staff_name);
             const startDateTime = new Date(`${b.date}T${b.start_time}`);
-            const duration = b.duration_minutes || 60;
+            const duration = b.duration_minutes || service?.duration_minutes || 60;
             const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
-            
+
             return {
               business_id: currentBusiness.id,
+              customer_id: customerMap.get(norm(b.customer_name)) ?? null,
+              service_id: service?.id ?? null,
+              staff_id: staffMember?.id ?? null,
               customer_name: b.customer_name,
               customer_phone: b.customer_phone || null,
               customer_email: b.customer_email || null,
               start_time: startDateTime.toISOString(),
               end_time: endDateTime.toISOString(),
+              total_price: service?.price ?? null,
               notes: b.notes || null,
               status: "confirmed",
             };
-          });
-          await supabase.from("bookings").insert(insertData);
+          }).filter((b) => !isNaN(new Date(b.start_time).getTime()));
+
+          const { error: bookingError } = await supabase.from("bookings").insert(insertData);
+          if (bookingError) throw bookingError;
           break;
+        }
       }
 
       toast({ title: "Import successful!", description: `${parsedData.length} ${activeTab} imported` });
       setParsedData(null);
       setDiaryText("");
       setCsvFile(null);
-      setCapturedImage(null);
+      setCapturedImages([]);
     } catch (error) {
       console.error("Import error:", error);
       toast({ title: "Import failed", description: "Some records may not have been imported", variant: "destructive" });
