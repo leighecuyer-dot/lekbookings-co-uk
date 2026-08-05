@@ -618,7 +618,7 @@ export default function ImportPage() {
 
                 <Button 
                   onClick={handleAIParse} 
-                  disabled={isLoading || (!diaryText.trim() && !capturedImage)}
+                  disabled={isLoading || preparingPhotos || (!diaryText.trim() && capturedImages.length === 0)}
                   className="w-full sm:w-auto"
                 >
                   {isLoading ? (
@@ -626,7 +626,7 @@ export default function ImportPage() {
                   ) : (
                     <Wand2 className="w-4 h-4 mr-2" />
                   )}
-                  {capturedImage ? "Extract from Photo" : "Parse with AI"}
+                  {capturedImages.length > 0 ? "Extract from Photos" : "Parse with AI"}
                 </Button>
                 {renderParsedData()}
               </CardContent>
