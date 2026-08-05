@@ -97,7 +97,11 @@ export function StaffAccessModal({
       toast.error("Invite created but the link could not be read back. Please refresh and try again.");
       return;
     }
-    const link = `${window.location.origin}/invite/accept?token=${data.token}`;
+    // Preview/editor origins are workspace-restricted — always share the public domain
+    const origin = /lovable\.(app|dev)|localhost/.test(window.location.hostname)
+      ? "https://lekbookings.co.uk"
+      : window.location.origin;
+    const link = `${origin}/invite/accept?token=${data.token}`;
     setInviteLink(link);
     toast.success("Invite created — send them the link");
     onSaved();
