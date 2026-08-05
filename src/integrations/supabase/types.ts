@@ -1993,6 +1993,16 @@ export type Database = {
         Args: { _business_id: string; _from_date?: string; _to_date?: string }
         Returns: Json
       }
+      get_invite_details: {
+        Args: { _token: string }
+        Returns: {
+          accepted_at: string
+          business_name: string
+          email: string
+          expires_at: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
       get_public_booking_availability: {
         Args: {
           p_business_id: string
