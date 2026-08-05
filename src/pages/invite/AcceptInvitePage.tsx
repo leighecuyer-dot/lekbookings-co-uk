@@ -220,16 +220,22 @@ export default function AcceptInvitePage() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <XCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
-            <CardTitle>Invalid Invitation</CardTitle>
+            <CardTitle>{lookupError ? "Couldn't load this invitation" : "Invalid Invitation"}</CardTitle>
             <CardDescription>
-              This invitation link is invalid or has been revoked.
+              {!token
+                ? "This link is missing its invitation code. Ask for a fresh link."
+                : lookupError
+                  ? `We couldn't reach the invitation service. Please check your connection and try again. (${lookupError})`
+                  : "This invitation link is invalid, revoked, or the code was cut off when the link was shared."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center">
-            <Button asChild>
+          <CardContent className="flex justify-center gap-2">
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+            <Button asChild variant="outline">
               <Link to="/">Go to Home</Link>
             </Button>
           </CardContent>
+
         </Card>
       </div>
     );
