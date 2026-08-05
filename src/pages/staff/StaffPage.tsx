@@ -345,6 +345,11 @@ export default function StaffPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditStaff(staff)}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit Details
+                          </DropdownMenuItem>
+
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedStaffForAccess(staff);
