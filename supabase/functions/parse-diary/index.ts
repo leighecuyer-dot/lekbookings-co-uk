@@ -157,7 +157,12 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { diaryText, dataType, imageData, _diagnosticPing } = body;
+    const { diaryText, dataType, imageData, imagesData, context, _diagnosticPing } = body;
+    const images: string[] = Array.isArray(imagesData)
+      ? imagesData.filter((i: unknown) => typeof i === "string").slice(0, 6)
+      : imageData
+        ? [imageData]
+        : [];
     
     // Handle diagnostic ping - return rate limit status without processing
     if (_diagnosticPing === true) {
@@ -174,7 +179,7 @@ serve(async (req) => {
     }
 
     // Require either diaryText or imageData
-    if (!diaryText && !imageData) {
+    if (!diaryText && images.length === 0) {
       return jsonResponse(
         { error: "Missing required fields: either diaryText or imageData is required" },
         400
@@ -205,9 +210,10 @@ serve(async (req) => {
     }
 
     // Limit image size (base64 encoded images can be large)
-    if (imageData && imageData.length > 10 * 1024 * 1024) { // ~10MB base64
+    const totalImageBytes = images.reduce((sum, img) => sum + img.length, 0);
+    if (totalImageBytes > 20 * 1024 * 1024) { // ~20MB base64 across all photos
       return jsonResponse(
-        { error: "Image too large. Please use a smaller image (max 10MB)." },
+        { error: "Photos are too large. Please use fewer or smaller photos." },
         400
       );
     }
@@ -217,28 +223,34 @@ serve(async (req) => {
     // Build message content based on input type
     let messageContent: any;
     
-    if (imageData) {
-      // Vision request with image
+    // Optional business context helps the model resolve dates and match names
+    let contextText = "";
+    if (context && typeof context === "object") {
+      const today = typeof context.today === "string" ? context.today : null;
+      const services = Array.isArray(context.serviceNames) ? context.serviceNames.slice(0, 100) : [];
+      const staff = Array.isArray(context.staffNames) ? context.staffNames.slice(0, 50) : [];
+      if (today) contextText += `\nToday's date is ${today}. Resolve relative days (e.g. "Mon", "tomorrow") to actual dates on or after today.`;
+      if (services.length) contextText += `\nKnown services (match to these names exactly where possible): ${services.join(", ")}.`;
+      if (staff.length) contextText += `\nKnown staff members (match to these names exactly where possible): ${staff.join(", ")}.`;
+    }
+
+    if (images.length > 0) {
+      // Vision request with one or more photos
       messageContent = [
         {
           type: "text",
-          text: `Parse the following ${validDataType} data from this image of a paper diary/appointment book. Extract all visible appointments, names, times, and any other relevant information.`
+          text: `Parse the following ${validDataType} data from ${images.length > 1 ? `these ${images.length} images` : "this image"} of a paper diary/appointment book. Extract every visible appointment, name, time and any other relevant detail. Do not duplicate an appointment that appears on more than one photo.${contextText}`
         },
-        {
-          type: "image_url",
-          image_url: {
-            url: imageData // Already in data:image/... format
-          }
-        }
+        ...images.map((url) => ({ type: "image_url", image_url: { url } }))
       ];
-      
+
       // If there's also text, add it
       if (diaryText) {
         messageContent[0].text += `\n\nAdditional context:\n${diaryText}`;
       }
     } else {
       // Text-only request
-      messageContent = `Parse the following ${validDataType} data:\n\n${diaryText}`;
+      messageContent = `Parse the following ${validDataType} data:${contextText}\n\n${diaryText}`;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
