@@ -73,6 +73,9 @@ export default function StaffPage() {
   const [selectedStaffForLeave, setSelectedStaffForLeave] = useState<Staff | null>(null);
   const [selectedStaffForRevenue, setSelectedStaffForRevenue] = useState<Staff | null>(null);
   const [selectedStaffForAccess, setSelectedStaffForAccess] = useState<Staff | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editStaff, setEditStaff] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   
   const [newStaff, setNewStaff] = useState({
@@ -80,6 +83,7 @@ export default function StaffPage() {
     email: "",
     phone: "",
   });
+
 
   const staffLimitReached = !canAddStaff(staffList.length);
 
