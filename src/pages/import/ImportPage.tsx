@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImageFile } from "@/lib/imageCompression";
 import { 
   Upload, 
   Wand2, 
@@ -73,7 +74,8 @@ export default function ImportPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [parsedData, setParsedData] = useState<any[] | null>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedImages, setCapturedImages] = useState<string[]>([]);
+  const [preparingPhotos, setPreparingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,31 +102,42 @@ export default function ImportPage() {
     },
   };
 
-  const handleImageCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const MAX_PHOTOS = 6;
 
-    if (!file.type.startsWith('image/')) {
-      toast({ title: "Please select an image file", variant: "destructive" });
+  const handleImageCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    const room = MAX_PHOTOS - capturedImages.length;
+    if (room <= 0) {
+      toast({ title: `You can add up to ${MAX_PHOTOS} photos`, variant: "destructive" });
       return;
     }
 
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ title: "Image too large. Max 10MB allowed.", variant: "destructive" });
-      return;
+    setPreparingPhotos(true);
+    try {
+      const accepted: string[] = [];
+      for (const file of files.slice(0, room)) {
+        if (!file.type.startsWith("image/")) continue;
+        accepted.push(await compressImageFile(file));
+      }
+      if (accepted.length === 0) {
+        toast({ title: "Please select image files", variant: "destructive" });
+        return;
+      }
+      setCapturedImages((prev) => [...prev, ...accepted]);
+    } catch (err) {
+      console.error("Image prep error:", err);
+      toast({ title: "Could not read that photo", variant: "destructive" });
+    } finally {
+      setPreparingPhotos(false);
     }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setCapturedImage(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleAIParse = async () => {
-    if (!diaryText.trim() && !capturedImage) {
-      toast({ title: "Please enter text or capture a photo", variant: "destructive" });
+    if (!diaryText.trim() && capturedImages.length === 0) {
+      toast({ title: "Please add a photo or enter text", variant: "destructive" });
       return;
     }
 
@@ -132,11 +145,28 @@ export default function ImportPage() {
     setParsedData(null);
 
     try {
+      // Give the AI the business's own services/staff so it can match names.
+      let serviceNames: string[] = [];
+      let staffNames: string[] = [];
+      if (currentBusiness) {
+        const [{ data: svc }, { data: stf }] = await Promise.all([
+          supabase.from("services").select("name").eq("business_id", currentBusiness.id).eq("is_active", true),
+          supabase.from("staff").select("name").eq("business_id", currentBusiness.id).eq("is_active", true),
+        ]);
+        serviceNames = (svc ?? []).map((r) => r.name);
+        staffNames = (stf ?? []).map((r) => r.name);
+      }
+
       const { data, error } = await supabase.functions.invoke("parse-diary", {
-        body: { 
-          diaryText: diaryText.trim() || undefined, 
+        body: {
+          diaryText: diaryText.trim() || undefined,
           dataType: activeTab,
-          imageData: capturedImage || undefined
+          imagesData: capturedImages.length > 0 ? capturedImages : undefined,
+          context: {
+            today: new Date().toISOString().slice(0, 10),
+            serviceNames,
+            staffNames,
+          },
         }
       });
 
@@ -144,16 +174,16 @@ export default function ImportPage() {
 
       const items = data[activeTab] || [];
       if (items.length === 0) {
-        toast({ title: "No data found in the text or image", variant: "destructive" });
+        toast({ title: "No data found in the photos or text", variant: "destructive" });
         return;
       }
 
       setParsedData(items);
-      toast({ title: `Found ${items.length} ${activeTab}`, description: "Review and confirm to import" });
+      toast({ title: `Found ${items.length} ${activeTab}`, description: "Check the details, then confirm to import" });
     } catch (error) {
       console.error("AI parse error:", error);
       toast({ 
-        title: "Failed to parse diary", 
+        title: "Failed to read your diary", 
         description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive" 
       });
