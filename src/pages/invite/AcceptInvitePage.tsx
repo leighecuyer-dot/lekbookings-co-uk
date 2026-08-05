@@ -246,8 +246,20 @@ export default function AcceptInvitePage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <p className="text-2xl font-bold tracking-tight mb-2">LEK</p>
-          <Building2 className="h-10 w-10 text-primary mx-auto mb-2" />
+          {inviteDetails?.logoUrl ? (
+            <img
+              src={inviteDetails.logoUrl}
+              alt={`${inviteDetails.businessName} logo`}
+              className="h-16 w-auto max-w-[180px] object-contain mx-auto mb-3"
+              loading="lazy"
+            />
+          ) : (
+            <>
+              <p className="text-2xl font-bold tracking-tight mb-2">LEK</p>
+              <Building2 className="h-10 w-10 text-primary mx-auto mb-2" />
+            </>
+          )}
+
           <CardTitle>You're Invited!</CardTitle>
           <CardDescription>
             You've been invited to join <strong>{inviteDetails?.businessName}</strong> as a{" "}
