@@ -15,8 +15,10 @@ interface InviteDetails {
   email: string;
   role: string;
   businessName: string;
+  logoUrl?: string | null;
   expiresAt: string;
 }
+
 
 export default function AcceptInvitePage() {
   const [searchParams] = useSearchParams();
