@@ -52,6 +52,10 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Auth-style routes must never be served from the cached app shell,
+        // otherwise a stale build breaks invite/reset links on returning devices.
+        navigateFallbackDenylist: [/^\/invite/, /^\/auth/, /^\/reset-password/, /^\/~oauth/],
+
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
