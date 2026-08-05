@@ -371,6 +371,13 @@ export default function StaffPage() {
                         {staff.phone}
                       </p>
                     )}
+                    <div className="mt-2">
+                      <Badge variant={staff.user_id ? "outline" : "secondary"} className="text-xs gap-1">
+                        <KeyRound className="w-3 h-3" />
+                        {staff.user_id ? "Login linked" : "No login"}
+                      </Badge>
+                    </div>
+
                     {/* Revenue tracking indicator */}
                     {canViewFinancials && (
                       <div className="flex items-center gap-2 mt-2">
