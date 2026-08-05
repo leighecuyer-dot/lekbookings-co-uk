@@ -34,6 +34,8 @@ export default function AcceptInvitePage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
 
   // Verify invite token on mount
   useEffect(() => {
@@ -42,17 +44,49 @@ export default function AcceptInvitePage() {
       return;
     }
 
-    async function verifyToken() {
-      const { data, error } = await supabase.rpc("get_invite_details", {
-        _token: token,
-      });
+    async function clearStaleAppCache() {
+      try {
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.allSettled(keys.map((k) => caches.delete(k)));
+        }
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.allSettled(regs.map((r) => r.unregister()));
+        }
+      } catch {
+        // Cache clean-up is best effort only.
+      }
+    }
 
+    async function lookup() {
+      const { data, error } = await supabase.rpc("get_invite_details", { _token: token });
       const invite = Array.isArray(data) ? data[0] : data;
+      return { invite, error };
+    }
+
+    async function verifyToken() {
+      let { invite, error } = await lookup();
 
       if (error || !invite) {
+        // A stale cached app shell / service worker is the usual cause here,
+        // so self-heal once before declaring the invitation invalid.
+        await clearStaleAppCache();
+        ({ invite, error } = await lookup());
+      }
+
+      if (error) {
+        setLookupError(error.message);
         setStatus("invalid");
         return;
       }
+
+      if (!invite) {
+        setLookupError(null);
+        setStatus("invalid");
+        return;
+      }
+
 
       if (invite.accepted_at) {
         setStatus("accepted");
