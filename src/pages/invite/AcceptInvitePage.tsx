@@ -68,8 +68,10 @@ export default function AcceptInvitePage() {
         email: invite.email,
         role: invite.role,
         businessName: invite.business_name || "Unknown Business",
+        logoUrl: (invite as { business_logo_url?: string | null }).business_logo_url ?? null,
         expiresAt: invite.expires_at,
       });
+
       setEmail(invite.email);
       setStatus("valid");
     }
