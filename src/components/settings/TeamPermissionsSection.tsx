@@ -20,7 +20,10 @@ interface TeamMember {
 interface PermissionsRow {
   can_view_financials: boolean;
   page_access: Record<PageKey, boolean>;
+  calendar_scope: "all" | "all_masked" | "own";
+  booking_edit_scope: "all" | "own" | "none";
 }
+
 
 const PAGES: { key: PageKey; label: string }[] = [
   { key: "customers", label: "Customers" },
@@ -88,7 +91,7 @@ export function TeamPermissionsSection() {
       // Fetch existing permissions
       const { data: existing } = await supabase
         .from("user_permissions")
-        .select("user_id, can_view_financials, page_access")
+        .select("user_id, can_view_financials, page_access, calendar_scope, booking_edit_scope")
         .eq("business_id", currentBusiness.id);
 
       const map: Record<string, PermissionsRow> = {};
@@ -97,6 +100,8 @@ export function TeamPermissionsSection() {
         map[m.userId] = {
           can_view_financials: row?.can_view_financials ?? true,
           page_access: { ...DEFAULT_PAGES, ...((row?.page_access as Record<PageKey, boolean>) || {}) },
+          calendar_scope: (row?.calendar_scope as PermissionsRow["calendar_scope"]) ?? "all",
+          booking_edit_scope: (row?.booking_edit_scope as PermissionsRow["booking_edit_scope"]) ?? "all",
         };
       }
       setPerms(map);
@@ -115,8 +120,11 @@ export function TeamPermissionsSection() {
         user_id: userId,
         business_id: currentBusiness.id,
         can_view_financials: next.can_view_financials,
+        calendar_scope: next.calendar_scope,
+        booking_edit_scope: next.booking_edit_scope,
         page_access: next.page_access as unknown as import("@/integrations/supabase/types").Json,
       }, { onConflict: "user_id,business_id" });
+
 
     if (error) {
       setPerms({ ...perms, [userId]: prev });
