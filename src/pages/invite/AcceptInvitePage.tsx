@@ -41,44 +41,37 @@ export default function AcceptInvitePage() {
     }
 
     async function verifyToken() {
-      const { data, error } = await supabase
-        .from("business_invites")
-        .select(`
-          email,
-          role,
-          expires_at,
-          accepted_at,
-          businesses:business_id (name)
-        `)
-        .eq("token", token)
-        .single();
+      const { data, error } = await supabase.rpc("get_invite_details", {
+        _token: token,
+      });
 
-      if (error || !data) {
+      const invite = Array.isArray(data) ? data[0] : data;
+
+      if (error || !invite) {
         setStatus("invalid");
         return;
       }
 
-      if (data.accepted_at) {
+      if (invite.accepted_at) {
         setStatus("accepted");
         return;
       }
 
-      if (new Date(data.expires_at) < new Date()) {
+      if (new Date(invite.expires_at) < new Date()) {
         setStatus("expired");
         return;
       }
 
-      const businessData = data.businesses as unknown as { name: string } | null;
-      
       setInviteDetails({
-        email: data.email,
-        role: data.role,
-        businessName: businessData?.name || "Unknown Business",
-        expiresAt: data.expires_at,
+        email: invite.email,
+        role: invite.role,
+        businessName: invite.business_name || "Unknown Business",
+        expiresAt: invite.expires_at,
       });
-      setEmail(data.email);
+      setEmail(invite.email);
       setStatus("valid");
     }
+
 
     verifyToken();
   }, [token]);
