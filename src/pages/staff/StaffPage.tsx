@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent, KeyRound } from "lucide-react";
+import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent, KeyRound, Pencil } from "lucide-react";
 import { StaffAccessModal } from "@/components/staff/StaffAccessModal";
 
 import {
@@ -73,6 +73,9 @@ export default function StaffPage() {
   const [selectedStaffForLeave, setSelectedStaffForLeave] = useState<Staff | null>(null);
   const [selectedStaffForRevenue, setSelectedStaffForRevenue] = useState<Staff | null>(null);
   const [selectedStaffForAccess, setSelectedStaffForAccess] = useState<Staff | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editStaff, setEditStaff] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   
   const [newStaff, setNewStaff] = useState({
@@ -80,6 +83,7 @@ export default function StaffPage() {
     email: "",
     phone: "",
   });
+
 
   const staffLimitReached = !canAddStaff(staffList.length);
 
@@ -150,11 +154,49 @@ export default function StaffPage() {
     fetchStaff();
   };
 
+  const openEditStaff = (staff: Staff) => {
+    setEditStaff({
+      id: staff.id,
+      name: staff.name,
+      email: staff.email ?? "",
+      phone: staff.phone ?? "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateStaff = async () => {
+    if (!editStaff) return;
+    if (!editStaff.name.trim()) {
+      toast.error("Please enter a staff name");
+      return;
+    }
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("staff")
+      .update({
+        name: editStaff.name.trim(),
+        email: editStaff.email.trim() || null,
+        phone: editStaff.phone.trim() || null,
+      })
+      .eq("id", editStaff.id);
+    setSavingEdit(false);
+
+    if (error) {
+      toast.error("Could not save changes");
+      return;
+    }
+    toast.success("Details updated");
+    setEditDialogOpen(false);
+    setEditStaff(null);
+    fetchStaff();
+  };
+
   const handleToggleActive = async (id: string, isActive: boolean) => {
     const { error } = await supabase
       .from("staff")
       .update({ is_active: !isActive })
       .eq("id", id);
+
 
     if (error) {
       toast.error("Failed to update staff");
@@ -303,6 +345,11 @@ export default function StaffPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditStaff(staff)}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit Details
+                          </DropdownMenuItem>
+
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedStaffForAccess(staff);
@@ -469,6 +516,49 @@ export default function StaffPage() {
           onSaved={fetchStaff}
         />
       )}
+
+      {/* Edit Staff Details Modal */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Details</DialogTitle>
+            <DialogDescription>Update this team member's name and contact details.</DialogDescription>
+          </DialogHeader>
+          {editStaff && (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  value={editStaff.name}
+                  onChange={(e) => setEditStaff({ ...editStaff, name: e.target.value })}
+                  placeholder="Jane Smith"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={editStaff.email}
+                  onChange={(e) => setEditStaff({ ...editStaff, email: e.target.value })}
+                  placeholder="jane@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input
+                  value={editStaff.phone}
+                  onChange={(e) => setEditStaff({ ...editStaff, phone: e.target.value })}
+                  placeholder="+44 7700 900000"
+                />
+              </div>
+              <Button onClick={handleUpdateStaff} disabled={savingEdit} className="w-full gradient-primary">
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
 
     </DashboardLayout>
   );
