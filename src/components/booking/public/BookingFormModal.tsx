@@ -354,6 +354,7 @@ export function BookingFormModal({
 
       setStep("success");
       setConfirmation({ reference, emailSent: false, smsSent: false });
+      setConfirmationLoading(true);
 
       // Trigger confirmation email + SMS (edge function looks up verified
       // customer data server-side and handles opt-in / tier caps).
@@ -371,6 +372,8 @@ export function BookingFormModal({
         }
       } catch (e) {
         console.log("Confirmation notification skipped:", e);
+      } finally {
+        setConfirmationLoading(false);
       }
     }
     setSubmitting(false);
