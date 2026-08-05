@@ -108,6 +108,7 @@ export function BookingFormModal({
   const [waitlistDialogOpen, setWaitlistDialogOpen] = useState(false);
   const [waitlistSlot, setWaitlistSlot] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ reference: string; emailSent: boolean; smsSent: boolean } | null>(null);
+  const [confirmationLoading, setConfirmationLoading] = useState(false);
   
   
   const [formData, setFormData] = useState({
@@ -353,6 +354,7 @@ export function BookingFormModal({
 
       setStep("success");
       setConfirmation({ reference, emailSent: false, smsSent: false });
+      setConfirmationLoading(true);
 
       // Trigger confirmation email + SMS (edge function looks up verified
       // customer data server-side and handles opt-in / tier caps).
@@ -370,6 +372,8 @@ export function BookingFormModal({
         }
       } catch (e) {
         console.log("Confirmation notification skipped:", e);
+      } finally {
+        setConfirmationLoading(false);
       }
     }
     setSubmitting(false);
@@ -642,12 +646,14 @@ export function BookingFormModal({
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {confirmation.emailSent && confirmation.smsSent
+                  {confirmationLoading
+                    ? "Sending your confirmation…"
+                    : confirmation.emailSent && confirmation.smsSent
                     ? "Confirmation sent to your email and phone."
                     : confirmation.smsSent
                     ? "Confirmation sent to your phone."
                     : confirmation.emailSent
-                    ? "Confirmation sent to your email."
+                    ? "Confirmation sent to your email. SMS will be added once the sender is ready."
                     : "Please save this reference — we couldn't send an automatic confirmation."}
                 </p>
               </div>

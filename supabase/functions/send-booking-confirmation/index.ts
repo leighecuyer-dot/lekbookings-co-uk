@@ -122,31 +122,44 @@ const handler = async (req: Request): Promise<Response> => {
 
 
 
-    // Send SMS confirmation (respects per-business opt-in + tier caps).
+    // Send SMS confirmation only if the business has SMS enabled.
     if (booking.customer_phone) {
       try {
-        const smsUrl = `${supabaseUrl}/functions/v1/send-sms`;
-        const smsRes = await fetch(smsUrl, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${serviceKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            businessId: booking.business_id,
-            bookingId: booking.id,
-            eventType: "confirmation",
-            to: booking.customer_phone,
-            tokens: {
-              customer_name: booking.customer_name,
-              service_name: serviceName,
-              business_name: businessName,
-              start_time: dateTime,
-              reference: booking.id.slice(0, 8).toUpperCase(),
+        const { data: smsSettings } = await admin
+          .from("business_sms_settings")
+          .select("sms_enabled, confirmation_enabled")
+          .eq("business_id", booking.business_id)
+          .maybeSingle();
+
+        if (smsSettings?.sms_enabled && smsSettings?.confirmation_enabled) {
+          const smsUrl = `${supabaseUrl}/functions/v1/send-sms`;
+          const smsRes = await fetch(smsUrl, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${serviceKey}`,
+              "Content-Type": "application/json",
             },
-          }),
-        });
-        smsSent = smsRes.ok;
+            body: JSON.stringify({
+              businessId: booking.business_id,
+              bookingId: booking.id,
+              eventType: "confirmation",
+              to: booking.customer_phone,
+              tokens: {
+                customer_name: booking.customer_name,
+                service_name: serviceName,
+                business_name: businessName,
+                start_time: dateTime,
+                reference: booking.id.slice(0, 8).toUpperCase(),
+              },
+            }),
+          });
+          if (smsRes.ok) {
+            const smsResult = await smsRes.json().catch(() => ({}));
+            smsSent = smsResult.status === "sent";
+          }
+        } else {
+          console.log("SMS confirmation skipped: disabled in business settings");
+        }
       } catch (e) {
         console.log("SMS confirmation skipped:", e);
       }

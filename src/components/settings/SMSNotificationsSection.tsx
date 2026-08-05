@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { AlertCircle, MessageSquare, Send } from "lucide-react";
+import { AlertCircle, CheckCircle, MessageSquare, Send } from "lucide-react";
 
 const TIER_CAPS: Record<string, number> = {
   free: 0, essential: 50, professional: 200, enterprise: 1000, unknown: 0,
@@ -129,6 +129,21 @@ export function SMSNotificationsSection() {
     else toast.warning(`Result: ${status ?? "unknown"}`);
   };
 
+  const toggleSmsEnabled = async (enabled: boolean) => {
+    if (!currentBusiness) return;
+    const next = { ...settings, sms_enabled: enabled };
+    setSettings(next);
+    const { error } = await supabase
+      .from("business_sms_settings")
+      .upsert({ business_id: currentBusiness.id, ...next }, { onConflict: "business_id" });
+    if (error) {
+      toast.error("Failed to update SMS settings");
+      setSettings(settings);
+    } else {
+      toast.success(enabled ? "SMS turned on" : "SMS turned off — email confirmations only");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -145,6 +160,42 @@ export function SMSNotificationsSection() {
         {!canUseSms && (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
             SMS is not included in your current tier ({tier}). Upgrade to Essential or higher to send SMS.
+          </div>
+        )}
+
+        {canUseSms && settings.sms_enabled && (
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>SMS confirmations are on</AlertTitle>
+            <AlertDescription className="text-sm">
+              Customers will receive a text message when they book. If your Twilio number is not
+              SMS-capable, tap the button below to fall back to email-only until Twilio is fixed.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {canUseSms && !settings.sms_enabled && (
+          <Alert variant="default" className="bg-muted/50 border-muted">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>SMS is off</AlertTitle>
+            <AlertDescription className="text-sm">
+              Customers will receive email confirmations only. Turn SMS back on once your Twilio
+              sender is upgraded and SMS-capable.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {canUseSms && (
+          <div className="flex gap-2">
+            {settings.sms_enabled ? (
+              <Button variant="outline" onClick={() => toggleSmsEnabled(false)} className="w-full">
+                Use email only for now
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => toggleSmsEnabled(true)} className="w-full">
+                Turn SMS back on
+              </Button>
+            )}
           </div>
         )}
 
