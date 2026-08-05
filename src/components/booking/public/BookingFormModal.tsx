@@ -108,6 +108,7 @@ export function BookingFormModal({
   const [waitlistDialogOpen, setWaitlistDialogOpen] = useState(false);
   const [waitlistSlot, setWaitlistSlot] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ reference: string; emailSent: boolean; smsSent: boolean } | null>(null);
+  const [confirmationLoading, setConfirmationLoading] = useState(false);
   
   
   const [formData, setFormData] = useState({
