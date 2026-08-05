@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { AlertCircle, MessageSquare, Send } from "lucide-react";
+import { AlertCircle, CheckCircle, MessageSquare, Send } from "lucide-react";
 
 const TIER_CAPS: Record<string, number> = {
   free: 0, essential: 50, professional: 200, enterprise: 1000, unknown: 0,
