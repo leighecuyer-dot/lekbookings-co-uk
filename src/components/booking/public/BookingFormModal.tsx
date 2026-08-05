@@ -646,7 +646,9 @@ export function BookingFormModal({
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {confirmation.emailSent && confirmation.smsSent
+                  {confirmationLoading
+                    ? "Sending your confirmation…"
+                    : confirmation.emailSent && confirmation.smsSent
                     ? "Confirmation sent to your email and phone."
                     : confirmation.smsSent
                     ? "Confirmation sent to your phone."
