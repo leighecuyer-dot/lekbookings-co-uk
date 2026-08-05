@@ -40,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: booking, error: bookingErr } = await admin
       .from("bookings")
-      .select("id, customer_email, customer_name, customer_phone, start_time, service_id, business_id")
+      .select("id, customer_email, customer_name, customer_phone, start_time, service_id, staff_id, business_id")
       .eq("id", bookingId)
       .maybeSingle();
 
@@ -151,6 +151,90 @@ const handler = async (req: Request): Promise<Response> => {
         console.log("SMS confirmation skipped:", e);
       }
     }
+
+    // ---- Internal alerts (owner + assigned staff) -------------------------
+    const reference = booking.id.slice(0, 8).toUpperCase();
+
+    const sendAlertEmail = async (to: string, recipientName: string, key: string) => {
+      try {
+        await admin.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "booking-alert",
+            recipientEmail: to,
+            idempotencyKey: `booking-alert-${key}-${booking.id}`,
+            templateData: {
+              recipientName,
+              businessName,
+              customerName: booking.customer_name,
+              customerPhone: booking.customer_phone ?? "",
+              serviceName,
+              dateTime,
+              staffName,
+              reference,
+              alertKind: "New booking",
+            },
+          },
+        });
+      } catch (e) {
+        console.log("Alert email skipped:", e);
+      }
+    };
+
+    const sendAlertSms = async (to: string) => {
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${serviceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            businessId: booking.business_id,
+            bookingId: booking.id,
+            eventType: "test",
+            to,
+            bodyOverride:
+              `New booking: ${booking.customer_name} — ${serviceName} on ${dateTime}` +
+              (staffName ? ` with ${staffName}` : "") + `. Ref ${reference}`,
+          }),
+        });
+      } catch (e) {
+        console.log("Alert SMS skipped:", e);
+      }
+    };
+
+    try {
+      const { data: notify } = await admin
+        .from("business_notification_settings")
+        .select("*")
+        .eq("business_id", booking.business_id)
+        .maybeSingle();
+
+      if (notify?.notify_new_booking) {
+        const ownerEmail = notify.owner_email || biz?.email || "";
+        if (notify.owner_channel_email && ownerEmail) {
+          await sendAlertEmail(ownerEmail, "there", "owner");
+        }
+        const ownerPhone = notify.owner_phone || businessPhone;
+        if (notify.owner_channel_sms && ownerPhone) {
+          await sendAlertSms(ownerPhone);
+        }
+      }
+
+      if (notify?.staff_alerts_enabled && booking.staff_id) {
+        const { data: st } = await admin
+          .from("staff").select("name, email, phone").eq("id", booking.staff_id).maybeSingle();
+        if (notify.staff_alert_channel_email && st?.email) {
+          await sendAlertEmail(st.email, st.name ?? "there", "staff");
+        }
+        if (notify.staff_alert_channel_sms && st?.phone) {
+          await sendAlertSms(st.phone);
+        }
+      }
+    } catch (e) {
+      console.log("Internal alerts skipped:", e);
+    }
+
 
     return new Response(JSON.stringify({ emailSent, smsSent }), {
       status: 200,
