@@ -43,6 +43,8 @@ interface Staff {
 
 export default function WeekPage() {
   const { currentBusiness } = useBusiness();
+  const { calendarScope, staffId: myStaffId } = useUserPermissions(currentBusiness?.id);
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -94,7 +96,7 @@ export default function WeekPage() {
         .eq("is_active", true),
     ]);
 
-    if (bookingsRes.data) setBookings(bookingsRes.data);
+    if (bookingsRes.data) setBookings(applyCalendarScope(bookingsRes.data, calendarScope, myStaffId));
     if (servicesRes.data) setServices(servicesRes.data);
     if (staffRes.data) setStaffList(staffRes.data);
     setLoading(false);
