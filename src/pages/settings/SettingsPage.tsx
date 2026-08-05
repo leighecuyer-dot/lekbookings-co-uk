@@ -22,6 +22,8 @@ import { DataAccessRequests } from "@/components/settings/DataAccessRequests";
 import { TeamPermissionsSection } from "@/components/settings/TeamPermissionsSection";
 import { SMSNotificationsSection } from "@/components/settings/SMSNotificationsSection";
 import { EmailNotificationsSection } from "@/components/settings/EmailNotificationsSection";
+import { NotificationSettingsSection } from "@/components/settings/NotificationSettingsSection";
+
 import { getBookingShareUrl, getBookingUrl } from "@/lib/bookingLinks";
 
 const TIMEZONES = [
@@ -299,6 +301,9 @@ export default function SettingsPage() {
         <SMSNotificationsSection />
 
         <EmailNotificationsSection />
+
+        <NotificationSettingsSection />
+
 
 
         {/* Payment Settings */}
