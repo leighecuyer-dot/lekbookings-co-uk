@@ -505,17 +505,21 @@ export default function ImportPage() {
                 <div className="space-y-3">
                   <Label className="flex items-center gap-2">
                     <Camera className="w-4 h-4" />
-                    Capture or upload a photo of your diary
+                    Photograph your appointment list ({capturedImages.length}/{MAX_PHOTOS} photos)
                   </Label>
-                  
+                  <p className="text-xs text-muted-foreground">
+                    Add one photo per page — you can snap several pages and import them all at once.
+                  </p>
+
                   <div className="flex flex-wrap gap-3">
                     {/* Camera capture (mobile) */}
                     <Button
                       variant="outline"
                       onClick={() => cameraInputRef.current?.click()}
+                      disabled={preparingPhotos || capturedImages.length >= MAX_PHOTOS}
                       className="gap-2"
                     >
-                      <Camera className="w-4 h-4" />
+                      {preparingPhotos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                       Take Photo
                     </Button>
                     <input
@@ -531,46 +535,60 @@ export default function ImportPage() {
                     <Button
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
+                      disabled={preparingPhotos || capturedImages.length >= MAX_PHOTOS}
                       className="gap-2"
                     >
                       <ImageIcon className="w-4 h-4" />
-                      Upload Image
+                      Upload Photos
                     </Button>
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleImageCapture}
                       className="hidden"
                     />
 
-                    {capturedImage && (
+                    {capturedImages.length > 0 && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setCapturedImage(null)}
+                        onClick={() => setCapturedImages([])}
                         className="text-destructive"
                       >
                         <X className="w-4 h-4 mr-1" />
-                        Remove
+                        Clear all
                       </Button>
                     )}
                   </div>
 
-                  {/* Image preview */}
-                  {capturedImage && (
-                    <div className="relative border rounded-lg overflow-hidden max-w-md">
-                      <img
-                        src={capturedImage}
-                        alt="Captured diary"
-                        className="w-full h-auto max-h-[300px] object-contain bg-muted"
-                      />
-                      <Badge className="absolute top-2 right-2">
-                        Photo ready
-                      </Badge>
+                  {/* Image previews */}
+                  {capturedImages.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {capturedImages.map((img, i) => (
+                        <div key={i} className="relative border rounded-lg overflow-hidden">
+                          <img
+                            src={img}
+                            alt={`Diary page ${i + 1}`}
+                            className="w-full h-32 object-cover bg-muted"
+                          />
+                          <Badge className="absolute top-1 left-1">Page {i + 1}</Badge>
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="absolute top-1 right-1 h-7 w-7"
+                            onClick={() => setCapturedImages((prev) => prev.filter((_, idx) => idx !== i))}
+                            aria-label={`Remove page ${i + 1}`}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
+
 
                 {/* Divider */}
                 <div className="relative">
