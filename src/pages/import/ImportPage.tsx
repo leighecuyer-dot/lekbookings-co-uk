@@ -316,31 +316,74 @@ export default function ImportPage() {
             (created ?? []).forEach((c) => customerMap.set(norm(c.name), c.id));
           }
 
-          insertData = parsedData.map((b: ParsedBooking) => {
-            const service = findService(b.service_name);
-            const staffMember = findStaff(b.staff_name);
-            const startDateTime = new Date(`${b.date}T${b.start_time}`);
-            const duration = b.duration_minutes || service?.duration_minutes || 60;
-            const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
+          // Build a valid Date from possibly-messy AI output; returns null if unusable.
+          const toStart = (dateStr?: string, timeStr?: string): Date | null => {
+            if (!dateStr) return null;
+            const d = String(dateStr).trim().slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+            let t = String(timeStr ?? "").trim();
+            const m = t.match(/^(\d{1,2})[:.]?(\d{2})?\s*(am|pm)?$/i);
+            if (m) {
+              let h = parseInt(m[1], 10);
+              const min = m[2] ? parseInt(m[2], 10) : 0;
+              const suffix = m[3]?.toLowerCase();
+              if (suffix === "pm" && h < 12) h += 12;
+              if (suffix === "am" && h === 12) h = 0;
+              if (h > 23 || min > 59) return null;
+              t = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+            } else {
+              t = "09:00";
+            }
+            const dt = new Date(`${d}T${t}:00`);
+            return isNaN(dt.getTime()) ? null : dt;
+          };
 
-            return {
-              business_id: currentBusiness.id,
-              customer_id: customerMap.get(norm(b.customer_name)) ?? null,
-              service_id: service?.id ?? null,
-              staff_id: staffMember?.id ?? null,
-              customer_name: b.customer_name,
-              customer_phone: b.customer_phone || null,
-              customer_email: b.customer_email || null,
-              start_time: startDateTime.toISOString(),
-              end_time: endDateTime.toISOString(),
-              total_price: service?.price ?? null,
-              notes: b.notes || null,
-              status: "confirmed",
-            };
-          }).filter((b) => !isNaN(new Date(b.start_time).getTime()));
+          let skipped = 0;
+          insertData = parsedData
+            .map((b: ParsedBooking) => {
+              const service = findService(b.service_name);
+              const staffMember = findStaff(b.staff_name);
+              const startDateTime = toStart(b.date, b.start_time);
+              if (!startDateTime) {
+                skipped++;
+                return null;
+              }
+              const duration = Number(b.duration_minutes) || service?.duration_minutes || 60;
+              const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
+
+              return {
+                business_id: currentBusiness.id,
+                customer_id: customerMap.get(norm(b.customer_name)) ?? null,
+                service_id: service?.id ?? null,
+                staff_id: staffMember?.id ?? null,
+                customer_name: b.customer_name,
+                customer_phone: b.customer_phone || null,
+                customer_email: b.customer_email || null,
+                start_time: startDateTime.toISOString(),
+                end_time: endDateTime.toISOString(),
+                total_price: service?.price ?? null,
+                notes: b.notes || null,
+                status: "confirmed",
+              };
+            })
+            .filter(Boolean);
+
+          if (insertData.length === 0) {
+            throw new Error("No bookings had a valid date and time. Please fix the dates in the preview table and try again.");
+          }
 
           const { error: bookingError } = await supabase.from("bookings").insert(insertData);
           if (bookingError) throw bookingError;
+          if (skipped > 0) {
+            toast({
+              title: `${skipped} booking(s) skipped`,
+              description: "They were missing a valid date or time.",
+            });
+          }
+          break;
+        }
+      }
+
           break;
         }
       }
