@@ -1,3 +1,5 @@
+import { useUserPermissions } from "@/hooks/permissions/useUserPermissions";
+import { applyCalendarScope } from "@/lib/bookingVisibility";
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/contexts/BusinessContext";
