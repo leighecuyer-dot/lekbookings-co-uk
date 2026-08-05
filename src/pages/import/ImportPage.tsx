@@ -372,10 +372,32 @@ export default function ImportPage() {
   const renderParsedData = () => {
     if (!parsedData) return null;
 
+    const columns = Object.keys(parsedData[0] || {});
+
+    const updateCell = (rowIndex: number, key: string, value: string) => {
+      setParsedData((prev) =>
+        (prev ?? []).map((row, i) =>
+          i === rowIndex
+            ? { ...row, [key]: key === "duration_minutes" || key === "price" ? (value === "" ? null : Number(value)) : value }
+            : row
+        )
+      );
+    };
+
+    const removeRow = (rowIndex: number) => {
+      setParsedData((prev) => {
+        const next = (prev ?? []).filter((_, i) => i !== rowIndex);
+        return next.length > 0 ? next : null;
+      });
+    };
+
     return (
       <div className="mt-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold">Preview ({parsedData.length} items)</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="font-semibold">Check before importing ({parsedData.length})</h3>
+            <p className="text-xs text-muted-foreground">Tap any box to correct what the AI read.</p>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setParsedData(null)}>
               <X className="w-4 h-4 mr-2" />
@@ -388,21 +410,41 @@ export default function ImportPage() {
           </div>
         </div>
 
-        <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+        <div className="border rounded-lg overflow-auto max-h-[420px]">
           <table className="w-full text-sm">
-            <thead className="bg-muted sticky top-0">
+            <thead className="bg-muted sticky top-0 z-10">
               <tr>
-                {Object.keys(parsedData[0] || {}).map(key => (
-                  <th key={key} className="px-4 py-2 text-left font-medium">{key}</th>
+                {columns.map(key => (
+                  <th key={key} className="px-3 py-2 text-left font-medium whitespace-nowrap capitalize">
+                    {key.replace(/_/g, " ")}
+                  </th>
                 ))}
+                <th className="w-10" />
               </tr>
             </thead>
             <tbody>
               {parsedData.map((item, i) => (
                 <tr key={i} className="border-t">
-                  {Object.values(item).map((val, j) => (
-                    <td key={j} className="px-4 py-2">{String(val ?? "-")}</td>
+                  {columns.map((key) => (
+                    <td key={key} className="px-1 py-1">
+                      <Input
+                        value={item[key] ?? ""}
+                        onChange={(e) => updateCell(i, key, e.target.value)}
+                        className="h-9 min-w-[120px] text-sm"
+                      />
+                    </td>
                   ))}
+                  <td className="px-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => removeRow(i)}
+                      aria-label="Remove row"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -411,6 +453,7 @@ export default function ImportPage() {
       </div>
     );
   };
+
 
   return (
     <DashboardLayout title="Import Data" description="Bulk upload or use AI to parse your existing diary">
