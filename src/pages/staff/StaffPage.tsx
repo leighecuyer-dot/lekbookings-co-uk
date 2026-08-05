@@ -455,6 +455,21 @@ export default function StaffPage() {
           onSave={fetchStaff}
         />
       )}
+
+      {/* Login Access Modal */}
+      {selectedStaffForAccess && currentBusiness && (
+        <StaffAccessModal
+          open={accessModalOpen}
+          onOpenChange={setAccessModalOpen}
+          businessId={currentBusiness.id}
+          staffId={selectedStaffForAccess.id}
+          staffName={selectedStaffForAccess.name}
+          staffEmail={selectedStaffForAccess.email}
+          linkedUserId={selectedStaffForAccess.user_id}
+          onSaved={fetchStaff}
+        />
+      )}
+
     </DashboardLayout>
   );
 }
