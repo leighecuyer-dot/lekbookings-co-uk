@@ -384,9 +384,7 @@ export default function ImportPage() {
         }
       }
 
-          break;
-        }
-      }
+
 
       toast({ title: "Import successful!", description: `${parsedData.length} ${activeTab} imported` });
       setParsedData(null);
