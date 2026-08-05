@@ -107,6 +107,8 @@ export default function StaffPage() {
         email: s.email,
         phone: s.phone,
         is_active: s.is_active,
+        user_id: s.user_id ?? null,
+
         working_hours: s.working_hours as unknown as WorkingHours | null,
         revenue_tracking_enabled: s.revenue_tracking_enabled,
         commission_percentage: s.commission_percentage,
