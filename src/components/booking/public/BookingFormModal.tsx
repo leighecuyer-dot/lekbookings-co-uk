@@ -647,7 +647,7 @@ export function BookingFormModal({
                     : confirmation.smsSent
                     ? "Confirmation sent to your phone."
                     : confirmation.emailSent
-                    ? "Confirmation sent to your email."
+                    ? "Confirmation sent to your email. SMS will be added once the sender is ready."
                     : "Please save this reference — we couldn't send an automatic confirmation."}
                 </p>
               </div>
