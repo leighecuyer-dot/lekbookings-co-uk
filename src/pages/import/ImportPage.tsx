@@ -466,7 +466,7 @@ export default function ImportPage() {
               <Button
                 key={key}
                 variant={activeTab === key ? "default" : "outline"}
-                onClick={() => { setActiveTab(key); setParsedData(null); setCapturedImage(null); }}
+                onClick={() => { setActiveTab(key); setParsedData(null); setCapturedImages([]); }}
                 className="gap-2"
               >
                 <Icon className="w-4 h-4" />
