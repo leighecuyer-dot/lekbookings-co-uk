@@ -7,6 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { toast } from "sonner";
 import { ShieldCheck, Users } from "lucide-react";
 import type { PageKey } from "@/hooks/permissions/useUserPermissions";
@@ -181,6 +183,45 @@ export function TeamPermissionsSection() {
                     onCheckedChange={(v) => savePermission(m.userId, { ...p, can_view_financials: v })}
                   />
                 </div>
+
+                <div className="rounded-md border p-3 space-y-3">
+                  <div>
+                    <Label className="text-sm">Calendar view</Label>
+                    <p className="text-xs text-muted-foreground">What they see on the shared calendar</p>
+                  </div>
+                  <Select
+                    value={p.calendar_scope}
+                    onValueChange={(v) => savePermission(m.userId, { ...p, calendar_scope: v as PermissionsRow["calendar_scope"] })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Everyone's appointments (full details)</SelectItem>
+                      <SelectItem value="all_masked">Everyone's appointments (others show as "Busy")</SelectItem>
+                      <SelectItem value="own">Only their own appointments</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <div>
+                    <Label className="text-sm">Editing appointments</Label>
+                    <p className="text-xs text-muted-foreground">What they are allowed to change</p>
+                  </div>
+                  <Select
+                    value={p.booking_edit_scope}
+                    onValueChange={(v) => savePermission(m.userId, { ...p, booking_edit_scope: v as PermissionsRow["booking_edit_scope"] })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Can edit any appointment</SelectItem>
+                      <SelectItem value="own">Can edit only their own</SelectItem>
+                      <SelectItem value="none">View only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    "Their own" means appointments booked with their linked staff profile. Link it on the Staff page.
+                  </p>
+                </div>
+
+
 
                 <div className="rounded-md border p-3 space-y-3">
                   <Label className="text-sm">Page access</Label>
