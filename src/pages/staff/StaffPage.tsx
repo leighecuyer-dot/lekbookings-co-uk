@@ -154,11 +154,49 @@ export default function StaffPage() {
     fetchStaff();
   };
 
+  const openEditStaff = (staff: Staff) => {
+    setEditStaff({
+      id: staff.id,
+      name: staff.name,
+      email: staff.email ?? "",
+      phone: staff.phone ?? "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateStaff = async () => {
+    if (!editStaff) return;
+    if (!editStaff.name.trim()) {
+      toast.error("Please enter a staff name");
+      return;
+    }
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("staff")
+      .update({
+        name: editStaff.name.trim(),
+        email: editStaff.email.trim() || null,
+        phone: editStaff.phone.trim() || null,
+      })
+      .eq("id", editStaff.id);
+    setSavingEdit(false);
+
+    if (error) {
+      toast.error("Could not save changes");
+      return;
+    }
+    toast.success("Details updated");
+    setEditDialogOpen(false);
+    setEditStaff(null);
+    fetchStaff();
+  };
+
   const handleToggleActive = async (id: string, isActive: boolean) => {
     const { error } = await supabase
       .from("staff")
       .update({ is_active: !isActive })
       .eq("id", id);
+
 
     if (error) {
       toast.error("Failed to update staff");
