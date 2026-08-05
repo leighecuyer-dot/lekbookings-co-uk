@@ -15,8 +15,10 @@ interface InviteDetails {
   email: string;
   role: string;
   businessName: string;
+  logoUrl?: string | null;
   expiresAt: string;
 }
+
 
 export default function AcceptInvitePage() {
   const [searchParams] = useSearchParams();
@@ -66,8 +68,10 @@ export default function AcceptInvitePage() {
         email: invite.email,
         role: invite.role,
         businessName: invite.business_name || "Unknown Business",
+        logoUrl: (invite as { business_logo_url?: string | null }).business_logo_url ?? null,
         expiresAt: invite.expires_at,
       });
+
       setEmail(invite.email);
       setStatus("valid");
     }
@@ -242,8 +246,20 @@ export default function AcceptInvitePage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <p className="text-2xl font-bold tracking-tight mb-2">LEK</p>
-          <Building2 className="h-10 w-10 text-primary mx-auto mb-2" />
+          {inviteDetails?.logoUrl ? (
+            <img
+              src={inviteDetails.logoUrl}
+              alt={`${inviteDetails.businessName} logo`}
+              className="h-16 w-auto max-w-[180px] object-contain mx-auto mb-3"
+              loading="lazy"
+            />
+          ) : (
+            <>
+              <p className="text-2xl font-bold tracking-tight mb-2">LEK</p>
+              <Building2 className="h-10 w-10 text-primary mx-auto mb-2" />
+            </>
+          )}
+
           <CardTitle>You're Invited!</CardTitle>
           <CardDescription>
             You've been invited to join <strong>{inviteDetails?.businessName}</strong> as a{" "}

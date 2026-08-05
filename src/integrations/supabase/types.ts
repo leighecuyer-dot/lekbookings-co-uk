@@ -1997,6 +1997,8 @@ export type Database = {
         Args: { _token: string }
         Returns: {
           accepted_at: string
+          brand_primary_color: string
+          business_logo_url: string
           business_name: string
           email: string
           expires_at: string
