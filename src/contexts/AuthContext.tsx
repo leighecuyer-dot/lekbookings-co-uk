@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, returnPath?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -38,12 +38,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, returnPath?: string) => {
+    const safeReturnPath = returnPath?.startsWith("/") && !returnPath.startsWith("//")
+      ? returnPath
+      : "/auth";
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: 'https://lekbookings.co.uk/auth',
+        emailRedirectTo: `https://lekbookings.co.uk${safeReturnPath}`,
         data: {
           full_name: fullName,
         },

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Mail, Building2 } from "lucide-react";
 
-type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "accepted" | "accepting" | "success";
+type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "accepted" | "mismatch" | "accepting" | "success";
 
 interface InviteDetails {
   email: string;
@@ -92,9 +92,26 @@ export default function AcceptInvitePage() {
 
     if (error) {
       console.error("Accept invite error:", error);
+      if (error.message.includes("email_mismatch")) {
+        setStatus("mismatch");
+        return;
+      }
+
+      // New-user creation may have accepted the invite through the secure
+      // database trigger before this client request completed.
+      const { data: refreshed } = await supabase.rpc("get_invite_details", { _token: token });
+      const latestInvite = Array.isArray(refreshed) ? refreshed[0] : refreshed;
+      if (latestInvite?.accepted_at) {
+        setStatus("success");
+        setTimeout(() => navigate("/dashboard"), 1200);
+        return;
+      }
+
       toast({
         title: "Failed to accept invite",
-        description: error.message,
+        description: error.message.includes("invite_not_found_or_expired")
+          ? "This invitation has expired or has already been used."
+          : error.message,
         variant: "destructive",
       });
       setStatus("valid");
@@ -119,7 +136,8 @@ export default function AcceptInvitePage() {
 
     try {
       if (isSignUp) {
-        const { error } = await signUp(email, password, fullName);
+        const returnPath = `/invite/accept?token=${encodeURIComponent(token ?? "")}`;
+        const { error } = await signUp(email, password, fullName, returnPath);
         if (error) {
           toast({
             title: "Sign up failed",
@@ -128,10 +146,7 @@ export default function AcceptInvitePage() {
           });
           return;
         }
-        toast({
-          title: "Account created!",
-          description: "You can now accept your invitation.",
-        });
+        toast({ title: "Account created!", description: "Accepting your invitation..." });
       } else {
         const { error } = await signIn(email, password);
         if (error) {
@@ -147,6 +162,12 @@ export default function AcceptInvitePage() {
       setAuthSubmitting(false);
     }
   };
+
+  // Complete the invitation as soon as authentication is established. This
+  // covers both sign-in and sign-up without asking the user to press twice.
+  useEffect(() => {
+    if (user && status === "valid") void acceptInvite();
+  }, [user, status]);
 
   if (authLoading || status === "loading") {
     return (
@@ -215,6 +236,30 @@ export default function AcceptInvitePage() {
           <CardContent className="flex justify-center">
             <Button asChild>
               <Link to="/dashboard">Go to Dashboard</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (status === "mismatch") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <XCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
+            <CardTitle>Wrong Email Account</CardTitle>
+            <CardDescription>
+              Sign in with {inviteDetails?.email} to accept this invitation.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full" onClick={async () => {
+              await supabase.auth.signOut();
+              setStatus("valid");
+            }}>
+              Sign Out and Try Again
             </Button>
           </CardContent>
         </Card>
@@ -325,8 +370,9 @@ export default function AcceptInvitePage() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                   readOnly
+                   aria-readonly="true"
                   required
                 />
               </div>
