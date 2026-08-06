@@ -49,7 +49,8 @@ export function useBookingDragDrop({ onUpdate }: UseBookingDragDropProps = {}) {
   const rescheduleBooking = useCallback(async (
     booking: DraggedBooking,
     newDate: Date,
-    newTime: string
+    newTime: string,
+    newStaffId?: string | null
   ) => {
     setLoading(true);
 
@@ -63,6 +64,13 @@ export function useBookingDragDrop({ onUpdate }: UseBookingDragDropProps = {}) {
     const newStartTime = setMinutes(setHours(newDate, hours), minutes);
     const newEndTime = addMinutes(newStartTime, durationMinutes);
 
+    const staffChanged = newStaffId !== undefined && newStaffId !== booking.staff_id;
+    const updatePayload: Record<string, unknown> = {
+      start_time: newStartTime.toISOString(),
+      end_time: newEndTime.toISOString(),
+      ...(staffChanged ? { staff_id: newStaffId } : {}),
+    };
+
     let error: Error | null = null;
 
     if (isResellerMode) {
@@ -70,10 +78,7 @@ export function useBookingDragDrop({ onUpdate }: UseBookingDragDropProps = {}) {
       // For now, use direct update (RLS will still apply)
       const { error: updateError } = await supabase
         .from("bookings")
-        .update({
-          start_time: newStartTime.toISOString(),
-          end_time: newEndTime.toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", booking.id);
       if (updateError) {
         error = updateError;
@@ -81,10 +86,7 @@ export function useBookingDragDrop({ onUpdate }: UseBookingDragDropProps = {}) {
     } else {
       const { error: updateError } = await supabase
         .from("bookings")
-        .update({
-          start_time: newStartTime.toISOString(),
-          end_time: newEndTime.toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", booking.id);
       if (updateError) {
         error = updateError;
@@ -98,7 +100,7 @@ export function useBookingDragDrop({ onUpdate }: UseBookingDragDropProps = {}) {
       return false;
     }
 
-    toast.success("Booking rescheduled!");
+    toast.success(staffChanged ? "Booking moved!" : "Booking rescheduled!");
     onUpdate?.();
     return true;
   }, [onUpdate, isResellerMode]);
@@ -106,7 +108,8 @@ export function useBookingDragDrop({ onUpdate }: UseBookingDragDropProps = {}) {
   const handleDrop = useCallback(async (
     e: React.DragEvent,
     targetDate: Date,
-    targetTime: string
+    targetTime: string,
+    targetStaffId?: string | null
   ) => {
     e.preventDefault();
     
@@ -115,7 +118,7 @@ export function useBookingDragDrop({ onUpdate }: UseBookingDragDropProps = {}) {
 
     try {
       const booking: DraggedBooking = JSON.parse(bookingData);
-      await rescheduleBooking(booking, targetDate, targetTime);
+      await rescheduleBooking(booking, targetDate, targetTime, targetStaffId);
     } catch (error) {
       console.error("Failed to parse booking data:", error);
     }
