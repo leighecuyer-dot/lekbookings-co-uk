@@ -279,6 +279,7 @@ export default function CalendarPage() {
         staffId: "",
         time: "09:00",
         notes: "",
+        durationOverride: null,
       });
       fetchData();
     }
