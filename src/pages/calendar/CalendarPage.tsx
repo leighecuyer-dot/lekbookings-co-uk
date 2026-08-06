@@ -378,9 +378,25 @@ export default function CalendarPage() {
       ...prev, 
       time,
       staffId: staffId || "",
+      durationOverride: null,
     }));
     setDialogOpen(true);
   };
+
+  const handleSlotRangeSelect = (
+    time: string,
+    durationMinutes: number,
+    staffId?: string
+  ) => {
+    setNewBooking((prev) => ({
+      ...prev,
+      time,
+      staffId: staffId || "",
+      durationOverride: durationMinutes,
+    }));
+    setDialogOpen(true);
+  };
+
 
   return (
     <DashboardLayout
