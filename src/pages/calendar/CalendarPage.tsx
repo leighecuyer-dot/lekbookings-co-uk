@@ -708,7 +708,9 @@ export default function CalendarPage() {
                           }
                           onBookingClick={handleBookingClick}
                           onSlotClick={handleSlotClick}
+                          onSlotRangeSelect={handleSlotRangeSelect}
                           loading={loading}
+                          initialLoad={initialLoad}
                           isOnLeave={isOnLeave}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
