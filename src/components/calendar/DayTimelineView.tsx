@@ -8,6 +8,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  TIME_SLOTS,
+  getStaffColor,
+  getStatusColor,
+  isStaffAvailableAtSlot,
+} from "./dayViewUtils";
+
 
 interface Booking {
   id: string;
