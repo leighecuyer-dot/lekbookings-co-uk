@@ -624,9 +624,9 @@ export default function CalendarPage() {
               {viewMode === "day" && (
                 <div 
                   className="flex flex-col h-full"
-                  onTouchStart={swipeHandlers.onTouchStart}
-                  onTouchMove={swipeHandlers.onTouchMove}
-                  onTouchEnd={swipeHandlers.onTouchEnd}
+                  onTouchStart={dayLayout === "timeline" ? swipeHandlers.onTouchStart : undefined}
+                  onTouchMove={dayLayout === "timeline" ? swipeHandlers.onTouchMove : undefined}
+                  onTouchEnd={dayLayout === "timeline" ? swipeHandlers.onTouchEnd : undefined}
                 >
                   <div className="flex items-center justify-between mb-3 sm:mb-6 shrink-0">
                     <div className="flex items-center gap-1 sm:gap-2">
