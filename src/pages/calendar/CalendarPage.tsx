@@ -201,6 +201,7 @@ export default function CalendarPage() {
     if (staffRes.data) setStaffList(staffRes.data as unknown as Staff[]);
     if (customersRes.data) setCustomers(customersRes.data);
     setLoading(false);
+    setInitialLoad(false);
   };
 
   const handleCreateBooking = async () => {
