@@ -29,6 +29,8 @@ import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { WeekView } from "@/components/calendar/WeekView";
 import { KanbanView } from "@/components/calendar/KanbanView";
 import { DayTimelineView } from "@/components/calendar/DayTimelineView";
+import { StaffDayColumnsView } from "@/components/calendar/StaffDayColumnsView";
+import { cn } from "@/lib/utils";
 import { PinchZoomWrapper } from "@/components/calendar/PinchZoomWrapper";
 import { StatusFilter } from "@/components/calendar/StatusFilter";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
@@ -102,6 +104,10 @@ export default function CalendarPage() {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("day");
+  const [dayLayout, setDayLayout] = useState<"timeline" | "columns">(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("lek-day-layout") : null;
+    return saved === "columns" ? "columns" : "timeline";
+  });
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [staffFilter, setStaffFilter] = useState<string>("all");
   
@@ -623,33 +629,89 @@ export default function CalendarPage() {
                         <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs sm:h-9 sm:text-sm"
-                      onClick={() => setSelectedDate(new Date())}
-                    >
-                      Today
-                    </Button>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="flex rounded-lg border overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDayLayout("timeline");
+                            localStorage.setItem("lek-day-layout", "timeline");
+                          }}
+                          className={cn(
+                            "px-2 py-1 text-[11px] sm:text-xs transition-colors",
+                            dayLayout === "timeline"
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:bg-muted"
+                          )}
+                        >
+                          Timeline
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDayLayout("columns");
+                            localStorage.setItem("lek-day-layout", "columns");
+                          }}
+                          className={cn(
+                            "px-2 py-1 text-[11px] sm:text-xs transition-colors",
+                            dayLayout === "columns"
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:bg-muted"
+                          )}
+                        >
+                          Columns
+                        </button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs sm:h-9 sm:text-sm"
+                        onClick={() => setSelectedDate(new Date())}
+                      >
+                        Today
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="flex-1 overflow-auto">
                     <PinchZoomWrapper storageKey="lek-calendar-zoom-day">
-                      <DayTimelineView
-                        selectedDate={selectedDate}
-                        bookings={dayBookings}
-                        services={services}
-                        staffList={staffList}
-                        onBookingClick={handleBookingClick}
-                        onSlotClick={handleSlotClick}
-                        loading={loading}
-                        isOnLeave={isOnLeave}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                        draggingBookingId={draggingBookingId}
-                      />
+                      {dayLayout === "columns" ? (
+                        <StaffDayColumnsView
+                          selectedDate={selectedDate}
+                          bookings={dayBookings}
+                          services={services}
+                          staffList={
+                            staffFilter !== "all" && staffFilter !== "unassigned"
+                              ? staffList.filter((s) => s.id === staffFilter)
+                              : staffList
+                          }
+                          onBookingClick={handleBookingClick}
+                          onSlotClick={handleSlotClick}
+                          loading={loading}
+                          isOnLeave={isOnLeave}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                          draggingBookingId={draggingBookingId}
+                        />
+                      ) : (
+                        <DayTimelineView
+                          selectedDate={selectedDate}
+                          bookings={dayBookings}
+                          services={services}
+                          staffList={staffList}
+                          onBookingClick={handleBookingClick}
+                          onSlotClick={handleSlotClick}
+                          loading={loading}
+                          isOnLeave={isOnLeave}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                          draggingBookingId={draggingBookingId}
+                        />
+                      )}
                     </PinchZoomWrapper>
                   </div>
                 </div>
