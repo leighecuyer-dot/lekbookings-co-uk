@@ -128,6 +128,7 @@ export default function CalendarPage() {
     staffId: "",
     time: "09:00",
     notes: "",
+    durationOverride: null as number | null,
   });
 
   // Track if we need to refetch after drag-drop
