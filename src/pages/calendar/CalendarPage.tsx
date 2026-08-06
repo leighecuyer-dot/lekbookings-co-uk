@@ -100,6 +100,7 @@ export default function CalendarPage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
