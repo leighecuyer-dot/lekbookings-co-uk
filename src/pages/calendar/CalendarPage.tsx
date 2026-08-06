@@ -100,6 +100,7 @@ export default function CalendarPage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -128,6 +129,7 @@ export default function CalendarPage() {
     staffId: "",
     time: "09:00",
     notes: "",
+    durationOverride: null as number | null,
   });
 
   // Track if we need to refetch after drag-drop
@@ -199,6 +201,7 @@ export default function CalendarPage() {
     if (staffRes.data) setStaffList(staffRes.data as unknown as Staff[]);
     if (customersRes.data) setCustomers(customersRes.data);
     setLoading(false);
+    setInitialLoad(false);
   };
 
   const handleCreateBooking = async () => {
@@ -213,7 +216,8 @@ export default function CalendarPage() {
     }
 
     const service = services.find((s) => s.id === newBooking.serviceId);
-    const durationMinutes = service?.duration_minutes || 30;
+    const durationMinutes =
+      newBooking.durationOverride ?? service?.duration_minutes ?? 30;
 
     const startTime = new Date(selectedDate);
     const [hours, minutes] = newBooking.time.split(":").map(Number);
@@ -278,6 +282,7 @@ export default function CalendarPage() {
         staffId: "",
         time: "09:00",
         notes: "",
+        durationOverride: null,
       });
       fetchData();
     }
@@ -375,9 +380,25 @@ export default function CalendarPage() {
       ...prev, 
       time,
       staffId: staffId || "",
+      durationOverride: null,
     }));
     setDialogOpen(true);
   };
+
+  const handleSlotRangeSelect = (
+    time: string,
+    durationMinutes: number,
+    staffId?: string
+  ) => {
+    setNewBooking((prev) => ({
+      ...prev,
+      time,
+      staffId: staffId || "",
+      durationOverride: durationMinutes,
+    }));
+    setDialogOpen(true);
+  };
+
 
   return (
     <DashboardLayout
@@ -603,9 +624,9 @@ export default function CalendarPage() {
               {viewMode === "day" && (
                 <div 
                   className="flex flex-col h-full"
-                  onTouchStart={swipeHandlers.onTouchStart}
-                  onTouchMove={swipeHandlers.onTouchMove}
-                  onTouchEnd={swipeHandlers.onTouchEnd}
+                  onTouchStart={dayLayout === "timeline" ? swipeHandlers.onTouchStart : undefined}
+                  onTouchMove={dayLayout === "timeline" ? swipeHandlers.onTouchMove : undefined}
+                  onTouchEnd={dayLayout === "timeline" ? swipeHandlers.onTouchEnd : undefined}
                 >
                   <div className="flex items-center justify-between mb-3 sm:mb-6 shrink-0">
                     <div className="flex items-center gap-1 sm:gap-2">
@@ -687,7 +708,9 @@ export default function CalendarPage() {
                           }
                           onBookingClick={handleBookingClick}
                           onSlotClick={handleSlotClick}
+                          onSlotRangeSelect={handleSlotRangeSelect}
                           loading={loading}
+                          initialLoad={initialLoad}
                           isOnLeave={isOnLeave}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}

@@ -1,4 +1,5 @@
-import { format, parseISO, setHours, setMinutes, differenceInMinutes, startOfDay } from "date-fns";
+import { format, parseISO, differenceInMinutes, startOfDay } from "date-fns";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import {
@@ -35,7 +36,9 @@ interface StaffDayColumnsViewProps {
   staffList: DayViewStaff[];
   onBookingClick: (booking: Booking) => void;
   onSlotClick: (time: string, staffId?: string) => void;
+  onSlotRangeSelect?: (time: string, durationMinutes: number, staffId?: string) => void;
   loading?: boolean;
+  initialLoad?: boolean;
   isOnLeave?: (staffId: string, date: Date) => boolean;
   onDragStart?: (e: React.DragEvent, booking: Booking) => void;
   onDragEnd?: (e: React.DragEvent) => void;
@@ -54,7 +57,9 @@ export function StaffDayColumnsView({
   staffList,
   onBookingClick,
   onSlotClick,
+  onSlotRangeSelect,
   loading,
+  initialLoad,
   isOnLeave,
   onDragStart,
   onDragEnd,
@@ -62,7 +67,15 @@ export function StaffDayColumnsView({
   onDrop,
   draggingBookingId,
 }: StaffDayColumnsViewProps) {
-  if (loading) {
+  const [dragSelect, setDragSelect] = useState<{
+    columnId: string;
+    startIndex: number;
+    endIndex: number;
+    moved: boolean;
+  } | null>(null);
+  const gridRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  if (loading && initialLoad) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm">Loading...</div>
     );
@@ -119,8 +132,74 @@ export function StaffDayColumnsView({
     return { sorted, placement, laneCount: Math.max(lanes.length, 1) };
   };
 
+  const slotAvailable = (staff: DayViewStaff | null, index: number) =>
+    staff ? isStaffAvailableAtSlot(staff, TIME_SLOTS[index], selectedDate, isOnLeave) : true;
+
+  const indexFromPointer = (columnId: string, clientY: number) => {
+    const el = gridRefs.current[columnId];
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const idx = Math.floor((clientY - rect.top) / SLOT_HEIGHT);
+    return Math.min(Math.max(idx, 0), TIME_SLOTS.length - 1);
+  };
+
+  const handlePointerDown = (
+    e: React.PointerEvent,
+    column: { id: string; staff: DayViewStaff | null }
+  ) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const index = indexFromPointer(column.id, e.clientY);
+    if (index === null || !slotAvailable(column.staff, index)) return;
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    setDragSelect({ columnId: column.id, startIndex: index, endIndex: index, moved: false });
+  };
+
+  const handlePointerMove = (
+    e: React.PointerEvent,
+    column: { id: string; staff: DayViewStaff | null }
+  ) => {
+    if (!dragSelect || dragSelect.columnId !== column.id) return;
+    const index = indexFromPointer(column.id, e.clientY);
+    if (index === null || index < dragSelect.startIndex) return;
+    // Stop the selection at the first unavailable slot
+    let end = index;
+    for (let i = dragSelect.startIndex; i <= index; i++) {
+      if (!slotAvailable(column.staff, i)) {
+        end = i - 1;
+        break;
+      }
+    }
+    if (end < dragSelect.startIndex) return;
+    if (end !== dragSelect.endIndex) {
+      setDragSelect({ ...dragSelect, endIndex: end, moved: end !== dragSelect.startIndex });
+    }
+  };
+
+  const handlePointerUp = (
+    e: React.PointerEvent,
+    column: { id: string; staff: DayViewStaff | null }
+  ) => {
+    if (!dragSelect || dragSelect.columnId !== column.id) return;
+    const staffId = column.staff ? column.id : undefined;
+    const startTime = TIME_SLOTS[dragSelect.startIndex];
+    const slots = dragSelect.endIndex - dragSelect.startIndex + 1;
+    const selection = dragSelect;
+    setDragSelect(null);
+    if (selection.moved && onSlotRangeSelect) {
+      onSlotRangeSelect(startTime, slots * SLOT_MINUTES, staffId);
+    } else {
+      onSlotClick(startTime, staffId);
+    }
+  };
+
   return (
-    <div className="overflow-x-auto">
+    <div
+      className={cn(
+        "overflow-x-auto overscroll-x-contain scroll-smooth transition-opacity",
+        loading && "opacity-60 pointer-events-none"
+      )}
+      style={{ scrollSnapType: "x proximity" }}
+    >
       <div className="flex min-w-max">
         {/* Time gutter */}
         <div className="sticky left-0 z-20 bg-background shrink-0 w-12 sm:w-16 border-r">
@@ -145,9 +224,14 @@ export function StaffDayColumnsView({
           const { sorted, placement, laneCount } = layoutColumn(items);
           const onLeave = column.staff && isOnLeave?.(column.staff.id, selectedDate);
           const working = column.staff ? isStaffWorkingToday(column.staff, selectedDate) : true;
+          const activeSelection = dragSelect?.columnId === column.id ? dragSelect : null;
 
           return (
-            <div key={column.id} className="w-[160px] sm:w-[200px] shrink-0 border-r last:border-r-0">
+            <div
+              key={column.id}
+              className="w-[160px] sm:w-[200px] shrink-0 border-r last:border-r-0"
+              style={{ scrollSnapAlign: "start" }}
+            >
               {/* Header */}
               <div
                 className="h-12 flex items-center justify-center px-2 border-b sticky top-0 z-10"
@@ -163,19 +247,21 @@ export function StaffDayColumnsView({
 
               {/* Grid */}
               <div
-                className={cn("relative", (onLeave || !working) && "bg-muted/40")}
-                style={{ height: gridHeight }}
+                ref={(el) => {
+                  gridRefs.current[column.id] = el;
+                }}
+                className={cn("relative select-none", (onLeave || !working) && "bg-muted/40")}
+                style={{ height: gridHeight, touchAction: "pan-x" }}
+                onPointerDown={(e) => handlePointerDown(e, column)}
+                onPointerMove={(e) => handlePointerMove(e, column)}
+                onPointerUp={(e) => handlePointerUp(e, column)}
+                onPointerCancel={() => setDragSelect(null)}
               >
                 {TIME_SLOTS.map((slot, i) => {
-                  const available = column.staff
-                    ? isStaffAvailableAtSlot(column.staff, slot, selectedDate, isOnLeave)
-                    : true;
+                  const available = slotAvailable(column.staff, i);
                   return (
                     <div
                       key={slot}
-                      onClick={() =>
-                        available && onSlotClick(slot, column.staff ? column.id : undefined)
-                      }
                       onDragOver={onDragOver}
                       onDrop={(e) =>
                         onDrop?.(e, selectedDate, slot, column.staff ? column.id : null)
@@ -193,6 +279,24 @@ export function StaffDayColumnsView({
                     </div>
                   );
                 })}
+
+                {/* Drag-to-create preview */}
+                {activeSelection && activeSelection.moved && (
+                  <div
+                    className="absolute left-0.5 right-0.5 rounded-lg border-2 border-dashed border-primary bg-primary/15 pointer-events-none flex items-center justify-center"
+                    style={{
+                      top: activeSelection.startIndex * SLOT_HEIGHT,
+                      height:
+                        (activeSelection.endIndex - activeSelection.startIndex + 1) * SLOT_HEIGHT,
+                    }}
+                  >
+                    <span className="text-[10px] sm:text-xs font-semibold text-foreground">
+                      {TIME_SLOTS[activeSelection.startIndex]} ·{" "}
+                      {(activeSelection.endIndex - activeSelection.startIndex + 1) * SLOT_MINUTES}{" "}
+                      min
+                    </span>
+                  </div>
+                )}
 
                 {/* Bookings */}
                 {sorted.map((booking) => {
@@ -214,6 +318,7 @@ export function StaffDayColumnsView({
                     <div
                       key={booking.id}
                       draggable
+                      onPointerDown={(e) => e.stopPropagation()}
                       onDragStart={(e) => onDragStart?.(e, booking)}
                       onDragEnd={onDragEnd}
                       onClick={(e) => {
