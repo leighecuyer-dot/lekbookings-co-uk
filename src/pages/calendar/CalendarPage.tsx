@@ -30,6 +30,7 @@ import { WeekView } from "@/components/calendar/WeekView";
 import { KanbanView } from "@/components/calendar/KanbanView";
 import { DayTimelineView } from "@/components/calendar/DayTimelineView";
 import { StaffDayColumnsView } from "@/components/calendar/StaffDayColumnsView";
+import { cn } from "@/lib/utils";
 import { PinchZoomWrapper } from "@/components/calendar/PinchZoomWrapper";
 import { StatusFilter } from "@/components/calendar/StatusFilter";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
