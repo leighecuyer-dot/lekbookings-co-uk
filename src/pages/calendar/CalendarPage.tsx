@@ -214,7 +214,8 @@ export default function CalendarPage() {
     }
 
     const service = services.find((s) => s.id === newBooking.serviceId);
-    const durationMinutes = service?.duration_minutes || 30;
+    const durationMinutes =
+      newBooking.durationOverride ?? service?.duration_minutes ?? 30;
 
     const startTime = new Date(selectedDate);
     const [hours, minutes] = newBooking.time.split(":").map(Number);
