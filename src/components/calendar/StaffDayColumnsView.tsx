@@ -233,7 +233,13 @@ export function StaffDayColumnsView({
           return (
             <div
               key={column.id}
-              className="w-[160px] sm:w-[200px] shrink-0 border-r last:border-r-0"
+              className={cn(
+                "border-r last:border-r-0",
+                fitToScreen
+                  ? "flex-1 min-w-[90px]"
+                  : "w-[160px] sm:w-[200px] shrink-0"
+              )}
+
               style={{ scrollSnapAlign: "start" }}
             >
               {/* Header */}
