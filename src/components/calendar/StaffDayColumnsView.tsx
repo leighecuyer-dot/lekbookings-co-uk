@@ -62,6 +62,8 @@ export function StaffDayColumnsView({
   onSlotRangeSelect,
   loading,
   initialLoad,
+  fitToScreen,
+
   isOnLeave,
   onDragStart,
   onDragEnd,
