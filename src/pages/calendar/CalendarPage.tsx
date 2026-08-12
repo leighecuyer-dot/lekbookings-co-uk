@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Clock, User, ChevronLeft, ChevronRight, CalendarDays, Columns3, List } from "lucide-react";
+import { Plus, Clock, User, ChevronLeft, ChevronRight, CalendarDays, Columns3, List, Maximize2, Minimize2, StretchHorizontal } from "lucide-react";
 import { format, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { WeekView } from "@/components/calendar/WeekView";
