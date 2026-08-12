@@ -701,6 +701,39 @@ export default function CalendarPage() {
                           Columns
                         </button>
                       </div>
+                      {dayLayout === "columns" && (
+                        <>
+                          <Button
+                            variant={fitToScreen ? "default" : "outline"}
+                            size="icon"
+                            title="Fit columns to screen"
+                            aria-label="Fit columns to screen"
+                            className="h-7 w-7 sm:h-9 sm:w-9"
+                            onClick={() => {
+                              const next = !fitToScreen;
+                              setFitToScreen(next);
+                              localStorage.setItem("lek-day-fit", next ? "1" : "0");
+                            }}
+                          >
+                            <StretchHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            title={isFullscreen ? "Exit full screen" : "Full screen"}
+                            aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
+                            className="h-7 w-7 sm:h-9 sm:w-9"
+                            onClick={() => setIsFullscreen((v) => !v)}
+                          >
+                            {isFullscreen ? (
+                              <Minimize2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                            ) : (
+                              <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                            )}
+                          </Button>
+                        </>
+                      )}
+
                       <Button
                         variant="outline"
                         size="sm"
