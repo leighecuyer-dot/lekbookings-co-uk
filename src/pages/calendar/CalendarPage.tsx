@@ -109,8 +109,22 @@ export default function CalendarPage() {
     const saved = typeof window !== "undefined" ? localStorage.getItem("lek-day-layout") : null;
     return saved === "columns" ? "columns" : "timeline";
   });
+  const [fitToScreen, setFitToScreen] = useState<boolean>(() => {
+    return typeof window !== "undefined" && localStorage.getItem("lek-day-fit") === "1";
+  });
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [staffFilter, setStaffFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
+
   
   // Swipe gestures for mobile day navigation
   const swipeHandlers = useSwipeGesture({
