@@ -39,6 +39,8 @@ interface StaffDayColumnsViewProps {
   onSlotRangeSelect?: (time: string, durationMinutes: number, staffId?: string) => void;
   loading?: boolean;
   initialLoad?: boolean;
+  fitToScreen?: boolean;
+
   isOnLeave?: (staffId: string, date: Date) => boolean;
   onDragStart?: (e: React.DragEvent, booking: Booking) => void;
   onDragEnd?: (e: React.DragEvent) => void;
@@ -60,6 +62,8 @@ export function StaffDayColumnsView({
   onSlotRangeSelect,
   loading,
   initialLoad,
+  fitToScreen,
+
   isOnLeave,
   onDragStart,
   onDragEnd,
@@ -200,7 +204,7 @@ export function StaffDayColumnsView({
       )}
       style={{ scrollSnapType: "x proximity" }}
     >
-      <div className="flex min-w-max">
+      <div className={cn("flex", fitToScreen ? "w-full" : "min-w-max")}>
         {/* Time gutter */}
         <div className="sticky left-0 z-20 bg-background shrink-0 w-12 sm:w-16 border-r">
           <div className="h-12 border-b" />
@@ -229,7 +233,13 @@ export function StaffDayColumnsView({
           return (
             <div
               key={column.id}
-              className="w-[160px] sm:w-[200px] shrink-0 border-r last:border-r-0"
+              className={cn(
+                "border-r last:border-r-0",
+                fitToScreen
+                  ? "flex-1 min-w-[90px]"
+                  : "w-[160px] sm:w-[200px] shrink-0"
+              )}
+
               style={{ scrollSnapAlign: "start" }}
             >
               {/* Header */}

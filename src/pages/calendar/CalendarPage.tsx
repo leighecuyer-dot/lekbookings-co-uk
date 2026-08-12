@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Clock, User, ChevronLeft, ChevronRight, CalendarDays, Columns3, List } from "lucide-react";
+import { Plus, Clock, User, ChevronLeft, ChevronRight, CalendarDays, Columns3, List, Maximize2, Minimize2, StretchHorizontal } from "lucide-react";
 import { format, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from "date-fns";
 import { BookingEditDialog } from "@/components/booking/BookingEditDialog";
 import { WeekView } from "@/components/calendar/WeekView";
@@ -109,8 +109,22 @@ export default function CalendarPage() {
     const saved = typeof window !== "undefined" ? localStorage.getItem("lek-day-layout") : null;
     return saved === "columns" ? "columns" : "timeline";
   });
+  const [fitToScreen, setFitToScreen] = useState<boolean>(() => {
+    return typeof window !== "undefined" && localStorage.getItem("lek-day-fit") === "1";
+  });
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [staffFilter, setStaffFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
+
   
   // Swipe gestures for mobile day navigation
   const swipeHandlers = useSwipeGesture({
@@ -623,11 +637,15 @@ export default function CalendarPage() {
             <CardContent className="p-3 sm:p-6 flex-1 flex flex-col min-h-0 overflow-hidden">
               {viewMode === "day" && (
                 <div 
-                  className="flex flex-col h-full"
+                  className={cn(
+                    "flex flex-col h-full",
+                    isFullscreen && "fixed inset-0 z-[60] bg-background p-3 sm:p-4 h-screen"
+                  )}
                   onTouchStart={dayLayout === "timeline" ? swipeHandlers.onTouchStart : undefined}
                   onTouchMove={dayLayout === "timeline" ? swipeHandlers.onTouchMove : undefined}
                   onTouchEnd={dayLayout === "timeline" ? swipeHandlers.onTouchEnd : undefined}
                 >
+
                   <div className="flex items-center justify-between mb-3 sm:mb-6 shrink-0">
                     <div className="flex items-center gap-1 sm:gap-2">
                       <Button
@@ -683,6 +701,39 @@ export default function CalendarPage() {
                           Columns
                         </button>
                       </div>
+                      {dayLayout === "columns" && (
+                        <>
+                          <Button
+                            variant={fitToScreen ? "default" : "outline"}
+                            size="icon"
+                            title="Fit columns to screen"
+                            aria-label="Fit columns to screen"
+                            className="h-7 w-7 sm:h-9 sm:w-9"
+                            onClick={() => {
+                              const next = !fitToScreen;
+                              setFitToScreen(next);
+                              localStorage.setItem("lek-day-fit", next ? "1" : "0");
+                            }}
+                          >
+                            <StretchHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            title={isFullscreen ? "Exit full screen" : "Full screen"}
+                            aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
+                            className="h-7 w-7 sm:h-9 sm:w-9"
+                            onClick={() => setIsFullscreen((v) => !v)}
+                          >
+                            {isFullscreen ? (
+                              <Minimize2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                            ) : (
+                              <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                            )}
+                          </Button>
+                        </>
+                      )}
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -711,6 +762,8 @@ export default function CalendarPage() {
                           onSlotRangeSelect={handleSlotRangeSelect}
                           loading={loading}
                           initialLoad={initialLoad}
+                          fitToScreen={fitToScreen}
+
                           isOnLeave={isOnLeave}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
