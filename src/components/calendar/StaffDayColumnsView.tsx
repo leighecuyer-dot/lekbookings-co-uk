@@ -39,6 +39,8 @@ interface StaffDayColumnsViewProps {
   onSlotRangeSelect?: (time: string, durationMinutes: number, staffId?: string) => void;
   loading?: boolean;
   initialLoad?: boolean;
+  fitToScreen?: boolean;
+
   isOnLeave?: (staffId: string, date: Date) => boolean;
   onDragStart?: (e: React.DragEvent, booking: Booking) => void;
   onDragEnd?: (e: React.DragEvent) => void;
