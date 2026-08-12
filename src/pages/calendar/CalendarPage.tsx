@@ -762,6 +762,8 @@ export default function CalendarPage() {
                           onSlotRangeSelect={handleSlotRangeSelect}
                           loading={loading}
                           initialLoad={initialLoad}
+                          fitToScreen={fitToScreen}
+
                           isOnLeave={isOnLeave}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
