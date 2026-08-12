@@ -204,7 +204,7 @@ export function StaffDayColumnsView({
       )}
       style={{ scrollSnapType: "x proximity" }}
     >
-      <div className="flex min-w-max">
+      <div className={cn("flex", fitToScreen ? "w-full" : "min-w-max")}>
         {/* Time gutter */}
         <div className="sticky left-0 z-20 bg-background shrink-0 w-12 sm:w-16 border-r">
           <div className="h-12 border-b" />
