@@ -302,6 +302,14 @@ export default function StaffPage() {
         </Alert>
       )}
 
+      {isOwner && currentBusiness && !loading && (
+        <TeamAdminPanel
+          businessId={currentBusiness.id}
+          staffList={staffList.map((s) => ({ id: s.id, name: s.name, email: s.email, user_id: s.user_id }))}
+          onChanged={fetchStaff}
+        />
+      )}
+
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading...</div>
       ) : staffList.length === 0 ? (
