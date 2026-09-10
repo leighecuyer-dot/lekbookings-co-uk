@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent, KeyRound, Pencil } from "lucide-react";
 import { StaffAccessModal } from "@/components/staff/StaffAccessModal";
+import { TeamAdminPanel } from "@/components/staff/TeamAdminPanel";
 
 import {
   DropdownMenu,
