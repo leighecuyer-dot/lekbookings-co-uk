@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { Plus, Mail, Phone, UserCircle, MoreHorizontal, Clock, Lock, Crown, CalendarDays, DollarSign, Percent, KeyRound, Pencil } from "lucide-react";
 import { StaffAccessModal } from "@/components/staff/StaffAccessModal";
+import { TeamAdminPanel } from "@/components/staff/TeamAdminPanel";
 
 import {
   DropdownMenu,
@@ -60,7 +61,7 @@ interface Staff {
 
 export default function StaffPage() {
   const { currentBusiness } = useBusiness();
-  const { canViewFinancials } = useUserPermissions(currentBusiness?.id);
+  const { canViewFinancials, isOwner } = useUserPermissions(currentBusiness?.id);
   const { tier, limits, canAddStaff, loading: tierLoading } = useSubscriptionTier(currentBusiness?.id ?? null);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -299,6 +300,14 @@ export default function StaffPage() {
             {tier === "essential" ? " Upgrade to Professional for up to 5 staff members." : " Upgrade to Enterprise for unlimited staff."}
           </AlertDescription>
         </Alert>
+      )}
+
+      {isOwner && currentBusiness && !loading && (
+        <TeamAdminPanel
+          businessId={currentBusiness.id}
+          staffList={staffList.map((s) => ({ id: s.id, name: s.name, email: s.email, user_id: s.user_id }))}
+          onChanged={fetchStaff}
+        />
       )}
 
       {loading ? (
