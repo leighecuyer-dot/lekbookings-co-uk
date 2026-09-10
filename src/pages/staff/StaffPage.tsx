@@ -61,7 +61,7 @@ interface Staff {
 
 export default function StaffPage() {
   const { currentBusiness } = useBusiness();
-  const { canViewFinancials } = useUserPermissions(currentBusiness?.id);
+  const { canViewFinancials, isOwner } = useUserPermissions(currentBusiness?.id);
   const { tier, limits, canAddStaff, loading: tierLoading } = useSubscriptionTier(currentBusiness?.id ?? null);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
