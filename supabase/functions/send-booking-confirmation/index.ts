@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendTemplateEmail } from "../_shared/transactional-email-templates/send-email.ts";
+import { recordSend } from "../_shared/transactional-email-templates/log-send.ts";
 
 
 const corsHeaders = {
@@ -96,25 +98,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (booking.customer_email) {
       try {
-        const { error: emailError } = await admin.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "booking-confirmation",
-            recipientEmail: booking.customer_email,
-            idempotencyKey: `booking-confirmation-${booking.id}`,
-            templateData: {
-              customerName: booking.customer_name,
-              businessName,
-              serviceName,
-              dateTime,
-              reference: booking.id.slice(0, 8).toUpperCase(),
-              staffName,
-              address: businessAddress,
-              phone: businessPhone,
-            },
-          },
-        });
-        emailSent = !emailError;
-        if (emailError) console.log("Email send failed:", emailError);
+        emailSent = await recordSend(
+          "booking-confirmation",
+          booking.customer_email,
+          () =>
+            sendTemplateEmail("booking-confirmation", booking.customer_email!, {
+              idempotencyKey: `booking-confirmation-${booking.id}`,
+              templateData: {
+                customerName: booking.customer_name,
+                businessName,
+                serviceName,
+                dateTime,
+                reference: booking.id.slice(0, 8).toUpperCase(),
+                staffName,
+                address: businessAddress,
+                phone: businessPhone,
+              },
+            }),
+        );
       } catch (e) {
         console.log("Email send failed:", e);
       }
@@ -170,10 +171,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const sendAlertEmail = async (to: string, recipientName: string, key: string) => {
       try {
-        await admin.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "booking-alert",
-            recipientEmail: to,
+        await recordSend("booking-alert", to, () =>
+          sendTemplateEmail("booking-alert", to, {
             idempotencyKey: `booking-alert-${key}-${booking.id}`,
             templateData: {
               recipientName,
@@ -186,8 +185,8 @@ const handler = async (req: Request): Promise<Response> => {
               reference,
               alertKind: "New booking",
             },
-          },
-        });
+          }),
+        );
       } catch (e) {
         console.log("Alert email skipped:", e);
       }
