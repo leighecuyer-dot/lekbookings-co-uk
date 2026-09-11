@@ -171,10 +171,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const sendAlertEmail = async (to: string, recipientName: string, key: string) => {
       try {
-        await admin.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "booking-alert",
-            recipientEmail: to,
+        await recordSend("booking-alert", to, () =>
+          sendTemplateEmail("booking-alert", to, {
             idempotencyKey: `booking-alert-${key}-${booking.id}`,
             templateData: {
               recipientName,
@@ -187,8 +185,8 @@ const handler = async (req: Request): Promise<Response> => {
               reference,
               alertKind: "New booking",
             },
-          },
-        });
+          }),
+        );
       } catch (e) {
         console.log("Alert email skipped:", e);
       }
