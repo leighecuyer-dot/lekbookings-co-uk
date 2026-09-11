@@ -33,6 +33,10 @@ import { StaffLeaveModal } from "@/components/staff/StaffLeaveModal";
 import { StaffRevenueSettingsModal } from "@/components/staff/StaffRevenueSettingsModal";
 import { useSubscriptionTier } from "@/hooks/subscription/useSubscriptionTier";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUserPermissions } from "@/hooks/permissions/useUserPermissions";
 
@@ -77,6 +81,7 @@ export default function StaffPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editStaff, setEditStaff] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
 
   
   const [newStaff, setNewStaff] = useState({
@@ -212,6 +217,7 @@ export default function StaffPage() {
       toast.error("Failed to delete staff member");
     } else {
       toast.success("Staff member removed");
+      setStaffToDelete(null);
       fetchStaff();
     }
   };
@@ -407,7 +413,7 @@ export default function StaffPage() {
                             {staff.is_active ? "Deactivate" : "Activate"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDeleteStaff(staff.id)}
+                            onClick={() => setStaffToDelete(staff)}
                             className="text-destructive"
                           >
                             Delete
@@ -568,6 +574,26 @@ export default function StaffPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete confirmation */}
+      <AlertDialog open={!!staffToDelete} onOpenChange={(open) => !open && setStaffToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {staffToDelete?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes them and their linked records. This can't be undone — use Deactivate instead if you just want to hide them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => staffToDelete && handleDeleteStaff(staffToDelete.id)}
+            >
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </DashboardLayout>
   );
