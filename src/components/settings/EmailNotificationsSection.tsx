@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
@@ -57,14 +57,17 @@ export function EmailNotificationsSection() {
             <Input
               id="test-email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              value={accountEmail}
+              readOnly
+              placeholder="your account email"
             />
-            <Button onClick={sendTest} disabled={sending} className="sm:w-auto">
+            <Button onClick={sendTest} disabled={sending || !accountEmail} className="sm:w-auto">
               {sending ? "Sending…" : "Send test"}
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Test emails go to the address you signed in with.
+          </p>
         </div>
       </CardContent>
     </Card>
