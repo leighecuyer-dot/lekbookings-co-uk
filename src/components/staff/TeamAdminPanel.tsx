@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Copy, Mail, Save, ShieldCheck } from "lucide-react";
+import { sendInviteEmail } from "@/lib/sendInviteEmail";
 
 type AppRole = "owner" | "admin" | "staff" | "readonly";
 
@@ -141,7 +142,20 @@ export function TeamAdminPanel({ businessId, staffList, onChanged }: Props) {
       return;
     }
     setInvites((prev) => ({ ...prev, [email]: data as InviteRow }));
-    copyLink(data.token);
+    const link = `${INVITE_BASE}/invite/accept?token=${data.token}`;
+    navigator.clipboard.writeText(link);
+    const emailed = await sendInviteEmail({
+      token: data.token,
+      email,
+      recipientName: staff.name,
+      businessId,
+      role,
+    });
+    toast.success(
+      emailed
+        ? `Invite emailed to ${email} — link also copied`
+        : `Invite link copied — email could not be sent to ${email}, send the link yourself`,
+    );
     onChanged();
   };
 
