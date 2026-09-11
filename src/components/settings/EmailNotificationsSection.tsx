@@ -10,41 +10,32 @@ import { Mail } from "lucide-react";
 
 export function EmailNotificationsSection() {
   const { currentBusiness } = useBusiness();
-  const [email, setEmail] = useState(currentBusiness?.email ?? "");
+  const [accountEmail, setAccountEmail] = useState<string>("");
   const [sending, setSending] = useState(false);
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setAccountEmail(data.user?.email ?? ""));
+  }, []);
+
   const sendTest = async () => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ title: "Enter a valid email address", variant: "destructive" });
-      return;
-    }
     setSending(true);
-    const { error } = await supabase.functions.invoke("send-transactional-email", {
-      body: {
-        templateName: "booking-confirmation",
-        recipientEmail: email,
-        templateData: {
-          customerName: "Test",
-          businessName: currentBusiness?.name ?? "Your business",
-          serviceName: "Test appointment",
-          dateTime: new Date().toLocaleString("en-GB", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          }),
-          reference: "TESTMAIL",
-          phone: currentBusiness?.phone ?? "",
-        },
-      },
+    const { data, error } = await supabase.functions.invoke("send-test-email", {
+      body: { businessId: currentBusiness?.id },
     });
     setSending(false);
     if (error) {
       toast({ title: "Test email failed", description: error.message, variant: "destructive" });
+    } else if (data?.success === false) {
+      toast({
+        title: "Not sent",
+        description: "This address previously unsubscribed or bounced.",
+        variant: "destructive",
+      });
     } else {
-      toast({ title: "Test email queued", description: `Sent to ${email}. Check inbox and spam.` });
+      toast({
+        title: "Test email sent",
+        description: `Sent to ${data?.recipient ?? accountEmail}. Check inbox and spam.`,
+      });
     }
   };
 

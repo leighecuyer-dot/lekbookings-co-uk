@@ -2,12 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const INVITE_BASE = "https://lekbookings.co.uk";
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  staff: "Staff",
-  readonly: "View only",
-};
 
 export function inviteUrlFor(token: string) {
   return `${INVITE_BASE}/invite/accept?token=${token}`;
