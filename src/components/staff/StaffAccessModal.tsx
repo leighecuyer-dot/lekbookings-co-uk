@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Copy, Mail } from "lucide-react";
+import { sendInviteEmail } from "@/lib/sendInviteEmail";
 
 interface Member {
   user_id: string;
@@ -100,7 +101,18 @@ export function StaffAccessModal({
     // Invite links must never use a workspace-restricted preview/editor origin.
     const link = `https://lekbookings.co.uk/invite/accept?token=${data.token}`;
     setInviteLink(link);
-    toast.success("Invite created — send them the link");
+    const emailed = await sendInviteEmail({
+      token: data.token,
+      email,
+      recipientName: staffName,
+      businessId,
+      role: "staff",
+    });
+    toast.success(
+      emailed
+        ? `Invite emailed to ${email}`
+        : "Invite created — email could not be sent, send them the link",
+    );
     onSaved();
 
   };
