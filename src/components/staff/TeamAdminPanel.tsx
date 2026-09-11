@@ -99,21 +99,19 @@ export function TeamAdminPanel({ businessId, staffList, onChanged }: Props) {
   const changeRole = async (staff: StaffRow, role: AppRole) => {
     if (!staff.user_id) return;
     setBusyId(staff.id);
-    const { error: delError } = await supabase
-      .from("user_roles")
-      .delete()
-      .eq("business_id", businessId)
-      .eq("user_id", staff.user_id);
-    const { error } = delError
-      ? { error: delError }
-      : await supabase.from("user_roles").insert({
-          business_id: businessId,
-          user_id: staff.user_id,
-          role,
-        });
+    // Single atomic upsert — never leaves the user without a role if it fails.
+    const { error } = await supabase.from("user_roles").upsert(
+      {
+        business_id: businessId,
+        user_id: staff.user_id,
+        role,
+      },
+      { onConflict: "user_id,business_id" }
+    );
     setBusyId(null);
     if (error) {
-      toast.error("Could not change access level");
+      toast.error("Could not change access level — their previous access is unchanged");
+      load(); // re-sync displayed roles with the database
       return;
     }
     setRoles((prev) => ({ ...prev, [staff.user_id as string]: role }));
