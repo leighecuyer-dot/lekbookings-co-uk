@@ -98,25 +98,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (booking.customer_email) {
       try {
-        const { error: emailError } = await admin.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "booking-confirmation",
-            recipientEmail: booking.customer_email,
-            idempotencyKey: `booking-confirmation-${booking.id}`,
-            templateData: {
-              customerName: booking.customer_name,
-              businessName,
-              serviceName,
-              dateTime,
-              reference: booking.id.slice(0, 8).toUpperCase(),
-              staffName,
-              address: businessAddress,
-              phone: businessPhone,
-            },
-          },
-        });
-        emailSent = !emailError;
-        if (emailError) console.log("Email send failed:", emailError);
+        emailSent = await recordSend(
+          "booking-confirmation",
+          booking.customer_email,
+          () =>
+            sendTemplateEmail("booking-confirmation", booking.customer_email!, {
+              idempotencyKey: `booking-confirmation-${booking.id}`,
+              templateData: {
+                customerName: booking.customer_name,
+                businessName,
+                serviceName,
+                dateTime,
+                reference: booking.id.slice(0, 8).toUpperCase(),
+                staffName,
+                address: businessAddress,
+                phone: businessPhone,
+              },
+            }),
+        );
       } catch (e) {
         console.log("Email send failed:", e);
       }
